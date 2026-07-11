@@ -7,6 +7,7 @@ import maplibregl from 'maplibre-gl';
 import MapBase from './modules/MapBase.js';
 import LayerManager from './modules/LayerManager.js';
 import LegendPanel from './modules/LegendPanel.js';
+import OccurrenceBrowser from './modules/OccurrenceBrowser.js';
 import {
   LAYER_CONFIG,
   WMS_CONFIG,
@@ -22,6 +23,7 @@ import {
   featureBelongsToCommodity,
   MODS_SURFACE_DEFAULT_COUNT
 } from './config/layerConfig.js';
+import { combineMODSFilters, filterMODSFeatures } from './config/modsFilters.js';
 import { computeCommoditySurface } from './modules/SurfaceInterpolation.js';
 
 class MineralsMapApp {
@@ -29,6 +31,8 @@ class MineralsMapApp {
     this.mapBase = new MapBase();
     this.layerManager = null;
     this.legendPanel = new LegendPanel('legend-panel');
+    this.occurrenceBrowser = null;
+    this.selectedPopup = null;
     // Occurrence-density surface visibility (Phase 1.1c) - a sub-toggle
     // inside the MODS legend card, independent of the commodity picker and
     // the main layer checkbox. Seeded from config so a future author can
@@ -46,9 +50,17 @@ class MineralsMapApp {
     const map = await this.mapBase.init();
 
     this.layerManager = new LayerManager(map);
-    this.mapBase.onStyleChange = () => this.layerManager.refreshLayers();
+    this.mapBase.onStyleChange = () => {
+      this.layerManager.refreshLayers();
+      this.applyMODSCommodityVisibility();
+    };
 
     await this.layerManager.loadAllLayers();
+
+    this.occurrenceBrowser = new OccurrenceBrowser({
+      onChange: () => this.applyMODSCommodityVisibility(),
+      onSelect: (feature) => this.onOccurrenceSelect(feature)
+    });
 
     this.renderLayerSidebar();
     this.bindLayerControls();
@@ -221,17 +233,118 @@ class MineralsMapApp {
     }
   }
 
-  /** Applies circle + surface filters from picker scope and enabled commodities. */
+  /** Applies circle + surface filters from picker, legend, status, and search. */
   applyMODSCommodityVisibility() {
     const value = this.currentMODSPickerValue;
     const resolved = resolveMODSCommodities(value);
     const primaryOnly = !resolved || resolved.length > 1;
+    const browser = this.occurrenceBrowser?.getFilterState() || { statuses: new Set(), query: '' };
+
+    const commodityFilter = buildMODSEnabledCommodityFilter(value, this.enabledCommodities, {
+      primaryOnly
+    });
+
+    // Search → NMINO allowlist (MapLibre can't do substring match)
+    let nminoAllowlist = null;
+    if (browser.query.trim()) {
+      const all = this.layerManager.getLoadedFeatures('modsOccurrences');
+      const matched = filterMODSFeatures(all, {
+        pickerCommodities: resolved,
+        enabledCommodities: this.enabledCommodities,
+        primaryOnly,
+        statuses: browser.statuses,
+        query: browser.query
+      });
+      nminoAllowlist = matched.map((f) => f.properties.NMINO).filter(Boolean);
+    }
 
     this.layerManager.setLayerFilter(
       'modsOccurrences',
-      buildMODSEnabledCommodityFilter(value, this.enabledCommodities, { primaryOnly })
+      combineMODSFilters(commodityFilter, {
+        statuses: browser.statuses,
+        nminoAllowlist
+      })
     );
     this.layerManager.setSurfaceEnabledCommodities('modsOccurrences', this.enabledCommodities);
+    this.syncOccurrenceBrowser();
+  }
+
+  /** Keep KPI / list in sync with the same filtered feature set as the map. */
+  syncOccurrenceBrowser() {
+    if (!this.occurrenceBrowser) return;
+
+    const all = this.layerManager.getLoadedFeatures('modsOccurrences');
+    const value = this.currentMODSPickerValue;
+    const resolved = resolveMODSCommodities(value);
+    const primaryOnly = !resolved || resolved.length > 1;
+    const browser = this.occurrenceBrowser.getFilterState();
+
+    const commodityScoped = filterMODSFeatures(all, {
+      pickerCommodities: resolved,
+      enabledCommodities: this.enabledCommodities,
+      primaryOnly,
+      statuses: new Set(),
+      query: ''
+    });
+
+    const filtered = filterMODSFeatures(all, {
+      pickerCommodities: resolved,
+      enabledCommodities: this.enabledCommodities,
+      primaryOnly,
+      statuses: browser.statuses,
+      query: browser.query
+    });
+
+    this.occurrenceBrowser.update(commodityScoped, filtered);
+  }
+
+  onOccurrenceSelect(feature) {
+    if (this.selectedPopup) {
+      this.selectedPopup.remove();
+      this.selectedPopup = null;
+    }
+    if (!feature) return;
+
+    const [lon, lat] = feature.geometry.coordinates;
+    this.map.flyTo({ center: [lon, lat], zoom: Math.max(this.map.getZoom(), 9) });
+
+    const p = feature.properties;
+    const primary = p.primaryCommodity || p.COMNAME;
+    const secondaries = p.secondaryCommodities || [];
+    const commodityRows = [['Primary commodity', primary]];
+    if (secondaries.length) {
+      commodityRows.push(['Also reported', secondaries.join(', ')]);
+    }
+    const rows = [
+      ...commodityRows,
+      ['Status', p.STATUS],
+      ['Deposit type', p.DEPDESC],
+      ['Ore minerals', p.OREMIN],
+      ['Work history', p.WORKING],
+      ['NTS sheet', p.NTS]
+    ]
+      .filter(([, v]) => v && String(v).trim())
+      .map(
+        ([label, value]) =>
+          `<div class="popup-row"><span class="popup-label">${label}:</span> <span class="popup-value">${value}</span></div>`
+      )
+      .join('');
+
+    const recordUrl = this.modsRecordUrl(p.NMINO);
+    const linkRow = recordUrl
+      ? `<div class="popup-row"><span class="popup-label">MODS record:</span> <span class="popup-value"><a href="${recordUrl}" target="_blank" rel="noopener">${p.NMINO}</a></span></div>`
+      : '';
+
+    this.selectedPopup = new maplibregl.Popup({ closeButton: true, closeOnClick: true })
+      .setLngLat([lon, lat])
+      .setHTML(`
+        <div class="popup-content">
+          <h3 class="popup-title">${p.name || 'Unnamed occurrence'}</h3>
+          ${rows}
+          ${linkRow}
+        </div>
+      `)
+      .addTo(this.map);
   }
 
   /**
@@ -462,6 +575,7 @@ class MineralsMapApp {
     // cluster/heatmap layer to bind here.
     this.map.on('click', 'mods-layer', (e) => {
       const coordinates = e.features[0].geometry.coordinates.slice();
+      const props = e.features[0].properties;
       const {
         name,
         primaryCommodity,
@@ -474,13 +588,32 @@ class MineralsMapApp {
         WORKING: workHistory,
         NTS: nts,
         NMINO: nmino
-      } = e.features[0].properties;
+      } = props;
 
-      const primary = primaryCommodity || commodity;
+      const parseMaybeArray = (v) => {
+        if (Array.isArray(v)) return v;
+        if (typeof v === 'string' && v.startsWith('[')) {
+          try {
+            return JSON.parse(v);
+          } catch {
+            return [];
+          }
+        }
+        return [];
+      };
+
+      const list = parseMaybeArray(commodityList);
       const secondaries = Array.isArray(secondaryCommodities)
         ? secondaryCommodities
-        : (commodityList || []).filter((c) => c !== primary);
+        : parseMaybeArray(secondaryCommodities).length
+          ? parseMaybeArray(secondaryCommodities)
+          : list.filter((c) => c !== (primaryCommodity || commodity));
 
+      if (this.occurrenceBrowser) {
+        this.occurrenceBrowser.selectByNmino(nmino);
+      }
+
+      const primary = primaryCommodity || commodity;
       const commodityRows = [['Primary commodity', primary]];
       if (secondaries.length) {
         commodityRows.push(['Also reported', secondaries.join(', ')]);
@@ -494,7 +627,7 @@ class MineralsMapApp {
         ['Work history', workHistory],
         ['NTS sheet', nts]
       ]
-        .filter(([, value]) => value && value.trim())
+        .filter(([, value]) => value && String(value).trim())
         .map(
           ([label, value]) =>
             `<div class="popup-row"><span class="popup-label">${label}:</span> <span class="popup-value">${value}</span></div>`
@@ -506,7 +639,8 @@ class MineralsMapApp {
         ? `<div class="popup-row"><span class="popup-label">MODS record:</span> <span class="popup-value"><a href="${recordUrl}" target="_blank" rel="noopener">${nmino}</a></span></div>`
         : '';
 
-      new maplibregl.Popup({ closeButton: true, closeOnClick: true })
+      this.selectedPopup?.remove();
+      this.selectedPopup = new maplibregl.Popup({ closeButton: true, closeOnClick: true })
         .setLngLat(coordinates)
         .setHTML(`
           <div class="popup-content">

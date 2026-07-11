@@ -6,6 +6,7 @@ import {
   WMS_BASE_URL,
   buildMODSSurfaceColorExpression
 } from '../config/layerConfig.js';
+import { normalizeMODSStatus } from '../config/modsFilters.js';
 import { reprojectToMercator } from './wmsReprojection.js';
 
 // Source datasets are national-scale compilations (1:5M geology maps, ~1km
@@ -154,6 +155,8 @@ export default class LayerManager {
           ? normalizeCommodityName(props.COMNAME)
           : props.commodityList[0] || null;
         props.secondaryCommodities = props.commodityList.filter((c) => c !== props.primaryCommodity);
+        // Status bucket for F5 filters (Past Producer variants collapsed).
+        props.statusBucket = normalizeMODSStatus(props.STATUS);
       });
     }
 

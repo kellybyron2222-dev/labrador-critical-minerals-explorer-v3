@@ -1,18 +1,19 @@
 # Labrador Critical Minerals Explorer — V3
 
-Blended product: the **MapLibre multi-layer explorer** (local V1) plus **mission-control occurrence UX** (flagship deposits, KPIs, searchable list, status/group filters) from [labrador-critical-minerals](https://github.com/enesgrahovac/labrador-critical-minerals).
+A’s **MapLibre multi-layer explorer**, plus a small UX cherry-pick from
+[labrador-critical-minerals](https://github.com/enesgrahovac/labrador-critical-minerals):
+status filters, search, occurrence list/detail, and a KPI strip.
 
-**Real public data only** — no demo/placeholder geography.
+**No B datasets** — no featured deposits, no commodity groups, no static GeoJSON.
+Live ArcGIS MODS remains the source of truth. Critical preset still excludes iron.
 
 ## Relationship to other versions
 
 | Version | Path / repo | Role |
 |---------|-------------|------|
 | **A (V1)** | `../project` | Untouched baseline — keep as reference |
-| **B** | [enesgrahovac/labrador-critical-minerals](https://github.com/enesgrahovac/labrador-critical-minerals) | Mission-control UX + featured enrichment reference |
-| **V3 (this repo)** | `explorer-v3` | Active development — blend of A architecture + B UX |
-
-Started as a clean copy of A. Blend work happens here only.
+| **B** | [enesgrahovac/labrador-critical-minerals](https://github.com/enesgrahovac/labrador-critical-minerals) | UX reference only (list / search / status / KPIs) |
+| **V3 (this repo)** | `explorer-v3` | Active development |
 
 ## Run
 
@@ -28,6 +29,6 @@ npm run dev
 - Turf.js (occurrence density surfaces)
 - Live NL GeoAtlas MODS + NRCan facilities / WMS
 
-## Status
+## Merger guide
 
-Scaffold only — same capabilities as A until blend phases land. See `BUILD_PLAN.md` and the version-blend proposal canvas for the V3 roadmap.
+[`revised-merger-guide.canvas.tsx`](C:/Users/byron/.cursor/projects/c-Developer-Critical-Minerals-explorer-v3/canvases/revised-merger-guide.canvas.tsx)

@@ -10,7 +10,6 @@
 </head>
 <body>
   <div class="app-container">
-    <!-- Sidebar -->
     <aside class="sidebar">
       <div class="sidebar-header">
         <h1 class="logo-title">Critical Minerals Explorer</h1>
@@ -55,6 +54,27 @@
             <button id="basemap-streets" class="basemap-btn" data-style="streets">Streets</button>
           </div>
         </div>
+
+        <section class="occ-section" aria-label="Occurrence browser">
+          <div class="occ-section-header">
+            <h3 class="nav-section-title">Occurrences</h3>
+            <span id="occ-list-count" class="occ-panel-count">0</span>
+          </div>
+          <div class="occ-panel-tools">
+            <input id="occ-search" class="occ-search" type="search" placeholder="Search name, commodity, status…" />
+            <button type="button" id="occ-clear-filters" class="occ-clear hidden">Clear</button>
+          </div>
+          <div id="occ-status-filters" class="occ-status-filters"></div>
+          <button type="button" id="occ-list-toggle" class="occ-list-toggle" aria-expanded="true">
+            <svg class="occ-list-chevron" viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+            <span id="occ-list-toggle-label">Hide list</span>
+          </button>
+          <div id="occ-list-wrap" class="occ-list-wrap">
+            <div id="occ-list" class="occ-list"></div>
+          </div>
+        </section>
       </nav>
 
       <div class="sidebar-footer">
@@ -68,10 +88,10 @@
       </div>
     </aside>
 
-    <!-- Map Canvas -->
     <main class="map-container">
       <div id="map"></div>
       <div id="legend-panel" class="legend-panel"></div>
+      <div id="occ-kpi" class="occ-kpi" aria-live="polite"></div>
     </main>
   </div>
 

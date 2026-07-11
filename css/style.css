@@ -1,4 +1,4 @@
-/* Critical Minerals Explorer - Main Styles */
+﻿/* Critical Minerals Explorer - Main Styles */
 :root {
   --primary: #1a56db;
   --primary-dark: #1e429f;
@@ -56,8 +56,8 @@ html, body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-size: 14px;
   line-height: 1.5;
-  color: var(--text-primary);
-  background-color: var(--bg-dark);
+  color: var(--card-light-text);
+  background-color: #f1f5f9;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -68,34 +68,35 @@ html, body {
   width: 100vw;
 }
 
-/* Sidebar */
+/* Sidebar ? light control panel */
 .sidebar {
-  width: 260px;
-  min-width: 260px;
+  width: 300px;
+  min-width: 300px;
   height: 100%;
-  background: var(--bg-card);
-  border-right: 1px solid var(--border);
+  background: var(--card-light-bg);
+  border-right: 1px solid var(--card-light-border);
   display: flex;
   flex-direction: column;
   z-index: 10;
+  color: var(--card-light-text);
 }
 
 .sidebar-header {
   padding: var(--space-4);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--card-light-border);
 }
 
 .logo-title {
   font-size: var(--text-lg);
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--card-light-text);
   margin-bottom: 2px;
   letter-spacing: -0.01em;
 }
 
 .logo-subtitle {
   font-size: var(--text-sm);
-  color: var(--text-muted);
+  color: var(--card-light-text-muted);
   font-weight: 400;
 }
 
@@ -103,10 +104,8 @@ html, body {
   flex: 1;
   overflow-y: auto;
   padding: var(--space-3) 0;
-  /* Custom thin scrollbar - a native default scrollbar looks out of place
-     against this otherwise quiet, flat instrument-panel theme. */
   scrollbar-width: thin;
-  scrollbar-color: var(--border) transparent;
+  scrollbar-color: #cbd5e1 transparent;
 }
 
 .sidebar-nav::-webkit-scrollbar {
@@ -118,13 +117,13 @@ html, body {
 }
 
 .sidebar-nav::-webkit-scrollbar-thumb {
-  background: var(--border);
+  background: #cbd5e1;
   border-radius: 4px;
-  border: 2px solid var(--bg-card);
+  border: 2px solid var(--card-light-bg);
 }
 
 .sidebar-nav::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted);
+  background: #94a3b8;
 }
 
 .nav-section {
@@ -141,11 +140,12 @@ html, body {
 .layer-group-title {
   font-size: var(--text-xs);
   font-weight: 600;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .nav-section-title {
-  color: var(--text-muted);
+  color: var(--card-light-text-muted);
   margin-bottom: var(--space-2);
 }
 
@@ -161,10 +161,10 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: transparent;
-  border: 1px solid var(--border);
+  background: #fff;
+  border: 1px solid var(--card-light-border);
   border-radius: 6px;
-  color: var(--text-secondary);
+  color: var(--card-light-text-muted);
   cursor: pointer;
   transition: all var(--transition);
 }
@@ -175,9 +175,9 @@ html, body {
 }
 
 .control-btn:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
-  border-color: var(--bg-hover);
+  background: #f1f5f9;
+  color: var(--card-light-text);
+  border-color: #cbd5e1;
 }
 
 .control-btn:active {
@@ -192,7 +192,7 @@ html, body {
 
 .layer-group {
   padding: 0 var(--space-4);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--card-light-border);
 }
 
 .layer-group:last-child {
@@ -207,16 +207,14 @@ html, body {
   padding: var(--space-3) 0;
   border: none;
   background: transparent;
-  /* Muted by default (matches .nav-section-title) - brightens on hover so
-     it's clear the whole header row is interactive, not just the chevron. */
-  color: var(--text-muted);
+  color: var(--card-light-text-muted);
   cursor: pointer;
   text-align: left;
   transition: color var(--transition);
 }
 
 .layer-group-toggle:hover {
-  color: var(--text-primary);
+  color: var(--card-light-text);
 }
 
 .layer-group-chevron {
@@ -236,7 +234,7 @@ html, body {
 .layer-group-count {
   font-size: var(--text-2xs);
   font-weight: 400;
-  color: var(--text-muted);
+  color: var(--card-light-text-muted);
 }
 
 .layer-group-body {
@@ -266,23 +264,20 @@ html, body {
 }
 
 .layer-item:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: #f1f5f9;
 }
 
 .layer-item:has(input:checked) .layer-label {
-  color: var(--text-primary);
+  color: var(--card-light-text);
 }
 
-/* Left accent bar - a scannable "this layer is on" signal independent of
-   reading label color, since a category swatch's own color shouldn't be
-   read as a selection state. */
 .layer-item:has(input:checked) {
   border-left-color: var(--primary);
-  background: rgba(26, 86, 219, 0.08);
+  background: #eff6ff;
 }
 
 .layer-item:has(input:checked):hover {
-  background: rgba(26, 86, 219, 0.14);
+  background: #dbeafe;
 }
 
 .layer-item.loading {
@@ -291,16 +286,10 @@ html, body {
 }
 
 .layer-item.loading .layer-label::after {
-  content: ' (loading…)';
-  color: var(--text-muted);
+  content: ' (loading?)';
+  color: var(--card-light-text-muted);
 }
 
-/*
- * Custom switch (replaces the native checkbox box) - built entirely with
- * `appearance: none` + a ::after knob on the input itself, so no extra
- * markup/JS is needed. Still a real, keyboard/screen-reader-accessible
- * checkbox underneath.
- */
 .layer-item input[type="checkbox"] {
   appearance: none;
   -webkit-appearance: none;
@@ -309,8 +298,8 @@ html, body {
   height: 15px;
   margin: 0;
   border-radius: 999px;
-  background: var(--bg-dark);
-  border: 1px solid var(--border);
+  background: #e2e8f0;
+  border: 1px solid var(--card-light-border);
   cursor: pointer;
   flex-shrink: 0;
   transition: background var(--transition), border-color var(--transition);
@@ -324,7 +313,7 @@ html, body {
   width: 11px;
   height: 11px;
   border-radius: 50%;
-  background: var(--text-muted);
+  background: #94a3b8;
   transition: transform var(--transition), background var(--transition);
 }
 
@@ -343,7 +332,6 @@ html, body {
   outline-offset: 2px;
 }
 
-/* Commodity picker (e.g. MODS) - indented under its layer row */
 .commodity-picker-wrap {
   padding: 0 var(--space-1) var(--space-2) 32px;
 }
@@ -353,9 +341,9 @@ html, body {
   padding: 5px 8px;
   font-size: 12px;
   font-family: inherit;
-  color: var(--text-primary);
-  background: var(--bg-dark);
-  border: 1px solid var(--border);
+  color: var(--card-light-text);
+  background: #fff;
+  border: 1px solid var(--card-light-border);
   border-radius: 4px;
   cursor: pointer;
   transition: border-color var(--transition);
@@ -363,7 +351,7 @@ html, body {
 
 .commodity-select:hover,
 .commodity-select:focus-visible {
-  border-color: var(--primary);
+  border-color: #94a3b8;
 }
 
 .commodity-select:focus-visible {
@@ -374,31 +362,26 @@ html, body {
 .commodity-select optgroup {
   font-style: normal;
   font-weight: 600;
-  color: var(--text-muted);
+  color: var(--card-light-text-muted);
 }
 
 .commodity-select option {
   font-weight: 400;
-  color: var(--text-primary);
+  color: var(--card-light-text);
 }
 
 .layer-label {
   font-size: var(--text-sm);
-  color: var(--text-secondary);
+  color: var(--card-light-text-muted);
   font-weight: 400;
 }
 
-/*
- * Basemap segmented control - one outer border + internal dividers instead
- * of three separately-bordered buttons, so it reads as a single control
- * with three states (like a native macOS/Mapbox Studio segmented picker)
- * rather than a row of buttons.
- */
 .basemap-options {
   display: flex;
-  border: 1px solid var(--border);
+  border: 1px solid var(--card-light-border);
   border-radius: 6px;
   overflow: hidden;
+  background: #fff;
 }
 
 .basemap-btn {
@@ -406,8 +389,8 @@ html, body {
   padding: 6px 8px;
   background: transparent;
   border: none;
-  border-right: 1px solid var(--border);
-  color: var(--text-secondary);
+  border-right: 1px solid var(--card-light-border);
+  color: var(--card-light-text-muted);
   font-size: var(--text-sm);
   font-weight: 400;
   cursor: pointer;
@@ -419,34 +402,33 @@ html, body {
 }
 
 .basemap-btn:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
+  background: #f1f5f9;
+  color: var(--card-light-text);
 }
 
 .basemap-btn.active {
-  background: var(--bg-hover);
-  color: var(--text-primary);
+  background: #eff6ff;
+  color: #1e40af;
   font-weight: 500;
 }
 
-/* Sidebar Footer */
 .sidebar-footer {
   padding: var(--space-3) var(--space-4);
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--card-light-border);
 }
 
 .data-status {
   font-size: var(--text-2xs);
-  color: var(--text-muted);
+  color: var(--card-light-text-muted);
   line-height: 1.4;
   margin-bottom: var(--space-2);
   padding-bottom: var(--space-2);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--card-light-border);
 }
 
 .coordinates, .zoom-level {
   font-size: var(--text-2xs);
-  color: var(--text-muted);
+  color: var(--card-light-text-muted);
   font-family: 'SF Mono', 'Consolas', monospace;
 }
 
@@ -469,13 +451,14 @@ html, body {
 /* Legend Panel */
 .legend-panel {
   position: absolute;
-  bottom: 16px;
+  top: 16px;
   left: 16px;
+  bottom: auto;
   z-index: 5;
   display: flex;
-  flex-direction: column-reverse;
+  flex-direction: column;
   gap: 10px;
-  max-height: calc(100% - 32px);
+  max-height: calc(100% - 96px);
   overflow-y: auto;
   pointer-events: none;
 }
@@ -780,8 +763,8 @@ html, body {
 /* Responsive */
 @media (max-width: 768px) {
   .sidebar {
-    width: 224px;
-    min-width: 224px;
+    width: 260px;
+    min-width: 260px;
   }
 
   .logo-title {
@@ -789,7 +772,8 @@ html, body {
   }
 
   .nav-section,
-  .layer-group {
+  .layer-group,
+  .occ-section {
     padding-left: var(--space-3);
     padding-right: var(--space-3);
   }
@@ -935,15 +919,307 @@ html, body {
 
 .layer-hint {
   font-size: var(--text-2xs);
-  color: var(--text-muted);
+  color: var(--card-light-text-muted);
   margin-top: 6px;
   line-height: 1.4;
 }
 
 .layer-note {
   font-size: var(--text-2xs);
-  color: var(--text-muted);
+  color: var(--card-light-text-muted);
   margin-top: 6px;
   line-height: 1.4;
   opacity: 0.8;
+}
+
+/* ---- Occurrence browser (sidebar) + bottom KPI ---- */
+.occ-section {
+  margin-top: var(--space-2);
+  padding: var(--space-3) var(--space-4) var(--space-4);
+  border-top: 1px solid var(--card-light-border);
+}
+
+.occ-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+}
+
+.occ-section-header .nav-section-title {
+  margin-bottom: 0;
+}
+
+.occ-panel-count {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--card-light-text-muted);
+}
+
+.occ-panel-tools {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.occ-search {
+  flex: 1;
+  border: 1px solid var(--card-light-border);
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-size: var(--text-sm);
+  font-family: inherit;
+  color: var(--card-light-text);
+  background: #fff;
+}
+
+.occ-search:focus {
+  outline: none;
+  border-color: #94a3b8;
+}
+
+.occ-clear {
+  border: none;
+  background: transparent;
+  color: var(--card-light-link);
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  text-transform: uppercase;
+}
+
+.occ-clear.hidden {
+  display: none;
+}
+
+.occ-status-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.occ-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--card-light-border);
+  background: #fff;
+  border-radius: 4px;
+  padding: 3px 6px;
+  font-size: 10px;
+  color: var(--card-light-text-muted);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.occ-chip:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.occ-chip.active {
+  background: #eff6ff;
+  border-color: #93c5fd;
+  color: #1e40af;
+}
+
+.occ-chip-count {
+  font-weight: 600;
+}
+
+.occ-list-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: var(--card-light-text-muted);
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 4px 0 6px;
+}
+
+.occ-list-toggle:hover {
+  color: var(--card-light-text);
+}
+
+.occ-list-chevron {
+  transition: transform var(--transition);
+}
+
+.occ-list-toggle.collapsed .occ-list-chevron {
+  transform: rotate(-90deg);
+}
+
+.occ-list-wrap {
+  max-height: 280px;
+  overflow: hidden;
+  border: 1px solid var(--card-light-border);
+  border-radius: 6px;
+  background: #fff;
+  transition: max-height 0.2s ease, border-color 0.2s ease;
+}
+
+.occ-list-wrap.collapsed {
+  max-height: 0;
+  border-color: transparent;
+}
+
+.occ-list {
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 4px 0;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.occ-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 8px 10px;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  color: inherit;
+}
+
+.occ-row:hover,
+.occ-row.selected {
+  background: #f1f5f9;
+}
+
+.occ-row-name {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--card-light-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.occ-row-meta {
+  font-size: var(--text-2xs);
+  color: var(--card-light-text-muted);
+}
+
+.occ-empty,
+.occ-hint {
+  font-size: var(--text-xs);
+  color: var(--card-light-text-muted);
+  padding: 12px;
+  line-height: 1.4;
+}
+
+.occ-back {
+  border: none;
+  background: transparent;
+  color: var(--card-light-link);
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  text-transform: uppercase;
+  padding: 4px 10px;
+}
+
+.occ-detail-title {
+  font-size: var(--text-md);
+  font-weight: 600;
+  padding: 4px 10px 8px;
+  color: var(--card-light-text);
+}
+
+.occ-kv {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  gap: 4px 8px;
+  padding: 2px 10px;
+  font-size: var(--text-xs);
+}
+
+.occ-k {
+  color: var(--card-light-text-muted);
+}
+
+.occ-v {
+  color: var(--card-light-text);
+  word-break: break-word;
+}
+
+.occ-mods-link {
+  display: inline-block;
+  margin: 10px;
+  font-size: var(--text-xs);
+  color: var(--card-light-link);
+}
+
+.occ-kpi {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 6;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  align-items: baseline;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid var(--card-light-border);
+  border-radius: var(--radius);
+  padding: 8px 14px;
+  box-shadow: var(--shadow);
+  max-width: min(640px, calc(100% - 32px));
+  color: var(--card-light-text);
+  font-size: var(--text-sm);
+}
+
+.occ-kpi-main strong {
+  font-size: var(--text-md);
+  font-weight: 600;
+}
+
+.occ-kpi-muted {
+  color: var(--card-light-text-muted);
+  font-weight: 500;
+}
+
+.occ-kpi-label {
+  color: var(--card-light-text-muted);
+  margin-left: 4px;
+}
+
+.occ-kpi-bit {
+  font-size: var(--text-2xs);
+  color: var(--card-light-text-muted);
+}
+
+.occ-kpi-bit em {
+  font-style: normal;
+  font-weight: 600;
+  color: var(--card-light-text);
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    width: 260px;
+    min-width: 260px;
+  }
+
+  .occ-kpi {
+    max-width: calc(100% - 24px);
+  }
 }
