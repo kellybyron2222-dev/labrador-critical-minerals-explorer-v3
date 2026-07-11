@@ -1,0 +1,523 @@
+/**
+ * Critical Minerals Explorer - Application Orchestrator
+ * Wires Module 1 (MapBase) and Module 2 (LayerManager)
+ */
+
+import maplibregl from 'maplibre-gl';
+import MapBase from './modules/MapBase.js';
+import LayerManager from './modules/LayerManager.js';
+import LegendPanel from './modules/LegendPanel.js';
+import {
+  LAYER_CONFIG,
+  WMS_CONFIG,
+  LAYER_GROUPS,
+  LAYER_GROUP_ORDER,
+  buildMODSColorExpression,
+  buildMODSEnabledCommodityFilter,
+  buildMODSLegendItems,
+  modsCommodityPickerLabel,
+  resolveMODSCommodities,
+  resolveMODSCommodityColor,
+  resolveMODSLegendCommodities,
+  featureBelongsToCommodity,
+  MODS_SURFACE_DEFAULT_COUNT
+} from './config/layerConfig.js';
+import { computeCommoditySurface } from './modules/SurfaceInterpolation.js';
+
+class MineralsMapApp {
+  constructor() {
+    this.mapBase = new MapBase();
+    this.layerManager = null;
+    this.legendPanel = new LegendPanel('legend-panel');
+    // Occurrence-density surface visibility (Phase 1.1c) - a sub-toggle
+    // inside the MODS legend card, independent of the commodity picker and
+    // the main layer checkbox. Seeded from config so a future author can
+    // ship it off-by-default without hunting through app.js.
+    this.showMODSSurface = LAYER_CONFIG.modsOccurrences.surface?.defaultVisible !== false;
+    // Per-mineral legend checkboxes control both circle visibility and which
+    // surfaces are eligible (master surface toggle still gates shading).
+    this.enabledCommodities = [];
+    this.modsSurfaceCache = new Map();
+    this.currentMODSPickerValue = null;
+    this.init();
+  }
+
+  async init() {
+    const map = await this.mapBase.init();
+
+    this.layerManager = new LayerManager(map);
+    this.mapBase.onStyleChange = () => this.layerManager.refreshLayers();
+
+    await this.layerManager.loadAllLayers();
+
+    this.renderLayerSidebar();
+    this.bindLayerControls();
+    // Applies the default commodity filter/color + legend before the initial
+    // legend sync below, so MODS renders its default (critical-minerals
+    // preset) legend on the first paint rather than a generic one that
+    // immediately gets replaced.
+    this.bindMODSCommodityPicker();
+    this.bindInteractions();
+    this.syncInitialLegends();
+  }
+
+  /** Groups vector + WMS layer configs by their `group` id for sidebar rendering. */
+  buildLayerGroupMap() {
+    const map = new Map();
+
+    const addToGroup = (groupId, entry) => {
+      if (!groupId) return;
+      if (!map.has(groupId)) map.set(groupId, []);
+      map.get(groupId).push(entry);
+    };
+
+    Object.entries(LAYER_CONFIG).forEach(([name, config]) => {
+      addToGroup(config.group, { type: 'vector', name, config });
+    });
+    Object.entries(WMS_CONFIG).forEach(([name, config]) => {
+      addToGroup(config.group, { type: 'wms', name, config });
+    });
+
+    return map;
+  }
+
+  /** Builds collapsible thematic layer groups in the sidebar from layer config. */
+  renderLayerSidebar() {
+    const container = document.getElementById('layer-groups');
+    if (!container) return;
+
+    const groupMap = this.buildLayerGroupMap();
+    container.innerHTML = '';
+
+    LAYER_GROUP_ORDER.forEach((groupId) => {
+      const layers = groupMap.get(groupId);
+      if (!layers?.length) return;
+
+      const groupDef = LAYER_GROUPS[groupId];
+      if (!groupDef) return;
+
+      const section = document.createElement('section');
+      section.className = 'layer-group';
+      if (groupDef.defaultExpanded) section.classList.add('expanded');
+
+      const toggle = document.createElement('button');
+      toggle.type = 'button';
+      toggle.className = 'layer-group-toggle';
+      toggle.setAttribute('aria-expanded', String(groupDef.defaultExpanded));
+      toggle.innerHTML = `
+        <svg class="layer-group-chevron" viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="9 6 15 12 9 18"></polyline>
+        </svg>
+        <span class="layer-group-title">${groupDef.title}</span>
+        <span class="layer-group-count">${layers.length}</span>
+      `;
+      toggle.addEventListener('click', () => {
+        const expanded = section.classList.toggle('expanded');
+        toggle.setAttribute('aria-expanded', String(expanded));
+      });
+      section.appendChild(toggle);
+
+      const body = document.createElement('div');
+      body.className = 'layer-group-body';
+
+      const list = document.createElement('div');
+      list.className = `layer-list${layers.some((l) => l.type === 'wms') ? ' wms-layers' : ''}`;
+
+      layers.forEach(({ type, name, config }) => {
+        const checkboxId = type === 'vector' ? `layer-${name}` : `wms-${name}`;
+        const label = type === 'vector' ? config.sidebarLabel : config.label;
+
+        const item = document.createElement('label');
+        item.className = 'layer-item';
+        item.innerHTML = `
+          <input type="checkbox" id="${checkboxId}"${config.visible ? ' checked' : ''}>
+          <span class="layer-indicator ${config.indicatorClass}"></span>
+          <span class="layer-label">${label}</span>
+        `;
+        list.appendChild(item);
+
+        if (type === 'vector' && config.commodityPicker) {
+          list.appendChild(this.buildCommodityPicker(name, config.commodityPicker));
+        }
+      });
+
+      body.appendChild(list);
+
+      if (groupDef.hint) {
+        const hint = document.createElement('p');
+        hint.className = 'layer-hint';
+        hint.textContent = groupDef.hint;
+        body.appendChild(hint);
+      }
+      if (groupDef.note) {
+        const note = document.createElement('p');
+        note.className = 'layer-note';
+        note.textContent = groupDef.note;
+        body.appendChild(note);
+      }
+
+      section.appendChild(body);
+      container.appendChild(section);
+    });
+  }
+
+  /** Builds the commodity-filter `<select>` shown under a layer row (currently only MODS) from its `commodityPicker` config. */
+  buildCommodityPicker(name, pickerConfig) {
+    const wrap = document.createElement('div');
+    wrap.className = 'commodity-picker-wrap';
+
+    const select = document.createElement('select');
+    select.id = `${name}-commodity-picker`;
+    select.className = 'commodity-select';
+
+    pickerConfig.groups.forEach((group) => {
+      const optgroup = document.createElement('optgroup');
+      optgroup.label = group.label;
+      group.options.forEach(({ value, label }) => {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = label;
+        optgroup.appendChild(option);
+      });
+      select.appendChild(optgroup);
+    });
+
+    select.value = pickerConfig.defaultValue;
+    wrap.appendChild(select);
+    return wrap;
+  }
+
+  /** Wires the MODS commodity picker to a MapLibre filter + color override on the underlying circle layer (no re-fetch - same source data, just filtered/recolored), recomputes the occurrence-density surface for the new selection, and keeps the legend in sync. */
+  bindMODSCommodityPicker() {
+    const picker = document.getElementById('modsOccurrences-commodity-picker');
+    if (!picker) return;
+
+    const applyCommodity = (value) => {
+      this.currentMODSPickerValue = value;
+      this.layerManager.setPaintProperty('modsOccurrences', 'circle-color', buildMODSColorExpression(value));
+      this.resetMODSEnabledCommodities(value);
+      this.applyMODSCommodityVisibility();
+      this.updateMODSSurface();
+      this.updateMODSLegend(value);
+    };
+
+    picker.addEventListener('change', (e) => applyCommodity(e.target.value));
+    applyCommodity(picker.value);
+  }
+
+  /**
+   * Resets which minerals are checked when the picker changes.
+   * Single commodity → that mineral only. Multi-commodity → first N of the
+   * legend list (MODS_SURFACE_DEFAULT_COUNT). Clears the geometry cache.
+   */
+  resetMODSEnabledCommodities(value) {
+    this.modsSurfaceCache.clear();
+    const available = resolveMODSLegendCommodities(value);
+    const resolved = resolveMODSCommodities(value);
+    if (resolved && resolved.length === 1) {
+      this.enabledCommodities = [resolved[0]];
+    } else {
+      this.enabledCommodities = available.slice(0, MODS_SURFACE_DEFAULT_COUNT);
+    }
+  }
+
+  /** Applies circle + surface filters from picker scope and enabled commodities. */
+  applyMODSCommodityVisibility() {
+    const value = this.currentMODSPickerValue;
+    const resolved = resolveMODSCommodities(value);
+    const primaryOnly = !resolved || resolved.length > 1;
+
+    this.layerManager.setLayerFilter(
+      'modsOccurrences',
+      buildMODSEnabledCommodityFilter(value, this.enabledCommodities, { primaryOnly })
+    );
+    this.layerManager.setSurfaceEnabledCommodities('modsOccurrences', this.enabledCommodities);
+  }
+
+  /**
+   * Ensures geometry exists for every currently enabled mineral, then pushes
+   * the merged FeatureCollection to LayerManager. Surfaces always use
+   * primary-commodity points only.
+   */
+  updateMODSSurface() {
+    const allFeatures = this.layerManager.getLoadedFeatures('modsOccurrences');
+    const tierCount = LAYER_CONFIG.modsOccurrences.surface?.tierCount;
+
+    for (const commodity of this.enabledCommodities) {
+      if (this.modsSurfaceCache.has(commodity)) continue;
+      const features = allFeatures.filter((f) => featureBelongsToCommodity(f, commodity));
+      const surface = computeCommoditySurface(features, commodity, { tierCount });
+      this.modsSurfaceCache.set(commodity, surface.features);
+    }
+
+    const merged = {
+      type: 'FeatureCollection',
+      features: []
+    };
+    for (const [commodity, features] of this.modsSurfaceCache) {
+      if (!this.enabledCommodities.includes(commodity)) continue;
+      merged.features.push(...features);
+    }
+
+    this.layerManager.updateOccurrenceSurface(
+      'modsOccurrences',
+      merged,
+      this.enabledCommodities
+    );
+    this.layerManager.setSurfaceVisibility('modsOccurrences', this.showMODSSurface);
+  }
+
+  /** Per-mineral checkbox: toggles circles and surfaces for that mineral. */
+  setMODSCommodityEnabled(commodity, checked) {
+    if (checked) {
+      if (!this.enabledCommodities.includes(commodity)) {
+        this.enabledCommodities = [...this.enabledCommodities, commodity];
+      }
+      this.modsSurfaceCache.delete(commodity);
+      this.applyMODSCommodityVisibility();
+      this.updateMODSSurface();
+    } else {
+      this.enabledCommodities = this.enabledCommodities.filter((c) => c !== commodity);
+      this.applyMODSCommodityVisibility();
+    }
+  }
+
+  setAllMODSCommoditiesEnabled(enabled) {
+    const value = this.currentMODSPickerValue;
+    const available = resolveMODSLegendCommodities(value);
+    this.enabledCommodities = enabled ? [...available] : [];
+    this.applyMODSCommodityVisibility();
+    if (enabled) this.updateMODSSurface();
+    this.updateMODSLegend(value);
+  }
+
+  /** Rebuilds the MODS legend card for the current commodity selection - mutates the shared config object so `updateVectorLegend`/`syncInitialLegends` stay generic. */
+  updateMODSLegend(value) {
+    const config = LAYER_CONFIG.modsOccurrences;
+    config.legendTitle = `MODS — ${modsCommodityPickerLabel(value)}`;
+    config.surfaceToggle = {
+      label: 'Show occurrence density surfaces',
+      checked: this.showMODSSurface,
+      onChange: (checked) => {
+        this.showMODSSurface = checked;
+        this.layerManager.setSurfaceVisibility('modsOccurrences', checked);
+      }
+    };
+
+    const legendCommodities = resolveMODSLegendCommodities(value);
+    const isMulti = legendCommodities.length > 1;
+
+    if (isMulti) {
+      config.legend = null;
+      config.commodityToggles = {
+        commodities: legendCommodities.map((c) => ({
+          value: c,
+          label: c,
+          color: resolveMODSCommodityColor(c)
+        })),
+        enabled: [...this.enabledCommodities],
+        onChange: (commodity, checked) => this.setMODSCommodityEnabled(commodity, checked),
+        onAllOn: () => this.setAllMODSCommoditiesEnabled(true),
+        onAllOff: () => this.setAllMODSCommoditiesEnabled(false)
+      };
+    } else {
+      config.commodityToggles = null;
+      config.legend = buildMODSLegendItems(value);
+    }
+
+    const checkbox = document.getElementById('layer-modsOccurrences');
+    const visible = checkbox ? checkbox.checked : config.visible;
+
+    this.legendPanel.hideLegend('layer-modsOccurrences');
+    this.updateVectorLegend('modsOccurrences', visible);
+  }
+
+  /** Shows legends for any layers that are checked/visible by default on page load. */
+  syncInitialLegends() {
+    Object.entries(LAYER_CONFIG).forEach(([name, config]) => {
+      if (config.visible) this.updateVectorLegend(name, true);
+    });
+  }
+
+  updateVectorLegend(name, visible) {
+    const config = LAYER_CONFIG[name];
+    this.legendPanel.setLayerLegend(`layer-${name}`, visible, {
+      title: config.legendTitle,
+      items: config.legend,
+      shape: config.legendShape,
+      note: config.legendNote,
+      surfaceToggle: config.surfaceToggle,
+      commodityToggles: config.commodityToggles
+    });
+  }
+
+  async updateWMSLegend(name, visible) {
+    const key = `wms-${name}`;
+    if (!visible) {
+      this.legendPanel.hideLegend(key);
+      return;
+    }
+
+    const config = WMS_CONFIG[name];
+    // Prefer real per-class text (wraps into columns, stays legible for
+    // large classifications); fall back to the raster GetLegendGraphic
+    // image only if the REST legend JSON is unavailable.
+    const items = await this.layerManager.getWMSLegendItems(name);
+
+    this.legendPanel.setLayerLegend(key, visible, items
+      ? { title: config.label, items, shape: 'icon' }
+      : { title: config.label, imageUrl: config.legendUrl });
+  }
+
+  get map() {
+    return this.mapBase.map;
+  }
+
+  bindLayerControls() {
+    Object.keys(LAYER_CONFIG).forEach((name) => {
+      const checkbox = document.getElementById(`layer-${name}`);
+      if (!checkbox) return;
+
+      checkbox.addEventListener('change', (e) => {
+        this.layerManager.setLayerVisibility(name, e.target.checked);
+        this.updateVectorLegend(name, e.target.checked);
+      });
+    });
+
+    Object.keys(WMS_CONFIG).forEach((name) => {
+      const checkbox = document.getElementById(`wms-${name}`);
+      if (!checkbox) return;
+
+      const item = checkbox.closest('.layer-item');
+
+      checkbox.addEventListener('change', async (e) => {
+        const checked = e.target.checked;
+        checkbox.disabled = true;
+        item?.classList.add('loading');
+        try {
+          await this.layerManager.setWMSLayerVisibility(name, checked);
+          await this.updateWMSLegend(name, checked);
+        } finally {
+          checkbox.disabled = false;
+          item?.classList.remove('loading');
+        }
+      });
+    });
+  }
+
+  bindInteractions() {
+    this.map.on('click', 'critical-minerals-layer', (e) => {
+      const coordinates = e.features[0].geometry.coordinates.slice();
+      const {
+        name,
+        OperatorOwnersEN: operator,
+        CommoditiesEN: commodities,
+        ProvincesEN: province,
+        DevelopmentStageEN: stage,
+        ActivityStatusEN: status,
+        Website: website
+      } = e.features[0].properties;
+
+      const websiteRow = website && website !== 'N/A'
+        ? `<div class="popup-row"><span class="popup-label">Website:</span> <span class="popup-value"><a href="${website}" target="_blank" rel="noopener">Visit site</a></span></div>`
+        : '';
+
+      new maplibregl.Popup({ closeButton: true, closeOnClick: true })
+        .setLngLat(coordinates)
+        .setHTML(`
+          <div class="popup-content">
+            <h3 class="popup-title">${name}</h3>
+            <div class="popup-row"><span class="popup-label">Operator:</span> <span class="popup-value">${operator}</span></div>
+            <div class="popup-row"><span class="popup-label">Commodities:</span> <span class="popup-value">${commodities}</span></div>
+            <div class="popup-row"><span class="popup-label">Province:</span> <span class="popup-value">${province}</span></div>
+            <div class="popup-row"><span class="popup-label">Stage:</span> <span class="popup-value">${stage}</span></div>
+            <div class="popup-row"><span class="popup-label">Status:</span> <span class="popup-value">${status}</span></div>
+            ${websiteRow}
+          </div>
+        `)
+        .addTo(this.map);
+    });
+
+    this.bindMODSInteractions();
+
+    ['critical-minerals-layer', 'mods-layer'].forEach((layerId) => {
+      this.map.on('mouseenter', layerId, () => {
+        this.map.getCanvas().style.cursor = 'pointer';
+      });
+      this.map.on('mouseleave', layerId, () => {
+        this.map.getCanvas().style.cursor = '';
+      });
+    });
+  }
+
+  /** MODS deep-link: NMINO (e.g. "023G/09/Ni 002") plugs straight into the province's occurrence-report lookup. */
+  modsRecordUrl(nmino) {
+    if (!nmino) return null;
+    return `https://gis.geosurv.gov.nl.ca/mods/ModsCard.asp?NMINOString=${encodeURIComponent(nmino).replace(/%20/g, '+')}`;
+  }
+
+  bindMODSInteractions() {
+    // Single circle layer, visible/clickable at every zoom (see
+    // `commodityPicker`/`paint.circle` in layerConfig.js) - no separate
+    // cluster/heatmap layer to bind here.
+    this.map.on('click', 'mods-layer', (e) => {
+      const coordinates = e.features[0].geometry.coordinates.slice();
+      const {
+        name,
+        primaryCommodity,
+        COMNAME: commodity,
+        secondaryCommodities,
+        commodityList,
+        STATUS: status,
+        DEPDESC: depositType,
+        OREMIN: oreMinerals,
+        WORKING: workHistory,
+        NTS: nts,
+        NMINO: nmino
+      } = e.features[0].properties;
+
+      const primary = primaryCommodity || commodity;
+      const secondaries = Array.isArray(secondaryCommodities)
+        ? secondaryCommodities
+        : (commodityList || []).filter((c) => c !== primary);
+
+      const commodityRows = [['Primary commodity', primary]];
+      if (secondaries.length) {
+        commodityRows.push(['Also reported', secondaries.join(', ')]);
+      }
+
+      const rows = [
+        ...commodityRows,
+        ['Status', status],
+        ['Deposit type', depositType],
+        ['Ore minerals', oreMinerals],
+        ['Work history', workHistory],
+        ['NTS sheet', nts]
+      ]
+        .filter(([, value]) => value && value.trim())
+        .map(
+          ([label, value]) =>
+            `<div class="popup-row"><span class="popup-label">${label}:</span> <span class="popup-value">${value}</span></div>`
+        )
+        .join('');
+
+      const recordUrl = this.modsRecordUrl(nmino);
+      const linkRow = recordUrl
+        ? `<div class="popup-row"><span class="popup-label">MODS record:</span> <span class="popup-value"><a href="${recordUrl}" target="_blank" rel="noopener">${nmino}</a></span></div>`
+        : '';
+
+      new maplibregl.Popup({ closeButton: true, closeOnClick: true })
+        .setLngLat(coordinates)
+        .setHTML(`
+          <div class="popup-content">
+            <h3 class="popup-title">${name}</h3>
+            ${rows}
+            ${linkRow}
+          </div>
+        `)
+        .addTo(this.map);
+    });
+  }
+}
+
+export default MineralsMapApp;

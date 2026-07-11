@@ -1,0 +1,19 @@
+{
+  "name": "labrador-critical-minerals-v3",
+  "private": true,
+  "version": "3.0.0-dev",
+  "type": "module",
+  "description": "Labrador Critical Minerals Explorer V3 — MapLibre multi-layer hub blended with mission-control occurrence UX. Real public data only.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@turf/turf": "^7.3.5",
+    "maplibre-gl": "^4.7.1"
+  },
+  "devDependencies": {
+    "vite": "^5.4.2"
+  }
+}
