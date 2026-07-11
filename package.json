@@ -3,7 +3,7 @@
   "private": true,
   "version": "3.0.0-dev",
   "type": "module",
-  "description": "Labrador Critical Minerals Explorer V3 — MapLibre multi-layer hub blended with mission-control occurrence UX. Real public data only.",
+  "description": "Labrador Critical Minerals Explorer V3 - MapLibre multi-layer hub blended with mission-control occurrence UX. Real public data only.",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
