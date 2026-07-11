@@ -454,6 +454,14 @@ class MineralsMapApp {
 
   updateVectorLegend(name, visible) {
     const config = LAYER_CONFIG[name];
+    if (!config) return;
+
+    // ArcGIS classification legends (e.g. GeoAtlas bedrock) — fetch async like WMS.
+    if (config.legendJsonUrl) {
+      this.updateVectorArcGISLegend(name, visible);
+      return;
+    }
+
     this.legendPanel.setLayerLegend(`layer-${name}`, visible, {
       title: config.legendTitle,
       items: config.legend,
@@ -464,6 +472,20 @@ class MineralsMapApp {
     });
   }
 
+  async updateVectorArcGISLegend(name, visible) {
+    const key = `layer-${name}`;
+    if (!visible) {
+      this.legendPanel.hideLegend(key);
+      return;
+    }
+
+    const config = LAYER_CONFIG[name];
+    const items = await this.layerManager.getVectorLegendItems(name);
+    this.legendPanel.setLayerLegend(key, visible, items
+      ? { title: config.legendTitle, items, shape: 'icon', note: config.legendNote }
+      : { title: config.legendTitle, note: config.legendNote || 'Legend unavailable' });
+  }
+
   async updateWMSLegend(name, visible) {
     const key = `wms-${name}`;
     if (!visible) {
@@ -472,9 +494,6 @@ class MineralsMapApp {
     }
 
     const config = WMS_CONFIG[name];
-    // Prefer real per-class text (wraps into columns, stays legible for
-    // large classifications); fall back to the raster GetLegendGraphic
-    // image only if the REST legend JSON is unavailable.
     const items = await this.layerManager.getWMSLegendItems(name);
 
     this.legendPanel.setLayerLegend(key, visible, items
@@ -491,9 +510,35 @@ class MineralsMapApp {
       const checkbox = document.getElementById(`layer-${name}`);
       if (!checkbox) return;
 
-      checkbox.addEventListener('change', (e) => {
-        this.layerManager.setLayerVisibility(name, e.target.checked);
-        this.updateVectorLegend(name, e.target.checked);
+      const config = LAYER_CONFIG[name];
+      const item = checkbox.closest('.layer-item');
+
+      checkbox.addEventListener('change', async (e) => {
+        const checked = e.target.checked;
+
+        if (config.lazy && checked && !this.layerManager.isLayerLoaded(name)) {
+          checkbox.disabled = true;
+          item?.classList.add('loading');
+          try {
+            const ok = await this.layerManager.loadLayerOnDemand(name);
+            if (!ok) {
+              checkbox.checked = false;
+              return;
+            }
+            this.layerManager.setLayerVisibility(name, true);
+            if (this.layerManager.layers[name]) {
+              this.layerManager.layers[name].visible = true;
+            }
+            await this.updateVectorLegend(name, true);
+          } finally {
+            checkbox.disabled = false;
+            item?.classList.remove('loading');
+          }
+          return;
+        }
+
+        this.layerManager.setLayerVisibility(name, checked);
+        await this.updateVectorLegend(name, checked);
       });
     });
 
@@ -552,14 +597,48 @@ class MineralsMapApp {
     });
 
     this.bindMODSInteractions();
+    this.bindBedrockInteractions();
 
-    ['critical-minerals-layer', 'mods-layer'].forEach((layerId) => {
+    ['critical-minerals-layer', 'mods-layer', 'geoatlas-bedrock-fill'].forEach((layerId) => {
       this.map.on('mouseenter', layerId, () => {
         this.map.getCanvas().style.cursor = 'pointer';
       });
       this.map.on('mouseleave', layerId, () => {
         this.map.getCanvas().style.cursor = '';
       });
+    });
+  }
+
+  bindBedrockInteractions() {
+    this.map.on('click', 'geoatlas-bedrock-fill', (e) => {
+      if (!e.features?.length) return;
+      const feature = e.features[0];
+      const p = feature.properties || {};
+      const coordinates = e.lngLat;
+
+      const rows = [
+        ['Unit label', p.LABEL || p.name],
+        ['Lithology', p.LITHOLOGY],
+        ['Age', p.AGE],
+        ['Tectonic setting', p.TECTONIC],
+        ['Reference', p.REFERENCE]
+      ]
+        .filter(([, v]) => v && String(v).trim())
+        .map(
+          ([label, value]) =>
+            `<div class="popup-row"><span class="popup-label">${label}:</span> <span class="popup-value">${value}</span></div>`
+        )
+        .join('');
+
+      new maplibregl.Popup({ closeButton: true, closeOnClick: true })
+        .setLngLat(coordinates)
+        .setHTML(`
+          <div class="popup-content">
+            <h3 class="popup-title">${p.name || p.LABEL || 'Bedrock unit'}</h3>
+            ${rows}
+          </div>
+        `)
+        .addTo(this.map);
     });
   }
 

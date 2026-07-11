@@ -386,6 +386,64 @@ export const LAYER_GROUPS = {
  * development maturity.
  */
 export const LAYER_CONFIG = {
+  geoatlasBedrock: {
+    group: 'endowment',
+    sidebarLabel: 'Bedrock Geology (NL 1:1M)',
+    indicatorClass: 'geoatlasBedrock',
+    source: 'geoatlas-bedrock-source',
+    layer: 'geoatlas-bedrock-fill',
+    outline: 'geoatlas-bedrock-outline',
+    // Heavy polygon layer (~3,510 features) — fetch only when first toggled on.
+    lazy: true,
+    visible: false,
+    enrichment: 'bedrockRgb',
+    // Baked GeoJSON (npm run fetch:bedrock). IndexedDB keyed by cacheVersion.
+    dataUrl: './data/geoatlas-bedrock-1m.geojson',
+    cacheKey: 'geoatlas-bedrock-1m',
+    // Bump when regenerating public/data/geoatlas-bedrock-1m.geojson
+    cacheVersion: '2026-07-11',
+    // Insert below MODS / surfaces / facilities so endowment stays under points.
+    beforeLayerIds: [
+      'mods-surface-fill',
+      'mods-surface-outline',
+      'mods-layer',
+      'critical-minerals-layer'
+    ],
+    // Live GeoAtlas fallback if the static file is missing (dev / first clone).
+    paginatedQuery: {
+      url: `${GEOATLAS_REST_BASE}/Bedrock_Geology_All/MapServer/23/query`,
+      where: '1=1',
+      outFields: 'LABEL,LITHOLOGY,AGE,TECTONIC,REFERENCE,RED,GREEN,BLUE',
+      // Required: without this, coords arrive in NF_GNL1_NAD27 meters and
+      // polygons never appear on the MapLibre WGS84 basemap.
+      outSR: 4326,
+      // GeoAtlas returns empty FeatureCollection for f=geojson&outSR=4326;
+      // f=json works — LayerManager converts Esri rings → GeoJSON.
+      format: 'esrijson',
+      // Degrees in outSR=4326; cuts transfer time ~10× vs full vertices.
+      maxAllowableOffset: 0.002,
+      pageSize: 200,
+      concurrency: 4
+    },
+    paint: {
+      fill: {
+        'fill-color': ['get', 'fillColor'],
+        'fill-opacity': 0.5,
+        'fill-outline-color': 'rgba(30, 41, 59, 0.15)'
+      },
+      line: {
+        'line-color': 'rgba(30, 41, 59, 0.35)',
+        'line-width': 0.4,
+        'line-opacity': 0.7
+      }
+    },
+    legendTitle: 'Bedrock Geology (NL 1:1M)',
+    legendShape: 'icon',
+    legendNote: 'Provincial 1:1M bedrock units (NL GeoAtlas). Colors from source RGB.',
+    // Same ArcGIS legend JSON pattern as NRCan WMS — ~153 classification rows.
+    legendJsonUrl: `${GEOATLAS_REST_BASE}/Bedrock_Geology_All/MapServer/legend?f=json`,
+    legendLayerId: 23
+  },
   criticalMinerals: {
     group: 'occurrences',
     sidebarLabel: 'Critical Mineral Facilities',
@@ -394,11 +452,16 @@ export const LAYER_CONFIG = {
     layer: 'critical-minerals-layer',
     // No `labels` key - ~290 national points would clutter the map; details
     // are shown via click popup instead (see bindInteractions in app.js).
+    // Baked NL&L subset (npm run fetch:facilities). Live `sources` = fallback.
+    dataUrl: './data/critical-minerals-nl.geojson',
+    cacheKey: 'critical-minerals-nl',
+    cacheVersion: '2026-07-11',
     sources: CRITICAL_MINERALS_SOURCES,
     visible: true,
-    // Data stays national (fetched/held in full) - only what's drawn is
+    // Data stays national on live fallback - only what's drawn is
     // scoped to NL&L, since 'ProvincesEN' can list multiple provinces for
     // cross-boundary projects, hence a substring ('in') check rather than '=='.
+    // Baked file is already NL-filtered; filter remains harmless.
     filter: ['in', NL_LABRADOR_PROVINCE_NAME, ['get', 'ProvincesEN']],
     icon: {
       field: 'OperationGroupEN',
@@ -441,6 +504,11 @@ export const LAYER_CONFIG = {
     source: 'mods-source',
     layer: 'mods-layer',
     visible: true,
+    // Baked Labrador GeoJSON (npm run fetch:mods). IndexedDB after first hit;
+    // live paginatedQuery is fallback only.
+    dataUrl: './data/mods-labrador.geojson',
+    cacheKey: 'mods-labrador',
+    cacheVersion: '2026-07-11',
     // ~3,173 Labrador points, always rendered as commodity-colored circles at
     // every zoom (no heatmap, no clustering - see BUILD_PLAN.md Phase 1.1b).
     // `commodityPicker` drives a sidebar dropdown (app.js) that sets a
@@ -554,6 +622,10 @@ export const WMS_CONFIG = {
     bounds: NL_LABRADOR_BOUNDS,
     opacity: 0.65,
     visible: false,
+    // Baked Mercator-corrected NL&L image (npm run fetch:wms). Live GetMap = fallback.
+    imageUrl: './data/wms-lithium-nll.png',
+    cacheKey: 'wms-lithium-nll',
+    cacheVersion: '2026-07-11',
     legendUrl: wmsLegendUrl('pegmatite_lithium_en', '0'),
     legendJsonUrl: arcgisLegendJsonUrl('pegmatite_lithium_en'),
     legendLayerId: 0
@@ -567,6 +639,9 @@ export const WMS_CONFIG = {
     bounds: NL_LABRADOR_BOUNDS,
     opacity: 0.65,
     visible: false,
+    imageUrl: './data/wms-ree-nll.png',
+    cacheKey: 'wms-ree-nll',
+    cacheVersion: '2026-07-11',
     legendUrl: wmsLegendUrl('carbonatite_ree_en', '0'),
     legendJsonUrl: arcgisLegendJsonUrl('carbonatite_ree_en'),
     legendLayerId: 0
@@ -580,6 +655,9 @@ export const WMS_CONFIG = {
     bounds: NL_LABRADOR_BOUNDS,
     opacity: 0.65,
     visible: false,
+    imageUrl: './data/wms-graphite-nll.png',
+    cacheKey: 'wms-graphite-nll',
+    cacheVersion: '2026-07-11',
     legendUrl: wmsLegendUrl('graphite_prospectivity_en', '0'),
     legendJsonUrl: arcgisLegendJsonUrl('graphite_prospectivity_en'),
     legendLayerId: 0
@@ -587,12 +665,15 @@ export const WMS_CONFIG = {
   bedrock: {
     group: 'endowment',
     indicatorClass: 'wms-bedrock',
-    label: 'Bedrock Geology',
+    label: 'Bedrock Geology (national)',
     service: 'gsc_bedrock_geology_en',
     layers: '0',
     bounds: NL_LABRADOR_BOUNDS,
     opacity: 0.55,
     visible: false,
+    imageUrl: './data/wms-bedrock-nll.png',
+    cacheKey: 'wms-bedrock-nll',
+    cacheVersion: '2026-07-11',
     legendUrl: wmsLegendUrl('gsc_bedrock_geology_en', '0'),
     legendJsonUrl: arcgisLegendJsonUrl('gsc_bedrock_geology_en'),
     // REST sub-layer 1 = "Bedrock geology" (the 149-class thematic layer);
@@ -608,6 +689,9 @@ export const WMS_CONFIG = {
     bounds: NL_LABRADOR_BOUNDS,
     opacity: 0.55,
     visible: false,
+    imageUrl: './data/wms-surficial-nll.png',
+    cacheKey: 'wms-surficial-nll',
+    cacheVersion: '2026-07-11',
     legendUrl: wmsLegendUrl('gsc_surficial_geology_en', '1'),
     legendJsonUrl: arcgisLegendJsonUrl('gsc_surficial_geology_en'),
     // REST sub-layer 3 = "Surficial geology category" (the thematic classes);

@@ -7,7 +7,12 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "fetch:bedrock": "node scripts/fetch-bedrock.js",
+    "fetch:mods": "node scripts/fetch-mods.js",
+    "fetch:facilities": "node scripts/fetch-facilities.js",
+    "fetch:wms": "node scripts/fetch-wms.js",
+    "refresh:data": "node scripts/refresh-data.js"
   },
   "dependencies": {
     "@turf/turf": "^7.3.5",

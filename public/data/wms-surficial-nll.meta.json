@@ -1,0 +1,22 @@
+{
+  "version": "2026-07-11",
+  "contentHash": "97224627e46a6a58738e1056ae2ca3e3174bff4d56ea68636ecefb6f0d2c7876",
+  "cadenceMonths": 12,
+  "generatedAt": "2026-07-11T21:57:18.482Z",
+  "nextDue": "2027-07-11",
+  "refresh": "GitHub Actions refresh-data.yml (monthly; skips until nextDue) or npm run refresh:data",
+  "featureCount": null,
+  "width": 900,
+  "height": 1438,
+  "channels": 4,
+  "bounds": [
+    -68,
+    46,
+    -52,
+    61
+  ],
+  "source": "https://maps-cartes.services.geo.ca/server_serveur/services/NRCan/gsc_surficial_geology_en/MapServer/WMSServer",
+  "service": "gsc_surficial_geology_en",
+  "layers": "1",
+  "imageWidthRequest": 900
+}

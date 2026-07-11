@@ -286,7 +286,7 @@ html, body {
 }
 
 .layer-item.loading .layer-label::after {
-  content: ' (loading?)';
+  content: ' (loading…)';
   color: var(--card-light-text-muted);
 }
 
@@ -807,8 +807,9 @@ html, body {
   background: #f59e0b;
 }
 
-.layer-indicator.modsOccurrences {
-  background: #22c55e;
+.layer-indicator.geoatlasBedrock {
+  background: #b45309;
+  border-radius: 2px;
 }
 
 /* MapLibre Popup Styling */

@@ -1,0 +1,22 @@
+{
+  "version": "2026-07-11",
+  "contentHash": "ee577b00bc0bf4c049cc7101e68647e6c7919c59e4f1f5aa8fb5b5e6fa140bf7",
+  "cadenceMonths": 12,
+  "generatedAt": "2026-07-11T21:57:01.180Z",
+  "nextDue": "2027-07-11",
+  "refresh": "GitHub Actions refresh-data.yml (monthly; skips until nextDue) or npm run refresh:data",
+  "featureCount": null,
+  "width": 900,
+  "height": 1438,
+  "channels": 4,
+  "bounds": [
+    -68,
+    46,
+    -52,
+    61
+  ],
+  "source": "https://maps-cartes.services.geo.ca/server_serveur/services/NRCan/carbonatite_ree_en/MapServer/WMSServer",
+  "service": "carbonatite_ree_en",
+  "layers": "0",
+  "imageWidthRequest": 900
+}

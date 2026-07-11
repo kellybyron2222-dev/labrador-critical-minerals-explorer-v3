@@ -1,0 +1,127 @@
+[
+  {
+    "id": "geoatlas-bedrock-1m",
+    "label": "Bedrock Geology (NL 1:1M)",
+    "cadenceMonths": 6,
+    "fetchScript": "fetch:bedrock",
+    "kind": "geojson",
+    "outputs": [
+      "public/data/geoatlas-bedrock-1m.geojson",
+      "public/data/geoatlas-bedrock-1m.meta.json"
+    ],
+    "metaPath": "public/data/geoatlas-bedrock-1m.meta.json",
+    "assetPath": "public/data/geoatlas-bedrock-1m.geojson",
+    "cacheVersionPath": "js/config/layerConfig.js",
+    "cacheKey": "geoatlas-bedrock-1m"
+  },
+  {
+    "id": "mods-labrador",
+    "label": "Mineral Occurrences (MODS)",
+    "cadenceMonths": 3,
+    "fetchScript": "fetch:mods",
+    "kind": "geojson",
+    "outputs": [
+      "public/data/mods-labrador.geojson",
+      "public/data/mods-labrador.meta.json"
+    ],
+    "metaPath": "public/data/mods-labrador.meta.json",
+    "assetPath": "public/data/mods-labrador.geojson",
+    "cacheVersionPath": "js/config/layerConfig.js",
+    "cacheKey": "mods-labrador"
+  },
+  {
+    "id": "critical-minerals-nl",
+    "label": "Critical Mineral Facilities (NL&L)",
+    "cadenceMonths": 3,
+    "fetchScript": "fetch:facilities",
+    "kind": "geojson",
+    "outputs": [
+      "public/data/critical-minerals-nl.geojson",
+      "public/data/critical-minerals-nl.meta.json"
+    ],
+    "metaPath": "public/data/critical-minerals-nl.meta.json",
+    "assetPath": "public/data/critical-minerals-nl.geojson",
+    "cacheVersionPath": "js/config/layerConfig.js",
+    "cacheKey": "critical-minerals-nl"
+  },
+  {
+    "id": "wms-lithium-nll",
+    "label": "Lithium Prospectivity (WMS bake)",
+    "cadenceMonths": 12,
+    "fetchScript": "fetch:wms",
+    "fetchOncePerScript": true,
+    "kind": "image",
+    "outputs": [
+      "public/data/wms-lithium-nll.png",
+      "public/data/wms-lithium-nll.meta.json"
+    ],
+    "metaPath": "public/data/wms-lithium-nll.meta.json",
+    "assetPath": "public/data/wms-lithium-nll.png",
+    "cacheVersionPath": "js/config/layerConfig.js",
+    "cacheKey": "wms-lithium-nll"
+  },
+  {
+    "id": "wms-ree-nll",
+    "label": "REE Prospectivity (WMS bake)",
+    "cadenceMonths": 12,
+    "fetchScript": "fetch:wms",
+    "fetchOncePerScript": true,
+    "kind": "image",
+    "outputs": [
+      "public/data/wms-ree-nll.png",
+      "public/data/wms-ree-nll.meta.json"
+    ],
+    "metaPath": "public/data/wms-ree-nll.meta.json",
+    "assetPath": "public/data/wms-ree-nll.png",
+    "cacheVersionPath": "js/config/layerConfig.js",
+    "cacheKey": "wms-ree-nll"
+  },
+  {
+    "id": "wms-graphite-nll",
+    "label": "Graphite Prospectivity (WMS bake)",
+    "cadenceMonths": 12,
+    "fetchScript": "fetch:wms",
+    "fetchOncePerScript": true,
+    "kind": "image",
+    "outputs": [
+      "public/data/wms-graphite-nll.png",
+      "public/data/wms-graphite-nll.meta.json"
+    ],
+    "metaPath": "public/data/wms-graphite-nll.meta.json",
+    "assetPath": "public/data/wms-graphite-nll.png",
+    "cacheVersionPath": "js/config/layerConfig.js",
+    "cacheKey": "wms-graphite-nll"
+  },
+  {
+    "id": "wms-bedrock-nll",
+    "label": "Bedrock Geology national (WMS bake)",
+    "cadenceMonths": 12,
+    "fetchScript": "fetch:wms",
+    "fetchOncePerScript": true,
+    "kind": "image",
+    "outputs": [
+      "public/data/wms-bedrock-nll.png",
+      "public/data/wms-bedrock-nll.meta.json"
+    ],
+    "metaPath": "public/data/wms-bedrock-nll.meta.json",
+    "assetPath": "public/data/wms-bedrock-nll.png",
+    "cacheVersionPath": "js/config/layerConfig.js",
+    "cacheKey": "wms-bedrock-nll"
+  },
+  {
+    "id": "wms-surficial-nll",
+    "label": "Surficial Geology national (WMS bake)",
+    "cadenceMonths": 12,
+    "fetchScript": "fetch:wms",
+    "fetchOncePerScript": true,
+    "kind": "image",
+    "outputs": [
+      "public/data/wms-surficial-nll.png",
+      "public/data/wms-surficial-nll.meta.json"
+    ],
+    "metaPath": "public/data/wms-surficial-nll.meta.json",
+    "assetPath": "public/data/wms-surficial-nll.png",
+    "cacheVersionPath": "js/config/layerConfig.js",
+    "cacheKey": "wms-surficial-nll"
+  }
+]

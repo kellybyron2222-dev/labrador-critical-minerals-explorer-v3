@@ -1,0 +1,22 @@
+{
+  "version": "2026-07-11",
+  "contentHash": "0ae99450961a74cb3d5167ffa813b42b55ee48b68283cb093c5e012cf89e6947",
+  "cadenceMonths": 12,
+  "generatedAt": "2026-07-11T21:57:09.137Z",
+  "nextDue": "2027-07-11",
+  "refresh": "GitHub Actions refresh-data.yml (monthly; skips until nextDue) or npm run refresh:data",
+  "featureCount": null,
+  "width": 900,
+  "height": 1438,
+  "channels": 4,
+  "bounds": [
+    -68,
+    46,
+    -52,
+    61
+  ],
+  "source": "https://maps-cartes.services.geo.ca/server_serveur/services/NRCan/graphite_prospectivity_en/MapServer/WMSServer",
+  "service": "graphite_prospectivity_en",
+  "layers": "0",
+  "imageWidthRequest": 900
+}

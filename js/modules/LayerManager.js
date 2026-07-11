@@ -7,6 +7,7 @@ import {
   buildMODSSurfaceColorExpression
 } from '../config/layerConfig.js';
 import { normalizeMODSStatus } from '../config/modsFilters.js';
+import { getCachedGeoJSON, setCachedGeoJSON } from './layerCache.js';
 import { reprojectToMercator } from './wmsReprojection.js';
 
 // Source datasets are national-scale compilations (1:5M geology maps, ~1km
@@ -74,30 +75,141 @@ export default class LayerManager {
   }
 
   /**
+   * Esri polygon rings → GeoJSON Polygon / MultiPolygon.
+   * Exterior rings are clockwise in ArcGIS; opposite winding = holes.
+   */
+  esriPolygonToGeoJSON(geometry) {
+    const rings = geometry?.rings;
+    if (!Array.isArray(rings) || !rings.length) return null;
+
+    const ringArea = (ring) => {
+      let sum = 0;
+      for (let i = 0; i < ring.length - 1; i++) {
+        sum += ring[i][0] * ring[i + 1][1] - ring[i + 1][0] * ring[i][1];
+      }
+      return sum / 2;
+    };
+    // ArcGIS exteriors are clockwise (negative shoelace in lon/lat space).
+    const isClockwise = (ring) => ringArea(ring) < 0;
+
+    const polys = [];
+    let current = null;
+    for (const ring of rings) {
+      if (!ring?.length) continue;
+      if (isClockwise(ring) || !current) {
+        if (current) polys.push(current);
+        current = [ring];
+      } else {
+        current.push(ring);
+      }
+    }
+    if (current) polys.push(current);
+
+    if (!polys.length) return null;
+    if (polys.length === 1) return { type: 'Polygon', coordinates: polys[0] };
+    return { type: 'MultiPolygon', coordinates: polys };
+  }
+
+  esriFeatureToGeoJSON(feature) {
+    const geometry = this.esriPolygonToGeoJSON(feature?.geometry);
+    if (!geometry) return null;
+    return {
+      type: 'Feature',
+      properties: { ...(feature.attributes || {}) },
+      geometry
+    };
+  }
+
+  /**
    * Loops resultOffset/resultRecordCount against an ArcGIS REST query
    * endpoint whose feature count exceeds maxRecordCount (e.g. GeoAtlas MODS:
    * 1000/page, ~3,173 Labrador features -> 4 pages). Stops once a page comes
    * back short of a full page (cheaper and more robust than trusting
    * `exceededTransferLimit`, which some ArcGIS versions omit).
+   *
+   * `format: 'esrijson'` — required for GeoAtlas bedrock: `f=geojson&outSR=4326`
+   * returns an empty FeatureCollection on that service; `f=json&outSR=4326`
+   * returns projected rings we convert client-side.
    */
-  async fetchPaginatedGeoJSON({ url, where = '1=1', outFields = '*', pageSize = 1000 }) {
-    const features = [];
-    let offset = 0;
+  async fetchPaginatedGeoJSON({
+    url,
+    where = '1=1',
+    outFields = '*',
+    pageSize = 1000,
+    outSR,
+    format = 'geojson',
+    maxAllowableOffset,
+    concurrency = 1
+  }) {
+    const useEsri = format === 'esrijson';
 
-    for (;;) {
+    const buildParams = (offset) => {
       const params = new URLSearchParams({
         where,
         outFields,
-        f: 'geojson',
+        f: useEsri ? 'json' : 'geojson',
         resultOffset: String(offset),
         resultRecordCount: String(pageSize)
       });
+      // GeoAtlas bedrock (and some other MapServers) return native projected
+      // meters unless outSR=4326 is set — MapLibre needs WGS84 lon/lat.
+      if (outSR != null) params.set('outSR', String(outSR));
+      if (maxAllowableOffset != null) {
+        params.set('maxAllowableOffset', String(maxAllowableOffset));
+      }
+      return params;
+    };
 
-      const page = await this.fetchGeoJSON(`${url}?${params.toString()}`);
-      const pageFeatures = page?.features ?? [];
+    const parsePage = (page) => {
+      if (page?.error) {
+        console.error('ArcGIS query error:', page.error);
+        return { raw: [], features: [] };
+      }
+      const raw = page?.features ?? [];
+      const features = useEsri
+        ? raw.map((f) => this.esriFeatureToGeoJSON(f)).filter(Boolean)
+        : raw;
+      return { raw, features };
+    };
+
+    // Parallel path: count first, then fetch pages in a small pool.
+    if (concurrency > 1) {
+      const countParams = new URLSearchParams({
+        where,
+        returnCountOnly: 'true',
+        f: 'json'
+      });
+      const countPage = await this.fetchGeoJSON(`${url}?${countParams}`);
+      const total = countPage?.count ?? 0;
+      if (!total) return null;
+
+      const offsets = [];
+      for (let offset = 0; offset < total; offset += pageSize) {
+        offsets.push(offset);
+      }
+
+      const pages = new Array(offsets.length);
+      let next = 0;
+      const workers = Array.from({ length: Math.min(concurrency, offsets.length) }, async () => {
+        while (next < offsets.length) {
+          const i = next++;
+          const page = await this.fetchGeoJSON(`${url}?${buildParams(offsets[i])}`);
+          pages[i] = parsePage(page).features;
+        }
+      });
+      await Promise.all(workers);
+
+      const features = pages.flat();
+      return features.length ? { type: 'FeatureCollection', features } : null;
+    }
+
+    const features = [];
+    let offset = 0;
+    for (;;) {
+      const page = await this.fetchGeoJSON(`${url}?${buildParams(offset)}`);
+      const { raw, features: pageFeatures } = parsePage(page);
       features.push(...pageFeatures);
-
-      if (pageFeatures.length < pageSize) break;
+      if (raw.length < pageSize) break;
       offset += pageSize;
     }
 
@@ -105,10 +217,31 @@ export default class LayerManager {
   }
 
   async loadAllLayers() {
-    const loadPromises = Object.entries(LAYER_CONFIG).map(([name, config]) =>
-      this.loadLayer(name, config)
-    );
+    const loadPromises = Object.entries(LAYER_CONFIG)
+      .filter(([, config]) => !config.lazy)
+      .map(([name, config]) => this.loadLayer(name, config));
     await Promise.all(loadPromises);
+  }
+
+  /** True once a lazy (or eager) vector layer has been fetched into loadedData. */
+  isLayerLoaded(name) {
+    return Boolean(this.loadedData[name]);
+  }
+
+  /**
+   * One-shot fetch + add for `lazy: true` layers (e.g. GeoAtlas bedrock).
+   * Idempotent if already loaded.
+   */
+  async loadLayerOnDemand(name) {
+    const config = LAYER_CONFIG[name];
+    if (!config) return false;
+    if (this.loadedData[name]) {
+      this.ensureSource(config, this.loadedData[name]);
+      this.addLayerByType(name, config, this.loadedData[name]);
+      return true;
+    }
+    await this.loadLayer(name, config);
+    return Boolean(this.loadedData[name]);
   }
 
   /** Fetches and merges multiple GeoJSON endpoints (e.g. an ArcGIS service split across sub-layers) into one FeatureCollection. */
@@ -128,15 +261,49 @@ export default class LayerManager {
     return features.length ? { type: 'FeatureCollection', features } : null;
   }
 
-  async loadLayer(name, config) {
-    const data = config.paginatedQuery
-      ? await this.fetchPaginatedGeoJSON(config.paginatedQuery)
-      : config.sources
-      ? await this.fetchMergedGeoJSON(config.sources)
-      : await this.fetchGeoJSON(config.dataUrl);
-    if (!data) return;
+  /**
+   * Resolve GeoJSON for a layer: IndexedDB → static dataUrl → live query.
+   * Heavy layers (bedrock) ship a baked file and warm IndexedDB after first hit.
+   */
+  async resolveLayerData(name, config) {
+    const { cacheKey, cacheVersion } = config;
 
+    if (cacheKey && cacheVersion) {
+      const cached = await getCachedGeoJSON(cacheKey, cacheVersion);
+      if (cached?.features?.length) return cached;
+    }
+
+    if (config.dataUrl) {
+      const staticData = await this.fetchGeoJSON(config.dataUrl);
+      if (staticData?.features?.length) {
+        if (cacheKey && cacheVersion) {
+          setCachedGeoJSON(cacheKey, cacheVersion, staticData);
+        }
+        return staticData;
+      }
+    }
+
+    let live = null;
     if (config.paginatedQuery) {
+      live = await this.fetchPaginatedGeoJSON(config.paginatedQuery);
+    } else if (config.sources) {
+      live = await this.fetchMergedGeoJSON(config.sources);
+    } else if (config.dataUrl) {
+      // Already tried above; keep for configs that only have dataUrl.
+      live = null;
+    }
+
+    if (live?.features?.length && cacheKey && cacheVersion) {
+      setCachedGeoJSON(cacheKey, cacheVersion, live);
+    }
+    return live;
+  }
+
+  async loadLayer(name, config) {
+    const data = await this.resolveLayerData(name, config);
+    if (!data?.features?.length) return;
+
+    if (config.enrichment === 'mods' || name === 'modsOccurrences') {
       // MODS: DEPNAME is the human deposit/occurrence name; some records only
       // have COMNAME (the commodity), so fall back to that rather than a
       // blank popup title. `commodityList` is a deduped, normalized array of
@@ -157,6 +324,19 @@ export default class LayerManager {
         props.secondaryCommodities = props.commodityList.filter((c) => c !== props.primaryCommodity);
         // Status bucket for F5 filters (Past Producer variants collapsed).
         props.statusBucket = normalizeMODSStatus(props.STATUS);
+      });
+    } else if (config.enrichment === 'bedrockRgb') {
+      data.features.forEach((feature) => {
+        const props = feature.properties;
+        if (props.fillColor && props.name) return;
+        props.name = props.LABEL?.trim() || props.name || 'Unnamed unit';
+        const r = Number(props.RED);
+        const g = Number(props.GREEN);
+        const b = Number(props.BLUE);
+        props.fillColor =
+          Number.isFinite(r) && Number.isFinite(g) && Number.isFinite(b)
+            ? `rgb(${Math.round(r)},${Math.round(g)},${Math.round(b)})`
+            : props.fillColor || '#94a3b8';
       });
     }
 
@@ -298,43 +478,63 @@ export default class LayerManager {
   }
 
   addPolygonLayer(name, config) {
+    const beforeId = this.resolveBeforeLayerId(config);
+
     if (!this.map.getLayer(config.layer)) {
-      this.map.addLayer({
-        id: config.layer,
-        type: 'fill',
-        source: config.source,
-        paint: config.paint.fill,
-        ...(config.filter ? { filter: config.filter } : {})
-      });
-    }
-
-    if (!this.map.getLayer(config.outline)) {
-      this.map.addLayer({
-        id: config.outline,
-        type: 'line',
-        source: config.source,
-        paint: config.paint.line,
-        ...(config.filter ? { filter: config.filter } : {})
-      });
-    }
-
-    if (!this.map.getLayer(config.labels)) {
-      this.map.addLayer({
-        id: config.labels,
-        type: 'symbol',
-        source: config.source,
-        layout: {
-          'text-field': ['get', 'claimId'],
-          'text-size': 10,
-          'text-font': ['Open Sans Semibold', 'Arial Unicode MS Bold']
+      this.map.addLayer(
+        {
+          id: config.layer,
+          type: 'fill',
+          source: config.source,
+          paint: config.paint.fill,
+          ...(config.filter ? { filter: config.filter } : {})
         },
-        paint: {
-          'text-color': '#ffffff',
-          'text-halo-color': '#000000',
-          'text-halo-width': 1
-        }
-      });
+        beforeId
+      );
     }
+
+    if (config.outline && !this.map.getLayer(config.outline)) {
+      this.map.addLayer(
+        {
+          id: config.outline,
+          type: 'line',
+          source: config.source,
+          paint: config.paint.line,
+          ...(config.filter ? { filter: config.filter } : {})
+        },
+        beforeId
+      );
+    }
+
+    if (config.labels && !this.map.getLayer(config.labels)) {
+      this.map.addLayer(
+        {
+          id: config.labels,
+          type: 'symbol',
+          source: config.source,
+          layout: {
+            'text-field': ['get', 'name'],
+            'text-size': 10,
+            'text-font': ['Open Sans Semibold', 'Arial Unicode MS Bold']
+          },
+          paint: {
+            'text-color': '#1e293b',
+            'text-halo-color': '#ffffff',
+            'text-halo-width': 1
+          }
+        },
+        beforeId
+      );
+    }
+  }
+
+  /** First existing layer id from config.beforeLayerIds — keep endowment under points. */
+  resolveBeforeLayerId(config) {
+    const ids = config.beforeLayerIds || [];
+    for (const id of ids) {
+      if (this.map.getLayer(id)) return id;
+    }
+    return undefined;
   }
 
   setLayerVisibility(name, visible) {
@@ -587,13 +787,34 @@ export default class LayerManager {
     }
   }
 
-  /** Lazily fetches, reprojects, and adds a WMS layer the first time it's enabled. */
+  /** Lazily loads a WMS / endowment raster the first time it's enabled.
+   * Prefers baked Mercator-corrected `imageUrl` (cache-busted by cacheVersion);
+   * falls back to live GetMap + client reprojection if the static file is missing.
+   */
   async ensureWMSLayer(name) {
     const config = WMS_CONFIG[name];
     const key = `wms-${name}`;
     if (!config || this.layers[key]) return;
 
-    const dataUrl = await this.fetchReprojectedWMSImage(config);
+    let dataUrl = null;
+    if (config.imageUrl) {
+      const versioned = config.cacheVersion
+        ? `${config.imageUrl}?v=${encodeURIComponent(config.cacheVersion)}`
+        : config.imageUrl;
+      try {
+        const response = await fetch(versioned, { method: 'HEAD' });
+        // Some static hosts omit HEAD — 405 still means the path is routable.
+        if (response.ok || response.status === 405) {
+          dataUrl = versioned;
+        }
+      } catch {
+        // Fall through to live GetMap.
+      }
+    }
+
+    if (!dataUrl) {
+      dataUrl = await this.fetchReprojectedWMSImage(config);
+    }
     if (!dataUrl) return;
 
     const sourceId = `${key}-source`;
@@ -700,15 +921,22 @@ export default class LayerManager {
     }
   }
 
-  /** Cached accessor - the legend rarely changes, so fetch once per session per layer. */
-  async getWMSLegendItems(name) {
+  /** Cached ArcGIS legend JSON for WMS or vector layers that declare legendJsonUrl. */
+  async getArcGISLegendItems(name, config) {
     if (this.legendItemsCache[name]) return this.legendItemsCache[name];
-
-    const config = WMS_CONFIG[name];
     if (!config) return null;
 
     const items = await this.fetchArcGISLegendItems(config);
     if (items) this.legendItemsCache[name] = items;
     return items;
+  }
+
+  /** Cached accessor - the legend rarely changes, so fetch once per session per layer. */
+  async getWMSLegendItems(name) {
+    return this.getArcGISLegendItems(name, WMS_CONFIG[name]);
+  }
+
+  async getVectorLegendItems(name) {
+    return this.getArcGISLegendItems(name, LAYER_CONFIG[name]);
   }
 }

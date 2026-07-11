@@ -1,0 +1,22 @@
+{
+  "version": "2026-07-11",
+  "contentHash": "c43d57b541bcaa94af83da29ee05d0a7cabbed3ab58bf2febc414e02e7752fca",
+  "cadenceMonths": 12,
+  "generatedAt": "2026-07-11T21:56:52.178Z",
+  "nextDue": "2027-07-11",
+  "refresh": "GitHub Actions refresh-data.yml (monthly; skips until nextDue) or npm run refresh:data",
+  "featureCount": null,
+  "width": 900,
+  "height": 1438,
+  "channels": 4,
+  "bounds": [
+    -68,
+    46,
+    -52,
+    61
+  ],
+  "source": "https://maps-cartes.services.geo.ca/server_serveur/services/NRCan/pegmatite_lithium_en/MapServer/WMSServer",
+  "service": "pegmatite_lithium_en",
+  "layers": "0",
+  "imageWidthRequest": 900
+}

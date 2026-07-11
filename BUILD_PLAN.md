@@ -1,16 +1,62 @@
 # Labrador Critical Minerals Explorer — Master Build Plan (V3)
 
 > **This tree is V3** (`explorer-v3`). Copied from the untouched V1 baseline at
-> `../project`. Blend A (MapLibre hub) + B (mission-control UX) here only; do
-> not edit `../project` for V3 work.
+> `../project`. Do not edit `../project` for V3 work.
+>
+> **Merger policy (revised 2026-07-11):** keep A’s MapLibre live-data hub.
+> Cherry-pick only UX pieces F1–F5 from B (KPI, search, list/detail, status
+> filters) — see Cursor canvas `revised-merger-guide.canvas.tsx`. No featured
+> deposits, no B commodity groups, no iron-in-critical, no static GeoJSON.
 >
 > **Living document.** This is BOTH the master plan and the granular, step-by-step
 > checklist for the project. Review and update it as we move along — tick boxes,
 > flip status markers, and add notes in place.
-> Last updated: 2026-07-11
+> Last updated: 2026-07-11 (evening) — §6.2 operator guide for auto-refresh;
+> baked MODS/facilities/WMS; monthly GHA with nextDue skip
 
 **Status marker key:** `[x]` done · `[~]` in progress · `[ ]` not started · `[!]` blocked/needs decision
 Layer catalog status: `✅ done/in app` · `🟢 verified available` · `⬜ to confirm/wire` · `🔒 blocked`
+
+---
+
+## Where we are (2026-07-11)
+
+**Phase 0** ✅ complete · **Phase 1** [~] — MODS + occurrence UX + provincial
+bedrock done; provincial surficial (1.3) still open · **Phases 2–4** not started ·
+**Phase 5** partially pulled forward (occurrence browser UX + public host).
+
+| Area | Status |
+|---|---|
+| Live MODS + critical preset (iron excluded) + surfaces | ✅ |
+| Facilities + 5 NRCan WMS | ✅ |
+| Provincial bedrock (GeoAtlas 1:1M, baked + IndexedDB + 6-mo auto-refresh) | ✅ (2026-07-11) |
+| MODS + facilities + 5 NRCan WMS baked (IndexedDB / static PNG; monthly GHA) | ✅ (2026-07-11) |
+| Status filters, search, list/detail, bottom KPI | ✅ (2026-07-11) |
+| Light sidebar chrome; legends top-left | ✅ |
+| GitHub repo + Pages hosting | ✅ |
+| Provincial surficial (GeoAtlas) | [ ] Phase 1.3 |
+| Mineral claims / tenure | [ ] Phase 2.1 |
+| Indigenous lands / protected areas | [ ] Phase 2.2 / 2.3 |
+| Infrastructure, geophysics, geochemistry | [ ] Phases 3–4 |
+| Provenance panel, shareable URL, export | [ ] Phase 5 remainder |
+
+**Public app:** https://kellybyron2222-dev.github.io/labrador-critical-minerals-explorer-v3/  
+**Repo:** https://github.com/kellybyron2222-dev/labrador-critical-minerals-explorer-v3
+
+### Recommended next steps (build sequence)
+
+1. **Phase 1.3 — Provincial surficial geology** (`GeoAtlas/Surficial_Geology_All`)  
+   Same playbook as 1.2 (inspect → lazy vector or WMS → legend + popup); closes Phase 1 exit criteria.
+2. **Phase 2.1 — Mineral claims & tenure** (`GeoAtlas/Mineral_Lands`)  
+   Turns the viewer into a siting tool (claims polygons, holder, status).
+3. **Phase 2.2 — Indigenous lands** (Nunatsiavut / ATRIS)  
+   High-priority permitting context; recommend default ON once styled as context.
+4. **Then** Phase 2.3 protected/land use → Phase 3 infrastructure → Phase 4 signals → remaining Phase 5 polish.
+
+Optional follow-ups on bedrock: SE Labrador detailed polygons (MapServer/16), 1:1M
+faults/contacts (MapServer/1). Data refreshes: monthly GHA `refresh-data.yml`
+skips until each dataset’s `nextDue` (3 / 6 / 12 mo); or
+`FORCE_REFRESH=1 npm run refresh:data` / Actions **workflow_dispatch**.
 
 ---
 
@@ -77,30 +123,36 @@ Canada-wide but cover Labrador; filter to Labrador where it helps focus.
 **Module layout**
 ```
 main.js                     app entry
-js/app.js                   orchestrator (wires modules, popups, legend sync)
+js/app.js                   orchestrator (wires modules, popups, legend, filters)
 js/config/mapConfig.js      map init constants (center, zoom, basemaps)
 js/config/layerConfig.js    layer + WMS definitions (data sources, styling, legends)
+js/config/modsFilters.js    MODS status buckets + combined filter helpers (F4/F5)
 js/modules/MapBase.js       MapLibre init, controls, HUD, basemap switching
 js/modules/LayerManager.js  async GeoJSON + WMS loading, visibility, refresh
-js/modules/LegendPanel.js   dynamic per-layer legend cards
-js/modules/SurfaceInterpolation.js  per-mineral, per-cluster occurrence-density surfaces (DBSCAN + IDW + isobands)
+js/modules/LegendPanel.js   dynamic per-layer legend cards (map, top-left)
+js/modules/OccurrenceBrowser.js  KPI + search + status chips + list/detail (sidebar)
+js/modules/SurfaceInterpolation.js  per-mineral, per-cluster occurrence-density surfaces
 js/modules/wmsReprojection.js  equirectangular→Mercator canvas reprojection
 js/modules/facilityIcons.js    value-chain SVG icons (lazy via styleimagemissing)
-css/style.css               UI styling
+css/style.css               light sidebar + map overlay styling
+.github/workflows/deploy-pages.yml  GitHub Pages CI deploy
 ```
 
 **Capabilities already built (the hard plumbing is done):**
 - Modular map base + basemap switching (Positron / Dark / Streets)
-- Async layer loading; merged multi-endpoint GeoJSON fetch
+- Async layer loading; merged multi-endpoint GeoJSON fetch; **lazy vector**
+  load-on-demand for heavy polygon layers (`lazy: true`)
 - WMS image layers with client-side reprojection + lazy load + caching (NL&L bbox)
 - Dynamic legends (vector / icon / WMS ArcGIS JSON multi-column / image fallback)
-  with a click-to-enlarge panel pinned to the map's bottom-left corner
+  with click-to-enlarge; pinned to the map's **top-left**
 - Data-driven collapsible sidebar layer groups (`LAYER_GROUPS` + `group` metadata)
-- Polished sidebar UI system (shared type scale, flat list rows, custom toggle
-  switches, segmented basemap control, active-layer accent bar) — new layers
-  inherit this styling automatically via config, no per-layer CSS needed
+- **Light** sidebar chrome (white panel, shared type scale, toggle switches,
+  segmented basemap, active-layer accent) — occurrence browser lives here too
+- Occurrence browser (cherry-pick F1–F5): bottom KPI strip; status multi-select;
+  free-text search; minimizable list + detail; map selection sync — live MODS only
 - Value-chain icon system with maturity draw-ordering (`symbol-sort-key`)
 - Popups + hover interactivity
+- Public host via GitHub Pages (Actions build on push to `master`)
 
 ---
 
@@ -113,20 +165,35 @@ css/style.css               UI styling
 - ✅ **Mineral Occurrences (MODS)** — NL GeoAtlas vector feed, ~3,175 Labrador
   points, paginated fetch, always rendered as zoom-scaled circles (no
   clustering/heatmap). Sidebar commodity picker scopes the view to one
-  commodity or a critical-minerals preset (default). **Legend checklist**
-  (multi-commodity views) toggles which primary minerals show circles;
-  **Show occurrence density surfaces** master toggle adds per-mineral
-  localized isoband shading (primary-only; default first 3 minerals on).
-  Single sidebar mineral pick still searches primary + secondary via
-  `commodityList`. Default ON.
+  commodity or a critical-minerals preset (default; **iron excluded**).
+  **Legend checklist** (multi-commodity views) toggles which primary minerals
+  show circles; **Show occurrence density surfaces** master toggle adds
+  per-mineral localized isoband shading (primary-only; default first 3
+  minerals on). Single sidebar mineral pick still searches primary + secondary
+  via `commodityList`. **Occurrence browser** ANDs status buckets + free-text
+  search with the commodity filter; list/detail sync with map selection.
+  Default ON.
 - ✅ **Geoscience WMS feeds** (NRCan): Lithium, REE, Graphite prospectivity;
-  Bedrock geology; Surficial geology. Default OFF, lazy-loaded.
+  Bedrock geology **(national)**; Surficial geology. Default OFF, lazy-loaded.
+- ✅ **Bedrock Geology (NL 1:1M)** — GeoAtlas `Bedrock_Geology_All/MapServer/23`,
+  ~3,510 polygons, lazy-loaded vector fill colored from source RGB; ArcGIS
+  legend (~153 classes); unit popups. Default OFF. Drawn under MODS/facilities.
+
+**UX shell (2026-07-11)**
+- ✅ Light left sidebar (layers + basemap + occurrence search/status/list)
+- ✅ Bottom KPI strip (filtered / scoped counts + status bits)
+- ✅ Legend cards top-left on the map
+- ✅ Deployed to GitHub Pages
 
 **Removed (2026-07-06) — were hand-authored demo/synthetic data:**
 - ❌ Mineral Deposits (demo) → replaced by MODS (✅ 2026-07-06, see Phase 1.1)
 - ❌ Infrastructure (demo) → replace with NRCan/GeoAtlas transport & power
 - ❌ Mining Tenures (demo) → replace with GeoAtlas Mineral Lands
 - See `TODO (real data)` note in `js/config/layerConfig.js`.
+
+**Explicitly not in V3 (revised merger guide):** featured-deposits JSON, B
+commodity-group taxonomy, iron-in-critical default, static occurrences.geojson,
+full mission-control dual-rail chrome.
 
 ---
 
@@ -147,16 +214,16 @@ Occurrences/MODS), `Mineral_Lands` (claims/tenure/quarries), `Land_Use`,
 ### 1. What's in the ground? — geological endowment
 | Layer | Source | Endpoint / service | Status |
 |---|---|---|---|
-| Bedrock geology (provincial, hi-res) | NL GeoAtlas | `GeoAtlas/Bedrock_Geology_All` | 🟢 verified |
+| Bedrock geology (provincial, 1:1M) | NL GeoAtlas | `GeoAtlas/Bedrock_Geology_All/MapServer/23` → baked `public/data/geoatlas-bedrock-1m.geojson` | ✅ in app (lazy; IndexedDB; refresh every 6 mo) |
 | Surficial geology (provincial) | NL GeoAtlas | `GeoAtlas/Surficial_Geology_All` | 🟢 verified |
-| Li / REE / graphite prospectivity | NRCan WMS | `pegmatite_lithium_en`, `carbonatite_ree_en`, `graphite_prospectivity_en` | ✅ in app |
-| Bedrock / surficial (national WMS) | NRCan WMS | `gsc_bedrock_geology_en`, `gsc_surficial_geology_en` | ✅ in app (superseded by GeoAtlas for Labrador) |
+| Li / REE / graphite prospectivity | NRCan WMS | baked `public/data/wms-{lithium,ree,graphite}-nll.png` | ✅ in app (12-mo refresh) |
+| Bedrock / surficial (national WMS) | NRCan WMS | baked `public/data/wms-{bedrock,surficial}-nll.png` | ✅ in app (context; 12-mo refresh) |
 
 ### 2. Has anyone found something here? — occurrences & activity
 | Layer | Source | Endpoint / service | Status |
 |---|---|---|---|
-| **Mineral Occurrences (MODS)** — 3,173 pts (Labrador) | NL GeoAtlas | `GeoAtlas/Map_Layers/MapServer/3` | ✅ in app |
-| Critical mineral facilities | NRCan | `NRCan/critical_minerals_en/MapServer` | ✅ in app |
+| **Mineral Occurrences (MODS)** — ~3,175 pts (Labrador) | NL GeoAtlas | baked `public/data/mods-labrador.geojson` | ✅ in app (IndexedDB; refresh every 3 mo) |
+| Critical mineral facilities | NRCan | baked `public/data/critical-minerals-nl.geojson` (NL&L subset) | ✅ in app (IndexedDB; refresh every 3 mo) |
 | Producing mines / metallurgical works | NRCan Map 900A | `NRCan/900A_and_top_100_en/MapServer` | 🟢 verified |
 | Drill core / assessment reports (GEOFILE) | NL GeoAtlas | `GeoAtlas/Map_Layers` (GEOFILE links) | ⬜ to confirm |
 
@@ -448,19 +515,68 @@ but multiple commodities in metadata.
       via expression + filter on enabled commodity list
 - [x] `LegendPanel` + `css/style.css` — `commodityToggles` block styling
 
-**1.2 — Provincial bedrock geology (GeoAtlas)**
-- [ ] Inspect `GeoAtlas/Bedrock_Geology_All` — sublayers; queryable-vector vs raster-only
-- [ ] Decide render path: vector fill (if queryable) vs WMS image (if raster; reuse reprojection)
-- [ ] Add config (fill paint by rock unit/age, opacity ~0.5, group=Endowment)
-- [ ] Legend (large classification — use `GetLegendGraphic` or a curated subset)
-- [ ] Toggle + wiring + popup (unit name/age/description)
-- [ ] Test + update status; decide whether to demote national NRCan bedrock WMS to "context"
+**1.1e — Occurrence browser UX cherry-pick (F1–F5 from B)** ✅ COMPLETE (2026-07-11)
 
-**1.3 — Provincial surficial geology (GeoAtlas)**
+Per `revised-merger-guide.canvas.tsx`: add B’s list/search/status/KPI UX onto
+A’s live MapLibre explorer **without** importing B datasets or group taxonomy.
+
+- [x] Status model (`js/config/modsFilters.js`) — normalize live MODS `STATUS`
+      into filter buckets (Producer, Past Producer, Developed Prospect,
+      Prospect, Showing, Indication); Past Producer variants collapsed
+- [x] Status multi-select chips ANDed with existing commodity picker / legend
+      checklist; persist with `setLayerFilter` across basemap refresh
+- [x] Free-text search over name, commodities, status, NMINO, type, NTS
+      (client-side; MapLibre via NMINO allowlist)
+- [x] Sidebar occurrence list (cap 300) + detail card (live MODS fields +
+      MODS record link); click syncs map flyTo + popup; map click selects list
+- [x] Minimizable list body (search + status chips stay visible)
+- [x] Bottom KPI strip: filtered / commodity-scoped totals + status bits
+- [x] Light sidebar restyle to match clean white panel chrome; legends moved
+      top-left; KPI bottom-center
+- [x] GitHub repo + Pages deploy workflow (`deploy-pages.yml`)
+- [x] Explicitly **not** shipped: featured deposits, NMINO commodity rebuild,
+      group toggles, iron-in-critical, dual filter modes, mission-control rails
+
+**1.2 — Provincial bedrock geology (GeoAtlas)** ✅ COMPLETE (2026-07-11)
+- [x] Inspect `GeoAtlas/Bedrock_Geology_All` — sublayers; queryable-vector vs raster-only
+      → Layer **23** "1:1 Million Bedrock Geology" chosen (full NL/Labrador,
+      3,510 polygons, 153 classes, fields LABEL/LITHOLOGY/AGE/TECTONIC/
+      REFERENCE + RGB). Layer 16 is SE-Labrador-only (deferred). Query +
+      geoJSON supported; `maxRecordCount=1000` → paginate.
+- [x] Decide render path: **vector fill** (lazy) — enables attribute popups;
+      national NRCan bedrock WMS kept as context (relabeled)
+- [x] Add config (`geoatlasBedrock` in `LAYER_CONFIG`: lazy, fill from RGB,
+      opacity 0.5, group=Endowment, beforeLayerIds under MODS)
+- [x] Legend via GeoAtlas ArcGIS legend JSON (layer 23) + enlarge panel
+- [x] Toggle + lazy `loadLayerOnDemand` + popup (label/lithology/age/tectonic/reference)
+- [x] Test path: syntax-check; live GeoJSON sample; basemap refresh restores
+      loaded vectors via existing `refreshLayers`
+- [x] Update catalog status → ✅ ; national WMS labeled "Bedrock Geology (national)"
+- [x] Performance / load path (order: IndexedDB → baked file → live GeoAtlas):
+      - Baked `public/data/geoatlas-bedrock-1m.geojson` (~18 MB, simplified
+        `maxAllowableOffset=0.002`); meta in `geoatlas-bedrock-1m.meta.json`
+      - Browser IndexedDB via `js/modules/layerCache.js` (`cacheKey` /
+        `cacheVersion` on `LAYER_CONFIG.geoatlasBedrock`)
+      - Live fallback: Esri JSON + `outSR=4326` (GeoAtlas `f=geojson&outSR`
+        returns empty); parallel pages (`concurrency: 4`)
+      - Manual bake: `npm run fetch:bedrock`
+- [x] Auto-refresh (registry-driven; bedrock cadence **6 months**):
+      - Registry: `scripts/data-refresh-registry.json` (bedrock + MODS +
+        facilities + 5 WMS bakes)
+      - Orchestrator: `npm run refresh:data` (skips until `nextDue`; hash
+        compare; bumps `cacheVersion` when changed; writes
+        `scripts/.refresh-result.json`)
+      - GHA: `.github/workflows/refresh-data.yml` — cron `0 12 1 * *`
+        (monthly) + `workflow_dispatch` (optional force); **opens a PR** on
+        change (no auto-merge to `master`)
+      - Meta fields: `cadenceMonths`, `nextDue`, `contentHash`
+
+**1.3 — Provincial surficial geology (GeoAtlas)**  ← **NEXT**
 - [ ] Repeat 1.2 steps for `GeoAtlas/Surficial_Geology_All`
 
 **Phase 1 exit criteria:** MODS + provincial bedrock/surficial live; sidebar grouped;
 demo-deposit gap fully replaced by real endowment + occurrence data.
+*(MODS + grouping + occurrence UX + provincial bedrock done; 1.3 remains for exit.)*
 
 ### Phase 2 — Rights & constraints (turns viewer into a siting tool)  [ ]
 **2.1 — Mineral claims & tenure**
@@ -527,17 +643,23 @@ reason about development feasibility.
 
 **Phase 4 exit criteria:** subsurface signal layers available for prospectivity work.
 
-### Phase 5 — Cross-cutting features & polish  [ ]
+### Phase 5 — Cross-cutting features & polish  [~]
 - [ ] **Data-source registry** — per-layer provenance, update cadence, license, last-checked date (drive an "About data" panel)
-- [ ] **Layer search / filter** — by commodity, status, NTS sheet
+- [~] **Layer search / filter** — commodity picker + legend checklist done (1.1b/d);
+      status + free-text over live MODS done (1.1e). Still open: filter by NTS sheet alone;
+      cross-layer search beyond MODS
 - [ ] **Attribution / license panel** — required by NL GeoAtlas / NRCan / SAC-ISC terms
-- [ ] **Feature search / geocode** — jump to occurrence, claim, NTS sheet
+- [~] **Feature search / geocode** — occurrence list + flyTo/select done (1.1e);
+      still open: jump to claim / NTS sheet / place geocode
 - [ ] **Measure & draw tools** (distance/area) — exploration utility
-- [ ] **Shareable state** — URL encodes active layers + extent
+- [ ] **Shareable state** — URL encodes active layers + extent + filters
 - [ ] **Export** — visible features to GeoJSON/CSV
-- [ ] **Performance pass** — clustering, tile/vector strategy for dense layers
-- [ ] **Mobile/responsive** sidebar
-- [ ] **README** + contribution/data-adding guide (open-source hygiene)
+- [ ] **Performance pass** — tile/vector strategy for dense polygon layers (claims, geology)
+- [~] **Mobile/responsive** sidebar — basic breakpoints exist; occurrence list hidden
+      on very narrow screens; needs a deliberate mobile pass
+- [~] **README** + contribution/data-adding guide — README updated for V3/Pages;
+      full contributor playbook still open
+- [x] **Public hosting** — GitHub Pages via Actions (2026-07-11)
 
 ---
 
@@ -555,9 +677,83 @@ Use for every new layer so the build stays consistent and documented.
    neighboring layers; respect the value-chain/maturity grammar.
 6. **UI** — add sidebar toggle in its thematic group; wire toggle + legend + hover.
 7. **Popup** — surface the fields a user actually needs; link back to source record.
-8. **Test** — load, feature-count sanity, alignment vs basemap, pan/zoom perf, popups, basemap-switch survival.
-9. **Document** — flip catalog status to ✅, tick the checklist item, note quirks
-   (CRS, pagination, licensing) here or inline.
+8. **Optimize for load speed (required — do not ship live-only)** — we do **not**
+   pull authoritative feeds on every browser session. Mirror the Bedrock (NL 1:1M)
+   playbook unless the payload is trivially tiny *and* already baked:
+   - **Vector:** bake clipped/simplified GeoJSON under `public/data/`; add
+     `dataUrl` + IndexedDB (`cacheKey` / `cacheVersion`) via `layerCache.js`;
+     keep live `paginatedQuery` / `sources` only as fallback; set `lazy: true`
+     for heavy polygon/line layers; prune `outFields` and use
+     `maxAllowableOffset` / `outSR=4326` where applicable.
+   - **WMS / raster:** bake a static NL&L-bbox image (PNG/WebP) or tile set under
+     `public/data/`; load as MapLibre `image` (or tiles) — do not rely on live
+     GetMap + client reprojection for production toggles.
+   - **Derived surfaces** (e.g. MODS density): no external bake required; keep
+     client-side unless compute becomes a startup bottleneck.
+   - Add `npm run fetch:<id>` (or extend an existing fetch script) and wire it
+     through `scripts/data-refresh-registry.json`.
+9. **Register auto-refresh cadence (required)** — every baked dataset must have
+   an entry in `scripts/data-refresh-registry.json` with `cadenceMonths`,
+   fetch script, output paths, and cache bump targets. Then update
+   `.github/workflows/refresh-data.yml` so the scheduled check covers the new
+   cadence (prefer a single frequent GHA that skips datasets whose `nextDue`
+   has not passed — no browser polling). Record the chosen cadence in the
+   catalog row / meta (`cadenceMonths`, `nextDue`). See **§6.1** for guidance.
+10. **Test** — load, feature-count sanity, alignment vs basemap, pan/zoom perf,
+    popups, basemap-switch survival, cold load from baked file (no live API).
+11. **Document** — flip catalog status to ✅, tick the checklist item, note quirks
+    (CRS, pagination, licensing, bake size, refresh cadence) here or inline.
+
+### 6.1 Dataset load strategy & refresh cadence (live inventory)
+
+**Gold standard:** IndexedDB → baked `public/data/*` → live API fallback. GHA
+`.github/workflows/refresh-data.yml` runs **monthly** (`0 12 1 * *`) and
+`npm run refresh:data` **skips** entries whose `nextDue` is still future.
+Force all: Actions `workflow_dispatch` with force=true, or
+`FORCE_REFRESH=1 npm run refresh:data`.
+
+| Dataset | Load path | Cadence | nextDue (from meta) |
+|---|---|---|---|
+| **Bedrock Geology (NL 1:1M)** | ✅ Baked GeoJSON + IndexedDB + lazy | **6 mo** | see `geoatlas-bedrock-1m.meta.json` |
+| **Mineral Occurrences (MODS)** | ✅ Baked GeoJSON + IndexedDB (`fetch:mods`) | **3 mo** | see `mods-labrador.meta.json` |
+| **Critical Mineral Facilities** | ✅ Baked NL&L GeoJSON + IndexedDB (`fetch:facilities`) | **3 mo** | see `critical-minerals-nl.meta.json` |
+| **Li / REE / Graphite / national bedrock / surficial** | ✅ Baked Mercator PNG (`fetch:wms`) | **12 mo** | see `wms-*-nll.meta.json` |
+| **MODS density surface** | Client Turf from loaded MODS | n/a (derived) | — |
+
+Registry: `scripts/data-refresh-registry.json` (8 entries). Manual bakes:
+`npm run fetch:bedrock` · `fetch:mods` · `fetch:facilities` · `fetch:wms`.
+
+**When adding a layer:** playbook steps 8–9 are mandatory (bake + registry +
+cadence). Prefer the same monthly GHA + `nextDue` skip over extra crons.
+
+### 6.2 How data refresh works (operator guide)
+
+**Runs mostly on its own.** You do **not** need to poll browsers or re-fetch
+by hand on the cadence. After this workflow lives on the repo’s **default
+branch** with Actions enabled:
+
+1. **Monthly** (1st, 12:00 UTC) GitHub Actions runs `refresh-data.yml`.
+2. `npm run refresh:data` checks each registry entry’s `meta.nextDue`.
+3. Datasets that are **not due** are skipped (no network fetch).
+4. Due datasets are re-baked; if the file hash / feature count changed, the
+   Action **opens a pull request** (it does **not** auto-merge to `master`).
+5. **Your only recurring job:** review and merge that PR when it appears.
+   Pages deploy then picks up the new `public/data/*` (and any
+   `cacheVersion` bumps in `layerConfig.js`).
+
+| Cadence | Datasets | Typical next due after a bake |
+|---|---|---|
+| 3 months | MODS, Critical Mineral Facilities | +3 months from `generatedAt` |
+| 6 months | Bedrock Geology (NL 1:1M) | +6 months |
+| 12 months | Five NRCan WMS PNG bakes | +12 months |
+
+**Optional / one-off**
+- Force every dataset now: Actions → **Refresh data sources** → Run workflow →
+  force = `true` (or locally `FORCE_REFRESH=1 npm run refresh:data`).
+- Bake one dataset locally: `npm run fetch:mods` (etc.), commit
+  `public/data/*` + any `cacheVersion` change.
+- Confirm Actions is enabled on the GitHub repo; scheduled crons only run from
+  the **default branch**.
 
 ---
 
@@ -620,6 +816,50 @@ Use for every new layer so the build stays consistent and documented.
 
 ## 10. Changelog
 
+- **2026-07-11 (evening)** — Added **§6.2 How data refresh works (operator
+  guide)**: monthly GHA is automatic; merge the refresh PR when it appears;
+  force / local bake options documented.
+- **2026-07-11 (evening)** — Baked remaining live layers for cold-load speed:
+  MODS (`mods-labrador.geojson`, ~3,175 pts), facilities NL subset
+  (`critical-minerals-nl.geojson`, 13 pts), five NRCan WMS Mercator PNGs
+  (`wms-*-nll.png`). Registry expanded to 8 entries; GHA cron **monthly**
+  with `nextDue` skip (3 / 6 / 12 mo). Scripts: `fetch:mods`, `fetch:facilities`,
+  `fetch:wms`. LayerManager prefers baked `imageUrl` for WMS.
+- **2026-07-11 (evening)** — Dataset inventory + load/refresh guidance. Add-a-Layer
+  Playbook now **requires** (8) bake/cache optimize and (9) registry + GHA
+  cadence for every new layer. Added §6.1 table: MODS + facilities → bake @
+  **3 mo**; five NRCan WMS → static NL&L images @ **12 mo**; bedrock stays
+  **6 mo**. Prefer monthly GHA that skips until `nextDue`. Optimize priority:
+  MODS → facilities → WMS images → then Phase 1.3 surficial on full playbook.
+- **2026-07-11 (evening)** — Bedrock performance + auto-refresh documented in
+  plan: load order IndexedDB → baked GeoJSON → live GeoAtlas; registry
+  (`scripts/data-refresh-registry.json`); `npm run refresh:data`; GHA
+  `refresh-data.yml` cron **1 Jan & 1 Jul UTC** opens a PR on change and bumps
+  `cacheVersion`. Meta: `cadenceMonths` / `nextDue` / `contentHash`. **Next:**
+  Phase 1.3 provincial surficial.
+- **2026-07-11 (evening)** — Bedrock load path: baked
+  `public/data/geoatlas-bedrock-1m.geojson` (~3,510 polys) + IndexedDB cache
+  (`cacheKey`/`cacheVersion`) + parallel live GeoAtlas fallback
+  (`npm run fetch:bedrock` to refresh). Loading label fixed to `(loading…)`.
+  **Next:** Phase 1.3 provincial surficial.
+- **2026-07-11 (evening)** — Phase 1.2 complete: provincial **Bedrock Geology
+  (NL 1:1M)** from GeoAtlas MapServer/23. Lazy paginated GeoJSON (~3,510
+  polygons), fill colors from source RGB, ArcGIS legend JSON (~153 classes),
+  unit popups, drawn under MODS/facilities. NRCan bedrock WMS relabeled
+  **Bedrock Geology (national)** and kept as optional context. New plumbing:
+  `LAYER_CONFIG.geoatlasBedrock` (`lazy`, `enrichment: 'bedrockRgb'`,
+  `beforeLayerIds`), `LayerManager.loadLayerOnDemand` /
+  `getVectorLegendItems`, app lazy-toggle + bedrock click popup. **Next:**
+  Phase 1.3 provincial surficial.
+- **2026-07-11 (evening)** — Plan refresh + Phase 1.1e complete. Cherry-picked
+  B UX (KPI, status filters, search, list/detail) onto A’s live MODS path per
+  revised merger guide — no featured enrichment / group taxonomy / iron policy
+  change. Light sidebar chrome; legends top-left; KPI bottom; occurrence list
+  minimizable in sidebar. Published to GitHub
+  (`kellybyron2222-dev/labrador-critical-minerals-explorer-v3`) with Pages
+  deploy workflow. Key files: `modsFilters.js`, `OccurrenceBrowser.js`,
+  `app.js`, `LayerManager.js` (`statusBucket`), `index.html`, `css/style.css`,
+  `.github/workflows/deploy-pages.yml`. **Next:** Phase 1.2 provincial bedrock.
 - **2026-07-11** — Phase 1.1d complete: per-mineral localized surfaces and
   primary-commodity discipline for MODS. Root cause of "Copper toggle shows
   wrong-colored dots / wrong surface extent" was a `commodityList` (primary +

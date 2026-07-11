@@ -1,0 +1,12 @@
+{
+  "version": "2026-07-11",
+  "featureCount": 3510,
+  "contentHash": "7112640d3e8b985c1022f6aa24775511ae0c32e97c7a5cd870b86ac0043c94c0",
+  "source": "https://dnrmaps.gov.nl.ca/arcgis/rest/services/GeoAtlas/Bedrock_Geology_All/MapServer/23/query",
+  "outSR": 4326,
+  "maxAllowableOffset": 0.002,
+  "cadenceMonths": 6,
+  "generatedAt": "2026-07-11T21:41:43.927Z",
+  "nextDue": "2027-01-11",
+  "refresh": "GitHub Actions refresh-data.yml (1 Jan & 1 Jul UTC) or npm run refresh:data"
+}

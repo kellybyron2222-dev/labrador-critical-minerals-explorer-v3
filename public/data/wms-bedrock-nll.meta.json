@@ -1,0 +1,22 @@
+{
+  "version": "2026-07-11",
+  "contentHash": "156ab88567b8445ef7bc6bc36a930899e54b2ec7831d9576e4f32c4034305890",
+  "cadenceMonths": 12,
+  "generatedAt": "2026-07-11T21:57:13.650Z",
+  "nextDue": "2027-07-11",
+  "refresh": "GitHub Actions refresh-data.yml (monthly; skips until nextDue) or npm run refresh:data",
+  "featureCount": null,
+  "width": 900,
+  "height": 1438,
+  "channels": 4,
+  "bounds": [
+    -68,
+    46,
+    -52,
+    61
+  ],
+  "source": "https://maps-cartes.services.geo.ca/server_serveur/services/NRCan/gsc_bedrock_geology_en/MapServer/WMSServer",
+  "service": "gsc_bedrock_geology_en",
+  "layers": "0",
+  "imageWidthRequest": 900
+}
