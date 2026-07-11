@@ -543,7 +543,9 @@ export const LAYER_CONFIG = {
     // change. Deliberately qualitative: MODS has no grade/tonnage field.
     surface: {
       enabled: true,
-      defaultVisible: true,
+      // Off by default so cold start skips main-thread Turf compute; users
+      // opt in via the legend "Show occurrence density surfaces" toggle.
+      defaultVisible: false,
       source: 'mods-surface-source',
       fillLayer: 'mods-surface-fill',
       lineLayer: 'mods-surface-outline',

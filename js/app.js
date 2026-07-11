@@ -23,8 +23,9 @@ import {
   featureBelongsToCommodity,
   MODS_SURFACE_DEFAULT_COUNT
 } from './config/layerConfig.js';
-import { combineMODSFilters, filterMODSFeatures } from './config/modsFilters.js';
+import { combineMODSFilters, filterMODSFeatures, featureMatchesBrowserFilters } from './config/modsFilters.js';
 import { computeCommoditySurface } from './modules/SurfaceInterpolation.js';
+import MobileChrome from './modules/MobileChrome.js';
 
 class MineralsMapApp {
   constructor() {
@@ -32,6 +33,9 @@ class MineralsMapApp {
     this.layerManager = null;
     this.legendPanel = new LegendPanel('legend-panel');
     this.occurrenceBrowser = null;
+    this.mobileChrome = new MobileChrome({
+      onLayoutChange: () => this.mapBase.map?.resize()
+    });
     this.selectedPopup = null;
     // Occurrence-density surface visibility (Phase 1.1c) - a sub-toggle
     // inside the MODS legend card, independent of the commodity picker and
@@ -62,6 +66,7 @@ class MineralsMapApp {
       onSelect: (feature) => this.onOccurrenceSelect(feature)
     });
 
+    this.mobileChrome.init();
     this.renderLayerSidebar();
     this.bindLayerControls();
     // Applies the default commodity filter/color + legend before the initial
@@ -209,7 +214,7 @@ class MineralsMapApp {
       this.layerManager.setPaintProperty('modsOccurrences', 'circle-color', buildMODSColorExpression(value));
       this.resetMODSEnabledCommodities(value);
       this.applyMODSCommodityVisibility();
-      this.updateMODSSurface();
+      this.scheduleMODSSurfaceUpdate();
       this.updateMODSLegend(value);
     };
 
@@ -287,13 +292,13 @@ class MineralsMapApp {
       query: ''
     });
 
-    const filtered = filterMODSFeatures(all, {
-      pickerCommodities: resolved,
-      enabledCommodities: this.enabledCommodities,
-      primaryOnly,
-      statuses: browser.statuses,
-      query: browser.query
-    });
+    // Status/search only — avoid a second full commodity pass over `all`.
+    const filtered = commodityScoped.filter((f) =>
+      featureMatchesBrowserFilters(f, {
+        statuses: browser.statuses,
+        query: browser.query
+      })
+    );
 
     this.occurrenceBrowser.update(commodityScoped, filtered);
   }
@@ -304,6 +309,8 @@ class MineralsMapApp {
       this.selectedPopup = null;
     }
     if (!feature) return;
+
+    this.mobileChrome?.close({ silent: true });
 
     const [lon, lat] = feature.geometry.coordinates;
     this.map.flyTo({ center: [lon, lat], zoom: Math.max(this.map.getZoom(), 9) });
@@ -350,9 +357,15 @@ class MineralsMapApp {
   /**
    * Ensures geometry exists for every currently enabled mineral, then pushes
    * the merged FeatureCollection to LayerManager. Surfaces always use
-   * primary-commodity points only.
+   * primary-commodity points only. No-ops while the master surface toggle is off
+   * so cold start / picker changes skip Turf work until the user opts in.
    */
   updateMODSSurface() {
+    if (!this.showMODSSurface) {
+      this.layerManager.setSurfaceVisibility('modsOccurrences', false);
+      return;
+    }
+
     const allFeatures = this.layerManager.getLoadedFeatures('modsOccurrences');
     const tierCount = LAYER_CONFIG.modsOccurrences.surface?.tierCount;
 
@@ -377,7 +390,28 @@ class MineralsMapApp {
       merged,
       this.enabledCommodities
     );
-    this.layerManager.setSurfaceVisibility('modsOccurrences', this.showMODSSurface);
+    this.layerManager.setSurfaceVisibility('modsOccurrences', true);
+  }
+
+  /** Defer Turf surface compute so UI paint / map interaction stay responsive. */
+  scheduleMODSSurfaceUpdate() {
+    if (!this.showMODSSurface) {
+      this.layerManager.setSurfaceVisibility('modsOccurrences', false);
+      return;
+    }
+    if (this._surfaceIdleHandle != null) {
+      if (typeof cancelIdleCallback === 'function') cancelIdleCallback(this._surfaceIdleHandle);
+      else clearTimeout(this._surfaceIdleHandle);
+    }
+    const run = () => {
+      this._surfaceIdleHandle = null;
+      this.updateMODSSurface();
+    };
+    if (typeof requestIdleCallback === 'function') {
+      this._surfaceIdleHandle = requestIdleCallback(run, { timeout: 900 });
+    } else {
+      this._surfaceIdleHandle = setTimeout(run, 0);
+    }
   }
 
   /** Per-mineral checkbox: toggles circles and surfaces for that mineral. */
@@ -388,10 +422,11 @@ class MineralsMapApp {
       }
       this.modsSurfaceCache.delete(commodity);
       this.applyMODSCommodityVisibility();
-      this.updateMODSSurface();
+      this.scheduleMODSSurfaceUpdate();
     } else {
       this.enabledCommodities = this.enabledCommodities.filter((c) => c !== commodity);
       this.applyMODSCommodityVisibility();
+      this.scheduleMODSSurfaceUpdate();
     }
   }
 
@@ -400,7 +435,7 @@ class MineralsMapApp {
     const available = resolveMODSLegendCommodities(value);
     this.enabledCommodities = enabled ? [...available] : [];
     this.applyMODSCommodityVisibility();
-    if (enabled) this.updateMODSSurface();
+    this.scheduleMODSSurfaceUpdate();
     this.updateMODSLegend(value);
   }
 
@@ -413,7 +448,8 @@ class MineralsMapApp {
       checked: this.showMODSSurface,
       onChange: (checked) => {
         this.showMODSSurface = checked;
-        this.layerManager.setSurfaceVisibility('modsOccurrences', checked);
+        if (checked) this.scheduleMODSSurfaceUpdate();
+        else this.layerManager.setSurfaceVisibility('modsOccurrences', false);
       }
     };
 

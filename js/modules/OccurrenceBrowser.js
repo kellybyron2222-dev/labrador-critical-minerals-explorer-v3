@@ -40,15 +40,18 @@ export default class OccurrenceBrowser {
   }
 
   bind() {
+    this._searchTimer = null;
     this.els.search?.addEventListener('input', (e) => {
       this.query = e.target.value;
-      this.onChange();
+      clearTimeout(this._searchTimer);
+      this._searchTimer = setTimeout(() => this.onChange(), 200);
     });
 
     this.els.clear?.addEventListener('click', () => {
       this.statuses = new Set();
       this.query = '';
       if (this.els.search) this.els.search.value = '';
+      clearTimeout(this._searchTimer);
       this.renderStatusToggles();
       this.onChange();
     });
@@ -56,7 +59,8 @@ export default class OccurrenceBrowser {
     this.els.listToggle = document.getElementById('occ-list-toggle');
     this.els.listWrap = document.getElementById('occ-list-wrap');
     this.els.listToggleLabel = document.getElementById('occ-list-toggle-label');
-    this.listExpanded = true;
+    // Collapse the long list by default on narrow screens (map-first).
+    this.listExpanded = !window.matchMedia('(max-width: 768px)').matches;
 
     this.els.listToggle?.addEventListener('click', () => {
       this.listExpanded = !this.listExpanded;
@@ -67,6 +71,13 @@ export default class OccurrenceBrowser {
         this.els.listToggleLabel.textContent = this.listExpanded ? 'Hide list' : 'Show list';
       }
     });
+
+    this.els.listWrap?.classList.toggle('collapsed', !this.listExpanded);
+    this.els.listToggle?.classList.toggle('collapsed', !this.listExpanded);
+    this.els.listToggle?.setAttribute('aria-expanded', String(this.listExpanded));
+    if (this.els.listToggleLabel) {
+      this.els.listToggleLabel.textContent = this.listExpanded ? 'Hide list' : 'Show list';
+    }
   }
 
   getFilterState() {

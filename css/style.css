@@ -51,6 +51,7 @@
 
 html, body {
   height: 100%;
+  height: 100dvh;
   width: 100%;
   overflow: hidden;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -65,6 +66,7 @@ html, body {
 .app-container {
   display: flex;
   height: 100vh;
+  height: 100dvh;
   width: 100vw;
 }
 
@@ -84,6 +86,71 @@ html, body {
 .sidebar-header {
   padding: var(--space-4);
   border-bottom: 1px solid var(--card-light-border);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.sidebar-header-text {
+  min-width: 0;
+}
+
+.sidebar-close-btn {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  border: 1px solid var(--card-light-border);
+  border-radius: 6px;
+  color: var(--card-light-text-muted);
+  cursor: pointer;
+}
+
+.sidebar-close-btn:hover {
+  background: #f1f5f9;
+  color: var(--card-light-text);
+}
+
+.sidebar-backdrop {
+  display: none;
+}
+
+.map-chrome-btn {
+  position: absolute;
+  z-index: 8;
+  display: none;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 14px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid var(--card-light-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  color: var(--card-light-text);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.sidebar-open-btn {
+  top: 12px;
+  left: 12px;
+}
+
+.legend-toggle-btn {
+  top: 12px;
+  left: 118px;
+}
+
+.hidden {
+  display: none !important;
 }
 
 .logo-title {
@@ -156,8 +223,10 @@ html, body {
 }
 
 .control-btn {
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -167,6 +236,7 @@ html, body {
   color: var(--card-light-text-muted);
   cursor: pointer;
   transition: all var(--transition);
+  -webkit-tap-highlight-color: transparent;
 }
 
 .control-btn svg {
@@ -386,7 +456,8 @@ html, body {
 
 .basemap-btn {
   flex: 1;
-  padding: 6px 8px;
+  min-height: 40px;
+  padding: 8px 10px;
   background: transparent;
   border: none;
   border-right: 1px solid var(--card-light-border);
@@ -395,6 +466,7 @@ html, body {
   font-weight: 400;
   cursor: pointer;
   transition: all var(--transition);
+  -webkit-tap-highlight-color: transparent;
 }
 
 .basemap-btn:last-child {
@@ -760,11 +832,59 @@ html, body {
   color: var(--text-secondary) !important;
 }
 
-/* Responsive */
+/* Responsive — map-first drawer below 768px; desktop keeps fixed sidebar */
 @media (max-width: 768px) {
   .sidebar {
-    width: 260px;
-    min-width: 260px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: min(320px, 88vw);
+    min-width: 0;
+    height: 100%;
+    height: 100dvh;
+    transform: translateX(-100%);
+    transition: transform 200ms ease;
+    z-index: 40;
+    border-right: 1px solid var(--card-light-border);
+  }
+
+  .app-container.sidebar-open .sidebar {
+    transform: translateX(0);
+  }
+
+  .sidebar-close-btn:not(.hidden) {
+    display: flex;
+  }
+
+  .sidebar-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 35;
+    background: rgba(15, 23, 42, 0.4);
+    border: none;
+    padding: 0;
+    cursor: pointer;
+  }
+
+  .app-container.sidebar-open .sidebar-backdrop {
+    display: block;
+  }
+
+  body:has(.app-container.sidebar-open),
+  body:has(.app-container.legend-expanded) {
+    overflow: hidden;
+  }
+
+  .map-chrome-btn.sidebar-open-btn:not(.hidden),
+  .map-chrome-btn.legend-toggle-btn:not(.hidden) {
+    display: inline-flex;
+  }
+
+  .map-container {
+    width: 100%;
+    flex: 1;
+    min-width: 0;
   }
 
   .logo-title {
@@ -777,21 +897,93 @@ html, body {
     padding-left: var(--space-3);
     padding-right: var(--space-3);
   }
-}
 
-@media (max-width: 480px) {
-  .app-container {
+  .control-btn {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .basemap-btn {
+    min-height: 44px;
+  }
+
+  .occ-chip {
+    min-height: 36px;
+    padding: 6px 10px;
+  }
+
+  /* Legend starts collapsed — map stays full-bleed until user taps Legend */
+  .legend-panel {
+    top: auto;
+    left: 12px;
+    right: 12px;
+    bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+    max-height: min(38vh, 260px);
     flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: 8px;
+    display: none;
+    z-index: 9;
   }
 
-  .sidebar {
+  .app-container.legend-expanded .legend-panel {
+    display: flex;
+  }
+
+  .legend-card {
+    min-width: 0;
+    max-width: none;
     width: 100%;
-    height: auto;
-    max-height: 40vh;
+    padding: 8px 10px;
   }
 
-  .map-container {
-    height: 60vh;
+  .legend-card-title {
+    margin-bottom: 6px;
+    padding-bottom: 4px;
+  }
+
+  .legend-note-text {
+    display: none;
+  }
+
+  .legend-commodity-list {
+    max-height: 18vh;
+    overflow-y: auto;
+  }
+
+  .legend-items-preview {
+    max-height: 12vh;
+  }
+
+  .occ-kpi {
+    bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+    left: 12px;
+    right: 12px;
+    transform: none;
+    max-width: none;
+    padding: 6px 10px;
+    gap: 6px 12px;
+    justify-content: flex-start;
+  }
+
+  .occ-kpi-bit {
+    display: none;
+  }
+
+  .maplibregl-ctrl-top-right {
+    top: 56px;
+  }
+
+  .legend-modal {
+    left: 12px;
+    right: 12px;
+    bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+    top: auto;
+    max-height: min(55vh, 420px);
+    width: auto;
   }
 }
 
@@ -1212,15 +1404,4 @@ html, body {
   font-style: normal;
   font-weight: 600;
   color: var(--card-light-text);
-}
-
-@media (max-width: 768px) {
-  .sidebar {
-    width: 260px;
-    min-width: 260px;
-  }
-
-  .occ-kpi {
-    max-width: calc(100% - 24px);
-  }
 }

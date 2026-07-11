@@ -11,8 +11,8 @@
 > **Living document.** This is BOTH the master plan and the granular, step-by-step
 > checklist for the project. Review and update it as we move along — tick boxes,
 > flip status markers, and add notes in place.
-> Last updated: 2026-07-11 (evening) — §6.2 operator guide for auto-refresh;
-> baked MODS/facilities/WMS; monthly GHA with nextDue skip
+> Last updated: 2026-07-11 (evening) — mobile map-first Layers drawer + collapsed Legend;
+> §6.2 operator guide; baked datasets + monthly GHA
 
 **Status marker key:** `[x]` done · `[~]` in progress · `[ ]` not started · `[!]` blocked/needs decision
 Layer catalog status: `✅ done/in app` · `🟢 verified available` · `⬜ to confirm/wire` · `🔒 blocked`
@@ -33,6 +33,7 @@ bedrock done; provincial surficial (1.3) still open · **Phases 2–4** not star
 | MODS + facilities + 5 NRCan WMS baked (IndexedDB / static PNG; monthly GHA) | ✅ (2026-07-11) |
 | Status filters, search, list/detail, bottom KPI | ✅ (2026-07-11) |
 | Light sidebar chrome; legends top-left | ✅ |
+| Mobile map-first chrome (drawer Layers + collapsible Legend) | ✅ (2026-07-11) |
 | GitHub repo + Pages hosting | ✅ |
 | Provincial surficial (GeoAtlas) | [ ] Phase 1.3 |
 | Mineral claims / tenure | [ ] Phase 2.1 |
@@ -816,6 +817,10 @@ branch** with Actions enabled:
 
 ## 10. Changelog
 
+- **2026-07-11 (evening)** — Mobile map-first chrome: sidebar is an off-canvas
+  **Layers** drawer (closed by default); **Legend** is a separate button and
+  starts collapsed so the map fills the phone screen. Escape / backdrop close;
+  MapLibre `resize` on layout change.
 - **2026-07-11 (evening)** — Added **§6.2 How data refresh works (operator
   guide)**: monthly GHA is automatic; merge the refresh PR when it appears;
   force / local bake options documented.
