@@ -12,8 +12,8 @@
 > checklist for the project. Review and update it as we move along — tick boxes,
 > flip status markers, and add notes in place.
 > **Product / GTM / freemium arc:** see [`PRODUCT_PLAN.md`](./PRODUCT_PLAN.md).
-> Last updated: 2026-07-12 — **Phase 3 complete** (3.1–3.4 + polish);
-> **next = Phase 4.1 geophysics**
+> Last updated: 2026-07-12 — **Phase 4.1 complete** (aeromag + 1VD + radiometrics +
+> gravity + footprints w/ type·digital filters); **next = Stage B soft launch**
 
 **Status marker key:** `[x]` done · `[~]` in progress · `[ ]` not started · `[!]` blocked/needs decision
 Layer catalog status: `✅ done/in app` · `🟢 verified available` · `⬜ to confirm/wire` · `🔒 blocked`
@@ -26,8 +26,8 @@ Layer catalog status: `✅ done/in app` · `🟢 verified available` · `⬜ to 
 bedrock mutual exclusion **1.4**) · **Phase 2** ✅ (2.1–2.3 + **2.1c** expiry
 bands + **2.4** hard exclusions) · **Pre–Phase 3 close-out** ✅ ·
 **Phase 3** ✅ (3.1–3.4 incl. nearest-infra distances) ·
-**Phase 4** not started · **Phase 5** lite pulled forward; full provenance /
-shareable URL remain.
+**Phase 4** ✅ (**4.1** aeromag/1VD/radiometrics/gravity/footprints; **4.2** post-MVP) ·
+**Phase 5** lite pulled forward; full provenance / shareable URL remain.
 
 | Area | Status |
 |---|---|
@@ -44,10 +44,10 @@ shareable URL remain.
 | Tenure↔CPCAD de-overlap (parks only on CPCAD; tenure 69 rights polys) | ✅ |
 | Status filters, search, list/detail, bottom KPI + Settings | ✅ |
 | Soft-launch Phase 5 lite (About data, GeoJSON export, legend collapse) | ✅ |
-| Bake registry + monthly auto-refresh → PR (§6.2) | ✅ (27 registry entries) |
+| Bake registry + monthly auto-refresh → PR (§6.2) | ✅ (~34 registry entries) |
 | GitHub repo + Pages hosting + CI validate/Vitest | ✅ |
 | Infrastructure (roads, power, communities, facilities + nearest distances) | ✅ Phase 3 (3.1–3.4) |
-| Geophysics MVP slice (1VD/aeromag + gravity; survey footprints) | [ ] Phase **4.1** (**Must**) ← **next** |
+| Geophysics MVP slice (1VD/aeromag/radiometrics + gravity; survey footprints) | ✅ Phase **4.1** (2026-07-12) |
 | Geochemistry / ice-flow / grade filters | [ ] Phase 4.2 (post-MVP) |
 | Provenance panel, shareable URL | [ ] Phase 5 remainder |
 | Optional later: detailed surficial, faults/contacts, LiDAR, aerial, EO | [ ] see §5 “Optional later” |
@@ -64,10 +64,8 @@ shareable URL remain.
 > Pre–Phase 3 Must/Should close-out is done. Phase **4.2** geochemistry and
 > §5.2 stay post-MVP. Full triage → **§5.2**.
 
-1. **Must — Phase 4.1** — Labrador geophysics MVP slice: regional **1VD /
-   aeromag** + **gravity** (GeoAtlas), opacity + legend; add **survey /
-   assessment footprints** if readily available so blank ≠ unexplored.
-   (Geochemistry 4.2 stays post-MVP.)
+1. **Stage B soft launch** — niche outreach (NLPA first); landing/About already
+   lite. Engineering gate (incl. **4.1** geophysics) is met.
 2. **Phase 5 remainder** — full provenance panel, shareable URL, measure tools.
 3. **Then Phase 4.2** — geochemistry / grade filters / ice-flow (beyond MVP).
 4. **§5.2 Post-MVP backlog** — drillholes, live claims API, ESG habitats,
@@ -317,7 +315,9 @@ Occurrences/MODS), `Mineral_Lands` (claims/tenure/quarries), `Land_Use`,
 ### 3. What do the subsurface signals say? — geophysics & geochemistry
 | Layer | Source | Endpoint / service | Status |
 |---|---|---|---|
-| Labrador geophysics (aeromag / radiometric / gravity) | NL GeoAtlas | `GeoAtlas/Geophysics_Labrador` | 🟢 verified |
+| Labrador aeromag / 1VD (GeoAtlas) | NL GeoAtlas | `GeoAtlas/Geophysics_Labrador` | ✅ in app (ExportMap bake) |
+| Labrador gravity (Bouguer) | NRCan CGDB | Canada 2 km Bouguer_AC GeoTIFF → local bake | ✅ in app |
+| Airborne survey footprints | NL GeoAtlas | `GeoAtlas/Indexes` /6 | ✅ in app |
 | Lake-sediment & till geochemistry | NL GeoAtlas | `GeoAtlas/Geochemistry_All` | 🟢 verified |
 | Ore geochemistry (CMiO) | CMMI (USGS/GSC/GA) | `services.ga.gov.au/gis/critical-minerals/wfs` (+ `/wms`) | 🟢 verified |
 
@@ -907,19 +907,29 @@ done; **3.4** done; **4.1** geophysics still required for full product MVP.)
 - [x] Bake-backed cache (`infraDistance.js`); independent of layer toggles
 - [x] Explicit “not a viability score” note; no composite score
 
-### Phase 4 — Signals  [ ]
+### Phase 4 — Signals  [~]
 > **4.1 geophysics is Must for MVP** (2026-07-12 product decision): prospectors
 > need subsurface structure under Labrador cover — surface polygons alone are
 > not enough. **4.2 geochemistry** stays post-MVP / Stage C depth.
 
-**4.1 — Geophysics** [ ] ← **Must (MVP)**
-- [ ] Inventory `GeoAtlas/Geophysics_Labrador` (aeromag / radiometric / gravity)
-- [ ] Ship MVP slice: regional **1VD / aeromag** + **gravity anomalies**
-      (external review Issue 2) — WMS/image bake path + opacity + legend
-- [ ] Per-product toggles in Signals group (default OFF; heavy rasters)
-- [ ] **Survey / assessment footprints** (Issue 4) when a usable outline layer
-      exists — blank map ≠ “no minerals”
-- [ ] Bake + registry cadence; do not block MVP on every sub-survey product
+**4.1 — Geophysics** ✅ (2026-07-12)
+- [x] Inventory `GeoAtlas/Geophysics_Labrador` (aeromag / radiometric; **no
+      gravity in this service**) + `Indexes/6` footprints + NRCan Bouguer grid
+- [x] Ship MVP slice: regional **Residual Mag (aeromag)** + **1VD composite**
+      of detailed surveys — GeoAtlas ExportMap bake + opacity + legend
+- [x] **Radiometrics** (eU / eTh / K) — mosaic of Makkovik W + Qipuqqaq-Postville
+      + Schefferville W/E published GeoAtlas image layers (not every DIGITAL
+      survey); grayscale + color-bar legends
+- [x] Per-product toggles in Signals group (default OFF; heavy rasters;
+      mutual exclusion among rasters)
+- [x] **Survey / assessment footprints** (`Indexes/6`, Labrador clip) — full
+      inventory kept; type (PARAMETERS family) + digital-availability filters;
+      popup with logistics + NL airborne detail link. Decision: do **not** bake
+      extra per-survey rasters for MVP (largest digital blocks already covered
+      by 1VD/radio mosaics or lack MapServer images)
+- [x] Bake + registry cadence for aeromag / 1VD / radio / footprints
+- [x] **Gravity (NRCan Canada 2 km Bouguer_AC)** — local GeoTIFF bake
+      (`npm run fetch:gravity-local`) after AGG WMS proved unreachable
 
 **4.2 — Geochemistry** [ ] · **post-MVP**
 > **Note (added 2026-07-06, updated 2026-07-11):** this is the *quantitative*
@@ -942,8 +952,9 @@ done; **3.4** done; **4.1** geophysics still required for full product MVP.)
 - [ ] Ice-flow / glacial-transport vectors (Issue 5 companion) — see Optional
       later striations/landforms; full “trace up-ice” engine → §5.2
 
-**Phase 4.1 exit (MVP):** at least 1VD/aeromag + gravity usable with legend/
-opacity. **Phase 4.2 exit (post-MVP):** quantitative geochem surfaces.
+**Phase 4.1 exit (MVP):** aeromag + 1VD + radiometrics + gravity + footprints
+(with honest index filters/popup) shipped with legend/opacity. **Phase 4.2 exit
+(post-MVP):** quantitative geochem surfaces.
 
 ### Phase 5 — Cross-cutting features & polish  [~]
 > Soft-launch lite ✅ (2026-07-12): About data + GeoJSON export + legend
@@ -1236,6 +1247,22 @@ branch** with Actions enabled:
 
 ## 10. Changelog
 
+- **2026-07-12** — **Signals footprint honesty:** full `Indexes/6` inventory kept;
+  mutually exclusive PARAMETERS type filter + digital Yes/No filter; richer
+  popup (type, date, company, line spacing, digital plain-language, NL airborne
+  page link). Ranked largest surveys vs published GeoAtlas rasters — no extra
+  MVP bakes (Hopedale/Mistastin/Shabogamo already in 1VD; Makkovik East not on
+  MapServer yet). **Next:** Stage B soft launch.
+- **2026-07-12** — **Phase 4.1 complete:** NRCan Canada 2 km Bouguer_AC GeoTIFF
+  baked locally (`fetch:gravity-local` → `wms-gravity-nll.png`); Signals gravity
+  toggle live. Stage A engineering gate (incl. geophysics) met. **Next:** Stage B.
+- **2026-07-12** — **Phase 4.1 Signals (partial):** GeoAtlas regional Residual Mag
+  + detailed-survey 1VD composite (ExportMap → Mercator PNG bake),
+  `Indexes/6` survey footprints, Signals sidebar (opacity + raster mutual
+  exclusion), registry + `fetch:geophysics` / `fetch:survey-footprints`.
+  Catalog corrected: GeoAtlas has no gravity — NRCan AGG Bouguer (layer 75)
+  scripted but bake **blocked** (`wms.agg.nrcan.gc.ca` timeout). **Next:**
+  gravity bake when AGG reachable → Stage B.
 - **2026-07-12** — **Infrastructure coverage audit:** filled missing CFS Labrador
   land airports (Black Tickle, Charlottetown, St. Lewis, Voisey’s Bay private),
   Hopedale/Black Tickle harbours, and matching communities (incl. Red Bay).

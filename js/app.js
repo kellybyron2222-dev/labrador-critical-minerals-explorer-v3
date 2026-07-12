@@ -13,6 +13,8 @@ import {
   WMS_CONFIG,
   LAYER_GROUPS,
   LAYER_GROUP_ORDER,
+  SIGNAL_RASTER_KEYS,
+  buildSignalsLegendRamp,
   FATAL_FLAW_PRESET_LAYERS,
   FATAL_FLAW_LAND_USE_KINDS,
   FATAL_FLAW_MASK_PAINT,
@@ -33,6 +35,7 @@ import {
   featureMatchesBrowserFilters,
   modsUsesPrimaryOnlyFilter
 } from './config/modsFilters.js';
+import { buildSurveyFootprintFilter } from './config/surveyFootprints.js';
 import {
   buildClaimsExpiryLegendItems,
   buildClaimsExpiryBandToggles,
@@ -79,6 +82,7 @@ const POPUP_LAYER_IDS = [
   'atris-claims-fill',
   'geoatlas-cpcad-fill',
   'geoatlas-landuse-fill',
+  'geoatlas-survey-footprints-fill',
   'geoatlas-bedrock-fill',
   'geoatlas-surficial-fill'
 ];
@@ -116,6 +120,8 @@ class MineralsMapApp {
     this._kpiTimer = null;
     this.kpiBar = null;
     this.settingsPanel = null;
+    /** Phase 4.1 — desaturate signal rasters (aeromag / 1VD / gravity). */
+    this.signalsGrayscale = false;
     this.init();
   }
 
@@ -165,6 +171,7 @@ class MineralsMapApp {
     // preset) legend on the first paint rather than a generic one that
     // immediately gets replaced.
     this.bindMODSCommodityPicker();
+    this.bindSurveyFootprintPicker();
     this.bindFatalFlawPreset();
     this.bindInteractions();
     this.bindKpiMapEvents();
@@ -372,10 +379,24 @@ class MineralsMapApp {
           if (type === 'vector' && config.commodityPicker) {
             list.appendChild(this.buildCommodityPicker(name, config.commodityPicker));
           }
+          if (type === 'vector' && config.surveyFilterPicker) {
+            list.appendChild(
+              this.buildCommodityPicker(name, config.surveyFilterPicker, 'type-picker')
+            );
+          }
+          if (type === 'vector' && config.surveyDigitalPicker) {
+            list.appendChild(
+              this.buildCommodityPicker(name, config.surveyDigitalPicker, 'digital-picker')
+            );
+          }
         });
 
         body.appendChild(list);
       });
+
+      if (groupId === 'signals') {
+        body.appendChild(this.buildSignalsOpacityControl());
+      }
 
       if (groupDef.hint) {
         const hint = document.createElement('p');
@@ -395,13 +416,59 @@ class MineralsMapApp {
     });
   }
 
-  /** Builds the commodity-filter `<select>` shown under a layer row (currently only MODS) from its `commodityPicker` config. */
-  buildCommodityPicker(name, pickerConfig) {
+  /** Phase 4.1 — shared opacity + grayscale controls for signal rasters. */
+  buildSignalsOpacityControl() {
+    const wrap = document.createElement('div');
+    wrap.className = 'signals-opacity-wrap';
+    wrap.innerHTML = `
+      <label class="signals-opacity-label" for="signals-raster-opacity">
+        Raster opacity
+        <span class="signals-opacity-value" id="signals-opacity-value">70%</span>
+      </label>
+      <input type="range" id="signals-raster-opacity" class="signals-opacity-range"
+        min="15" max="100" step="5" value="70" />
+      <label class="signals-grayscale-toggle" for="signals-grayscale">
+        <input type="checkbox" id="signals-grayscale" />
+        <span>Grayscale color mode</span>
+      </label>
+    `;
+    const range = wrap.querySelector('#signals-raster-opacity');
+    const valueEl = wrap.querySelector('#signals-opacity-value');
+    const grayCb = wrap.querySelector('#signals-grayscale');
+    grayCb.checked = this.signalsGrayscale;
+    range.addEventListener('input', () => {
+      const pct = Number(range.value);
+      valueEl.textContent = `${pct}%`;
+      const opacity = pct / 100;
+      SIGNAL_RASTER_KEYS.forEach((name) => {
+        if (WMS_CONFIG[name]) {
+          this.layerManager.setWMSLayerOpacity(name, opacity);
+        }
+      });
+    });
+    grayCb.addEventListener('change', () => {
+      this.signalsGrayscale = grayCb.checked;
+      this.layerManager.setSignalRasterGrayscale(this.signalsGrayscale);
+      this.refreshActiveSignalsLegends();
+    });
+    return wrap;
+  }
+
+  /** Refresh legend cards for any currently checked signal rasters (color ↔ gray). */
+  refreshActiveSignalsLegends() {
+    SIGNAL_RASTER_KEYS.forEach((name) => {
+      const cb = document.getElementById(`wms-${name}`);
+      if (cb?.checked) this.updateWMSLegend(name, true);
+    });
+  }
+
+  /** Builds a sidebar `<select>` under a layer row (MODS commodity, survey type/digital, …). */
+  buildCommodityPicker(name, pickerConfig, idSuffix = 'commodity-picker') {
     const wrap = document.createElement('div');
     wrap.className = 'commodity-picker-wrap';
 
     const select = document.createElement('select');
-    select.id = `${name}-commodity-picker`;
+    select.id = `${name}-${idSuffix}`;
     select.className = 'commodity-select';
 
     pickerConfig.groups.forEach((group) => {
@@ -533,6 +600,9 @@ class MineralsMapApp {
       if (this.layerManager.layers[name]) {
         this.layerManager.layers[name].visible = true;
       }
+      if (name === 'surveyFootprints') {
+        this.applySurveyFootprintFilters();
+      }
       await this.updateVectorLegend(name, true);
       return true;
     }
@@ -647,6 +717,29 @@ class MineralsMapApp {
 
     picker.addEventListener('change', (e) => applyCommodity(e.target.value));
     applyCommodity(picker.value);
+  }
+
+  /** Survey footprints: type (PARAMETERS family) + digital availability filters. */
+  bindSurveyFootprintPicker() {
+    const typePicker = document.getElementById('surveyFootprints-type-picker');
+    const digitalPicker = document.getElementById('surveyFootprints-digital-picker');
+    if (!typePicker && !digitalPicker) return;
+
+    const onChange = () => this.applySurveyFootprintFilters();
+    typePicker?.addEventListener('change', onChange);
+    digitalPicker?.addEventListener('change', onChange);
+    onChange();
+  }
+
+  applySurveyFootprintFilters() {
+    const typeValue =
+      document.getElementById('surveyFootprints-type-picker')?.value || 'all';
+    const digitalValue =
+      document.getElementById('surveyFootprints-digital-picker')?.value || 'all';
+    this.layerManager.setLayerFilter(
+      'surveyFootprints',
+      buildSurveyFootprintFilter(typeValue, digitalValue)
+    );
   }
 
   /**
@@ -1439,11 +1532,25 @@ class MineralsMapApp {
     }
 
     const config = WMS_CONFIG[name];
+    if (!config) return;
+
+    // Signal rasters: curated color-bar legends (ArcGIS raster legends are often empty/useless).
+    if (SIGNAL_RASTER_KEYS.includes(name) && config.legendRamp) {
+      const ramp = buildSignalsLegendRamp(config, this.signalsGrayscale);
+      const modeNote = this.signalsGrayscale ? ' Grayscale display mode on.' : '';
+      this.legendPanel.setLayerLegend(key, true, {
+        title: config.label,
+        ramp,
+        note: `${config.legendNote || ''}${modeNote}`.trim()
+      });
+      return;
+    }
+
     const items = await this.layerManager.getWMSLegendItems(name);
 
     this.legendPanel.setLayerLegend(key, visible, items
-      ? { title: config.label, items, shape: 'icon' }
-      : { title: config.label, imageUrl: config.legendUrl });
+      ? { title: config.label, items, shape: 'icon', note: config.legendNote }
+      : { title: config.label, imageUrl: config.legendUrl, note: config.legendNote });
   }
 
   get map() {
@@ -1477,6 +1584,9 @@ class MineralsMapApp {
         if (checked && name === 'bedrock') {
           await this.enforceBedrockMutualExclusion('national');
         }
+        if (checked && SIGNAL_RASTER_KEYS.includes(name)) {
+          await this.enforceSignalsRasterMutualExclusion(name);
+        }
         checkbox.disabled = true;
         item?.classList.add('loading');
         try {
@@ -1493,6 +1603,10 @@ class MineralsMapApp {
           }
           if (checked) this.setDataStatus(null);
           await this.updateWMSLegend(name, checkbox.checked);
+          this.syncSignalsOpacityControl(name);
+          if (checked && SIGNAL_RASTER_KEYS.includes(name) && this.signalsGrayscale) {
+            this.layerManager.setSignalRasterGrayscale(true);
+          }
           this.refreshKpiBar();
         } finally {
           checkbox.disabled = false;
@@ -1500,6 +1614,44 @@ class MineralsMapApp {
         }
       });
     });
+  }
+
+  /**
+   * Phase 4.1 — only one signals raster at a time (aeromag / 1VD / gravity).
+   * Survey footprints stay independently toggleable.
+   */
+  async enforceSignalsRasterMutualExclusion(enabling) {
+    if (this._signalsExcluding) return;
+    this._signalsExcluding = true;
+    try {
+      for (const name of SIGNAL_RASTER_KEYS) {
+        if (name === enabling || !WMS_CONFIG[name]) continue;
+        const cb = document.getElementById(`wms-${name}`);
+        if (cb?.checked) {
+          cb.checked = false;
+          await this.layerManager.setWMSLayerVisibility(name, false);
+          await this.updateWMSLegend(name, false);
+        }
+      }
+      this.setDataStatus(
+        'Only one geophysics raster at a time — radiometrics & 1VD are survey-limited; keep Survey footprints on for coverage.',
+        'info'
+      );
+    } finally {
+      this._signalsExcluding = false;
+    }
+  }
+
+  /** Keep the signals opacity slider in sync with the active raster's config opacity. */
+  syncSignalsOpacityControl(name) {
+    if (!SIGNAL_RASTER_KEYS.includes(name)) return;
+    const range = document.getElementById('signals-raster-opacity');
+    const valueEl = document.getElementById('signals-opacity-value');
+    const config = WMS_CONFIG[name];
+    if (!range || !config) return;
+    const pct = Math.round((config.opacity ?? 0.7) * 100);
+    range.value = String(pct);
+    if (valueEl) valueEl.textContent = `${pct}%`;
   }
 
   /**

@@ -1,0 +1,24 @@
+{
+  "version": "ff3663a73edd",
+  "contentHash": "ff3663a73edd66c6b948c4ff8e81f38a9ec11c703e86aecd8e00b5f268b38d5e",
+  "cadenceMonths": 12,
+  "generatedAt": "2026-07-12T22:31:33.553Z",
+  "nextDue": "2027-07-12",
+  "refresh": "GitHub Actions refresh-data.yml (monthly; skips until nextDue) or npm run refresh:data",
+  "featureCount": null,
+  "width": 1200,
+  "height": 1917,
+  "channels": 4,
+  "bounds": [
+    -68,
+    46,
+    -52,
+    61
+  ],
+  "source": "data/Gravity/AGG_Canada 2 km - GRAV - Bouguer - Bouguer_AC.TIF",
+  "provider": "local-bouguer-tif",
+  "layers": "Bouguer_AC",
+  "label": "Bouguer gravity anomaly (NRCan 2 km color grid)",
+  "imageWidthRequest": 1200,
+  "contentNote": "Baked from local GeoTIFF download (AGG Canada 2 km GRAV Bouguer_AC). Not live AGG WMS."
+}

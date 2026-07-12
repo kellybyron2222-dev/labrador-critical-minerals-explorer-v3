@@ -477,5 +477,37 @@ export function buildPopupSection(layerId, feature, options = {}) {
     );
   }
 
+  if (layerId === 'geoatlas-survey-footprints-fill') {
+    const year =
+      p.SURV_YEAR != null && Number(p.SURV_YEAR) > 0 ? String(p.SURV_YEAR) : null;
+    const surveyDate = p.SURV_DATE?.toString().trim();
+    const detailUrl = safeUrl(p.surveyDetailUrl);
+    const detailRow = detailUrl
+      ? `<div class="popup-row"><span class="popup-label">NL survey page:</span> <span class="popup-value"><a href="${escapeHtml(detailUrl)}" target="_blank" rel="noopener">Open logistics, reports &amp; digital links</a></span></div>`
+      : '';
+    return wrap(
+      'Airborne survey footprint',
+      p.name || p.SURVEY_ID || 'Survey',
+      rowsHtml([
+        ['Survey ID', p.SURVEY_ID],
+        ['Survey type', p.surveyFamilyLabel],
+        ['Date', surveyDate],
+        ['Year', year],
+        ['Company / collector', p.COMPANY],
+        ['Parameters', p.PARAMETERS],
+        ['Line spacing / resolution', p.LINE_SPACE],
+        ['Geofile', p.GEOFILE],
+        ['Digital data', p.digitalLabel || p.DIGITAL]
+      ]) +
+        detailRow +
+        rowsHtml([
+          [
+            'Note',
+            'Index footprint from GeoAtlas Indexes — not the same as Signals map rasters in this app.'
+          ]
+        ])
+    );
+  }
+
   return null;
 }

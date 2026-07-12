@@ -415,5 +415,111 @@
     "assetPath": "public/data/geoatlas-municipal-labrador.geojson",
     "cacheVersionPath": "js/config/layerConfig.js",
     "cacheKey": "geoatlas-municipal-labrador"
+  },
+  {
+    "id": "wms-aeromag-nll",
+    "label": "Aeromag Residual Mag (Labrador)",
+    "cadenceMonths": 12,
+    "fetchScript": "fetch:geophysics",
+    "kind": "image",
+    "outputs": [
+      "public/data/wms-aeromag-nll.png",
+      "public/data/wms-aeromag-nll.meta.json"
+    ],
+    "metaPath": "public/data/wms-aeromag-nll.meta.json",
+    "assetPath": "public/data/wms-aeromag-nll.png",
+    "cacheVersionPath": "js/config/layerConfig.js",
+    "cacheKey": "wms-aeromag-nll"
+  },
+  {
+    "id": "wms-mag1vd-nll",
+    "label": "Mag 1VD Detailed Surveys (Labrador)",
+    "cadenceMonths": 12,
+    "fetchScript": "fetch:geophysics",
+    "kind": "image",
+    "outputs": [
+      "public/data/wms-mag1vd-nll.png",
+      "public/data/wms-mag1vd-nll.meta.json"
+    ],
+    "metaPath": "public/data/wms-mag1vd-nll.meta.json",
+    "assetPath": "public/data/wms-mag1vd-nll.png",
+    "cacheVersionPath": "js/config/layerConfig.js",
+    "cacheKey": "wms-mag1vd-nll"
+  },
+  {
+    "id": "wms-radioEu-nll",
+    "label": "Radiometrics eU Detailed Surveys (Labrador)",
+    "cadenceMonths": 12,
+    "fetchScript": "fetch:geophysics",
+    "kind": "image",
+    "outputs": [
+      "public/data/wms-radioEu-nll.png",
+      "public/data/wms-radioEu-nll.meta.json"
+    ],
+    "metaPath": "public/data/wms-radioEu-nll.meta.json",
+    "assetPath": "public/data/wms-radioEu-nll.png",
+    "cacheVersionPath": "js/config/layerConfig.js",
+    "cacheKey": "wms-radioEu-nll"
+  },
+  {
+    "id": "wms-radioEth-nll",
+    "label": "Radiometrics eTh Detailed Surveys (Labrador)",
+    "cadenceMonths": 12,
+    "fetchScript": "fetch:geophysics",
+    "kind": "image",
+    "outputs": [
+      "public/data/wms-radioEth-nll.png",
+      "public/data/wms-radioEth-nll.meta.json"
+    ],
+    "metaPath": "public/data/wms-radioEth-nll.meta.json",
+    "assetPath": "public/data/wms-radioEth-nll.png",
+    "cacheVersionPath": "js/config/layerConfig.js",
+    "cacheKey": "wms-radioEth-nll"
+  },
+  {
+    "id": "wms-radioK-nll",
+    "label": "Radiometrics K Detailed Surveys (Labrador)",
+    "cadenceMonths": 12,
+    "fetchScript": "fetch:geophysics",
+    "kind": "image",
+    "outputs": [
+      "public/data/wms-radioK-nll.png",
+      "public/data/wms-radioK-nll.meta.json"
+    ],
+    "metaPath": "public/data/wms-radioK-nll.meta.json",
+    "assetPath": "public/data/wms-radioK-nll.png",
+    "cacheVersionPath": "js/config/layerConfig.js",
+    "cacheKey": "wms-radioK-nll"
+  },
+  {
+    "id": "wms-gravity-nll",
+    "label": "Bouguer Gravity (NRCan 2 km, Labrador window)",
+    "cadenceMonths": 12,
+    "fetchScript": "fetch:gravity-local",
+    "kind": "image",
+    "outputs": [
+      "public/data/wms-gravity-nll.png",
+      "public/data/wms-gravity-nll.meta.json"
+    ],
+    "metaPath": "public/data/wms-gravity-nll.meta.json",
+    "assetPath": "public/data/wms-gravity-nll.png",
+    "cacheVersionPath": "js/config/layerConfig.js",
+    "cacheKey": "wms-gravity-nll"
+  },
+  {
+    "id": "geoatlas-survey-footprints-labrador",
+    "label": "Airborne Survey Footprints (Labrador)",
+    "cadenceMonths": 12,
+    "fetchScript": "fetch:survey-footprints",
+    "kind": "geojson",
+    "outputs": [
+      "public/data/geoatlas-survey-footprints-labrador.geojson",
+      "public/data/geoatlas-survey-footprints-labrador.meta.json"
+    ],
+    "metaPath": "public/data/geoatlas-survey-footprints-labrador.meta.json",
+    "assetPath": "public/data/geoatlas-survey-footprints-labrador.geojson",
+    "cacheVersionPath": "js/config/layerConfig.js",
+    "cacheKey": "geoatlas-survey-footprints-labrador",
+    "minFeatureCount": 100
   }
 ]

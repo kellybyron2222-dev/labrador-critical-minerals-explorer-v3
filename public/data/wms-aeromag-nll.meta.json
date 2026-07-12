@@ -1,0 +1,23 @@
+{
+  "version": "296a830f4d53",
+  "contentHash": "296a830f4d5349e8af96c972e20b9e90c94cc44b86854534098b171e386c2774",
+  "cadenceMonths": 12,
+  "generatedAt": "2026-07-12T22:13:23.221Z",
+  "nextDue": "2027-07-12",
+  "refresh": "GitHub Actions refresh-data.yml (monthly; skips until nextDue) or npm run refresh:data",
+  "featureCount": null,
+  "width": 1200,
+  "height": 1917,
+  "channels": 4,
+  "bounds": [
+    -68,
+    46,
+    -52,
+    61
+  ],
+  "source": "https://dnrmaps.gov.nl.ca/arcgis/rest/services/GeoAtlas/Geophysics_Labrador/MapServer/export",
+  "provider": "geoatlas-export",
+  "layers": "65",
+  "label": "Residual Mag - Labrador",
+  "imageWidthRequest": 1200
+}

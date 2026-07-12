@@ -4,6 +4,9 @@ import {
   LAYER_CONFIG,
   WMS_CONFIG,
   WMS_BASE_URL,
+  GEOATLAS_GEOPHYSICS_MAPSERVER,
+  NRCAN_AGG_WMS_URL,
+  SIGNAL_RASTER_KEYS,
   buildMODSSurfaceColorExpression
 } from '../config/layerConfig.js';
 import { normalizeMODSStatus } from '../config/modsFilters.js';
@@ -28,6 +31,7 @@ import {
   enrichMunicipalProperties,
   enrichSiteProperties
 } from '../config/infrastructure.js';
+import { enrichSurveyFootprintProperties } from '../config/surveyFootprints.js';
 import { getCachedGeoJSON, setCachedGeoJSON } from './layerCache.js';
 import { reprojectToMercator } from './wmsReprojection.js';
 
@@ -80,6 +84,8 @@ export default class LayerManager {
     this.surfaceData = {};
     this.surfaceEnabledCommodities = {};
     this.surfaceVisible = {};
+    /** -1 = grayscale, 0 = full color (MapLibre raster-saturation). */
+    this.signalRasterSaturation = 0;
   }
 
   async fetchGeoJSON(url) {
@@ -512,6 +518,10 @@ export default class LayerManager {
     } else if (config.enrichment === 'infraSite') {
       data.features.forEach((feature) => {
         enrichSiteProperties(feature.properties);
+      });
+    } else if (config.enrichment === 'surveyFootprints') {
+      data.features.forEach((feature) => {
+        enrichSurveyFootprintProperties(feature.properties);
       });
     }
 
@@ -996,13 +1006,49 @@ export default class LayerManager {
   }
 
   /**
-   * Build a single GetMap request covering the full layer bounds.
-   * CRS:84 uses lon/lat axis order, and is the only unprojected CRS this
-   * server supports (it rejects EPSG:3857 outright).
+   * Build a single GetMap / ExportMap request covering the full layer bounds.
+   * Provider-aware:
+   *   - nrcan-geo (default): NRCan geo.ca ArcGIS WMS, CRS:84
+   *   - geoatlas-export: NL GeoAtlas MapServer export (WGS84 bbox)
+   *   - nrcan-agg: NRCan AGG WMS 1.1.1 EPSG:4326 (gravity)
    */
   buildWMSImageUrl(config, width, height) {
     const [west, south, east, north] = config.bounds;
+    const provider = config.provider || 'nrcan-geo';
 
+    if (provider === 'geoatlas-export') {
+      const params = new URLSearchParams({
+        bbox: `${west},${south},${east},${north}`,
+        bboxSR: '4326',
+        imageSR: '4326',
+        size: `${width},${height}`,
+        dpi: '96',
+        format: 'png32',
+        transparent: 'true',
+        layers: `show:${config.layers}`,
+        f: 'image'
+      });
+      return `${GEOATLAS_GEOPHYSICS_MAPSERVER}/export?${params.toString()}`;
+    }
+
+    if (provider === 'nrcan-agg') {
+      const params = new URLSearchParams({
+        service: 'WMS',
+        version: '1.1.1',
+        request: 'GetMap',
+        layers: config.layers,
+        styles: '',
+        srs: 'EPSG:4326',
+        bbox: `${west},${south},${east},${north}`,
+        width: String(width),
+        height: String(height),
+        format: 'image/png',
+        transparent: 'true'
+      });
+      return `${NRCAN_AGG_WMS_URL}?${params.toString()}`;
+    }
+
+    // nrcan-geo — CRS:84 uses lon/lat axis order; server rejects EPSG:3857.
     const params = new URLSearchParams({
       service: 'WMS',
       version: '1.3.0',
@@ -1021,7 +1067,7 @@ export default class LayerManager {
   }
 
   /**
-   * Fetches the CRS:84 GetMap image and resamples it onto a Mercator-linear
+   * Fetches the CRS:84 GetMap / ExportMap image and resamples it onto a Mercator-linear
    * grid so it aligns with the basemap, returning a data URL ready for a
    * MapLibre `image` source.
    */
@@ -1042,7 +1088,7 @@ export default class LayerManager {
       const canvas = reprojectToMercator(bitmap, config.bounds);
       return canvas.toDataURL('image/png');
     } catch (error) {
-      console.error(`Failed to load WMS layer ${config.service}:`, error);
+      console.error(`Failed to load raster layer ${config.service || config.layers}:`, error);
       return null;
     }
   }
@@ -1074,6 +1120,12 @@ export default class LayerManager {
     }
 
     if (!dataUrl) {
+      if (config.provider === 'local-bouguer-tif') {
+        console.error(
+          `Gravity bake missing (${config.imageUrl}). Run: npm run fetch:gravity-local`
+        );
+        return false;
+      }
       dataUrl = await this.fetchReprojectedWMSImage(config);
     }
     if (!dataUrl) return false;
@@ -1117,6 +1169,7 @@ export default class LayerManager {
         source: sourceId,
         paint: {
           'raster-opacity': config.opacity,
+          'raster-saturation': this.signalRasterSaturation ?? 0,
           'raster-fade-duration': 300,
           'raster-resampling': 'linear'
         },
@@ -1148,6 +1201,39 @@ export default class LayerManager {
 
     state.visible = visible;
     return true;
+  }
+
+  /** Update raster-opacity for a loaded WMS/image layer (signals opacity slider). */
+  setWMSLayerOpacity(name, opacity) {
+    const key = `wms-${name}`;
+    const state = this.layers[key];
+    const config = WMS_CONFIG[name];
+    if (!config) return;
+    const value = Math.max(0, Math.min(1, Number(opacity)));
+    config.opacity = value;
+    if (state?.layerId && this.map.getLayer(state.layerId)) {
+      this.map.setPaintProperty(state.layerId, 'raster-opacity', value);
+    }
+  }
+
+  /**
+   * Grayscale mode for signal rasters via raster-saturation (-1 = gray, 0 = color).
+   * Applied to newly added layers and any currently loaded signal rasters.
+   */
+  setSignalRasterGrayscale(grayscale) {
+    this.signalRasterSaturation = grayscale ? -1 : 0;
+    for (const [key, state] of Object.entries(this.layers)) {
+      if (!state?.isWMS || !state.layerId) continue;
+      const name = key.replace(/^wms-/, '');
+      if (!SIGNAL_RASTER_KEYS.includes(name)) continue;
+      if (this.map.getLayer(state.layerId)) {
+        this.map.setPaintProperty(
+          state.layerId,
+          'raster-saturation',
+          this.signalRasterSaturation
+        );
+      }
+    }
   }
 
   /** Re-adds previously-enabled WMS layers after a basemap style change, reusing the cached image (no re-fetch). */

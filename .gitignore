@@ -13,6 +13,9 @@ dist-ssr
 *.local
 scripts/.refresh-result.json
 
+# Local NRCan gravity source download (bake with npm run fetch:gravity-local)
+data/Gravity/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

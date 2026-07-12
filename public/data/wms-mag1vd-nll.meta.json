@@ -1,0 +1,24 @@
+{
+  "version": "abe9393c1b9e",
+  "contentHash": "abe9393c1b9e75c7a324158974f7d971129797c8ecda0109266f7dd922808985",
+  "cadenceMonths": 12,
+  "generatedAt": "2026-07-12T22:43:10.754Z",
+  "nextDue": "2027-07-12",
+  "refresh": "GitHub Actions refresh-data.yml (monthly; skips until nextDue) or npm run refresh:data",
+  "featureCount": null,
+  "width": 2400,
+  "height": 1776,
+  "channels": 4,
+  "bounds": [
+    -67.8,
+    52.5,
+    -56,
+    57.5
+  ],
+  "source": "https://dnrmaps.gov.nl.ca/arcgis/rest/services/GeoAtlas/Geophysics_Labrador/MapServer/export",
+  "provider": "geoatlas-export",
+  "layers": "6,21,30,35,38,64",
+  "mosaic": true,
+  "label": "Mag 1st Vert. Derivative (detailed surveys)",
+  "imageWidthRequest": 2400
+}

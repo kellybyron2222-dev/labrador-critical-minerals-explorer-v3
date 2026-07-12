@@ -1,0 +1,24 @@
+{
+  "version": "f466ed00b686",
+  "contentHash": "f466ed00b6863a4e79a1d2c24a801256837f798eddeb45b0b65f226b47a3d8d3",
+  "cadenceMonths": 12,
+  "generatedAt": "2026-07-12T22:43:20.784Z",
+  "nextDue": "2027-07-12",
+  "refresh": "GitHub Actions refresh-data.yml (monthly; skips until nextDue) or npm run refresh:data",
+  "featureCount": null,
+  "width": 2400,
+  "height": 1776,
+  "channels": 4,
+  "bounds": [
+    -67.8,
+    52.5,
+    -56,
+    57.5
+  ],
+  "source": "https://dnrmaps.gov.nl.ca/arcgis/rest/services/GeoAtlas/Geophysics_Labrador/MapServer/export",
+  "provider": "geoatlas-export",
+  "layers": "12,26,45,55",
+  "mosaic": true,
+  "label": "Equiv. Thorium (detailed surveys)",
+  "imageWidthRequest": 2400
+}

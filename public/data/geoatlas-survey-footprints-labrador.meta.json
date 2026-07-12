@@ -1,0 +1,21 @@
+{
+  "version": "de066dead550",
+  "contentHash": "de066dead550e461611109bdd74a23497f26321205c8e73ef8d659377f7c4216",
+  "cadenceMonths": 12,
+  "generatedAt": "2026-07-12T22:46:33.763Z",
+  "nextDue": "2027-07-12",
+  "refresh": "GitHub Actions refresh-data.yml (monthly; skips until nextDue) or npm run refresh:data",
+  "featureCount": 1236,
+  "source": "https://dnrmaps.gov.nl.ca/arcgis/rest/services/GeoAtlas/Indexes/MapServer/6",
+  "layerId": 6,
+  "clip": {
+    "xmin": -67.8,
+    "ymin": 51.5,
+    "xmax": -55.5,
+    "ymax": 60.6,
+    "spatialReference": {
+      "wkid": 4326
+    }
+  },
+  "outFields": "OBJECTID,SURVEY_ID,GEOFILE,DIGITAL,SURV_DATE,SURV_YEAR,LINE_SPACE,PARAMETERS,COMPANY"
+}

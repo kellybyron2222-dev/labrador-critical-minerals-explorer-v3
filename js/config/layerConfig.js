@@ -26,6 +26,10 @@ import {
   buildLandUsePaginatedQueries
 } from './protectedAreas.js';
 import {
+  SURVEY_DIGITAL_PICKER,
+  SURVEY_FOOTPRINT_PICKER
+} from './surveyFootprints.js';
+import {
   MAP_LAYERS_QUERY_BASE,
   LAND_USE_QUERY_BASE,
   ROADS_WHERE,
@@ -453,7 +457,8 @@ export const LAYER_GROUPS = {
   },
   signals: {
     title: 'Geophysical & Geochemical Signals',
-    hint: 'Subsurface survey and sample data',
+    hint:
+      'Aeromag, 1VD, radiometrics (eU / eTh / K), Bouguer gravity, survey footprints. Radiometrics & 1VD are survey-limited — use footprints. Off by default.',
     defaultExpanded: false
   },
   base: {
@@ -1399,6 +1404,58 @@ export const LAYER_CONFIG = {
       fillOpacityByTier: [0, 0.08, 0.16, 0.28, 0.4],
       lineOpacityByTier: [0, 0.15, 0.25, 0.4, 0.55]
     }
+  },
+  surveyFootprints: {
+    group: 'signals',
+    sidebarLabel: 'Survey footprints (index)',
+    indicatorClass: 'surveyFootprints',
+    source: 'geoatlas-survey-footprints-source',
+    layer: 'geoatlas-survey-footprints-fill',
+    outline: 'geoatlas-survey-footprints-outline',
+    lazy: true,
+    visible: false,
+    enrichment: 'surveyFootprints',
+    surveyFilterPicker: SURVEY_FOOTPRINT_PICKER,
+    surveyDigitalPicker: SURVEY_DIGITAL_PICKER,
+    dataUrl: './data/geoatlas-survey-footprints-labrador.geojson',
+    cacheKey: 'geoatlas-survey-footprints-labrador',
+    cacheVersion: 'de066dead550',
+    // Under signal rasters conceptually; keep under rights/MODS stack so outlines stay readable.
+    beforeLayerIds: [
+      'mods-surface-fill',
+      'mods-surface-outline',
+      'mods-layer',
+      ...FACILITY_STACK_LAYER_IDS
+    ],
+    paginatedQuery: {
+      url: `${GEOATLAS_REST_BASE}/Indexes/MapServer/6/query`,
+      where: '1=1',
+      outFields:
+        'OBJECTID,SURVEY_ID,GEOFILE,DIGITAL,SURV_DATE,SURV_YEAR,LINE_SPACE,PARAMETERS,COMPANY',
+      outSR: 4326,
+      format: 'esrijson',
+      maxAllowableOffset: 0.002,
+      pageSize: 200,
+      concurrency: 4,
+      ...labradorGeometryQueryParams()
+    },
+    paint: {
+      fill: {
+        'fill-color': '#7c3aed',
+        'fill-opacity': 0.08,
+        'fill-outline-color': 'rgba(124, 58, 237, 0.35)'
+      },
+      line: {
+        'line-color': '#6d28d9',
+        'line-width': 1.4,
+        'line-opacity': 0.9
+      }
+    },
+    legendTitle: 'Airborne survey footprints',
+    legendShape: 'fill',
+    legend: [{ color: 'rgba(124, 58, 237, 0.45)', label: 'Recorded survey outline' }],
+    legendNote:
+      'Full GeoAtlas Indexes inventory (~1,200 Labrador surveys). Filter by survey type and digital availability; click a footprint for logistics and the NL airborne detail page. Signal rasters only cover published regional/detailed products — most footprints have no matching image layer here.'
   }
 };
 
@@ -1409,6 +1466,47 @@ export const LAYER_CONFIG = {
  * EPSG:3857 XYZ tile grid, which this server rejects outright.
  */
 export const WMS_BASE_URL = 'https://maps-cartes.services.geo.ca/server_serveur/services/NRCan';
+
+/** GeoAtlas MapServer root (ExportMap bake / live fallback for geophysics rasters). */
+export const GEOATLAS_GEOPHYSICS_MAPSERVER = `${GEOATLAS_REST_BASE}/Geophysics_Labrador/MapServer`;
+
+/** NRCan AGG gravity WMS (Bouguer = layer 75). Often firewalled; bake when reachable. */
+export const NRCAN_AGG_WMS_URL = 'http://wms.agg.nrcan.gc.ca/wms2/wms2.aspx';
+
+/** Phase 4.1 — only one signals raster on at a time (aeromag / 1VD / gravity). */
+export const SIGNAL_RASTER_KEYS = [
+  'aeromag',
+  'mag1vd',
+  'radioEu',
+  'radioEth',
+  'radioK',
+  'gravity'
+];
+
+/** Grayscale stops shared by signal color-bar legends when grayscale mode is on. */
+export const SIGNAL_GRAYSCALE_RAMP_COLORS = [
+  '#0f172a',
+  '#334155',
+  '#64748b',
+  '#94a3b8',
+  '#e2e8f0'
+];
+
+/**
+ * Build a legend ramp def for a signals raster (color or grayscale).
+ * @param {object} config WMS_CONFIG entry
+ * @param {boolean} grayscale
+ */
+export function buildSignalsLegendRamp(config, grayscale = false) {
+  const base = config?.legendRamp;
+  if (!base?.colors?.length) return null;
+  return {
+    colors: grayscale ? SIGNAL_GRAYSCALE_RAMP_COLORS : [...base.colors],
+    lowLabel: base.lowLabel || 'Lower',
+    highLabel: base.highLabel || 'Higher',
+    midLabel: base.midLabel
+  };
+}
 
 function wmsLegendUrl(service, layer) {
   const params = new URLSearchParams({
@@ -1450,6 +1548,13 @@ export const CANADA_BOUNDS = [-141, 41, -52, 75];
 // error) since NL&L doesn't reach anywhere near the old national cap.
 export const NL_LABRADOR_BOUNDS = [-68, 46, -52, 61];
 
+/**
+ * Tight Labrador window for detailed airborne surveys (1VD / radiometrics).
+ * Matches scripts/fetch-geophysics.js DETAILED_SURVEY_BOUNDS — keeps pixels in
+ * the survey patches instead of stretching them across empty NL/ocean.
+ */
+export const DETAILED_SURVEY_BOUNDS = [-67.8, 52.5, -56.0, 57.5];
+
 // Note: mines/processing facilities are served as vector point layers
 // (see `infraMines` / `infraProcessing` / `infraExploration` / `infraDevelopment`
 // in LAYER_CONFIG) rather than a WMS image -
@@ -1462,6 +1567,7 @@ export const WMS_CONFIG = {
     indicatorClass: 'wms-lithium',
     sidebarLabel: 'Lithium',
     label: 'Lithium Prospectivity',
+    provider: 'nrcan-geo',
     service: 'pegmatite_lithium_en',
     layers: '0',
     bounds: NL_LABRADOR_BOUNDS,
@@ -1481,6 +1587,7 @@ export const WMS_CONFIG = {
     indicatorClass: 'wms-ree',
     sidebarLabel: 'Rare Earth Elements',
     label: 'Rare Earth Elements Prospectivity',
+    provider: 'nrcan-geo',
     service: 'carbonatite_ree_en',
     layers: '0',
     bounds: NL_LABRADOR_BOUNDS,
@@ -1499,6 +1606,7 @@ export const WMS_CONFIG = {
     indicatorClass: 'wms-graphite',
     sidebarLabel: 'Graphite',
     label: 'Graphite Prospectivity',
+    provider: 'nrcan-geo',
     service: 'graphite_prospectivity_en',
     layers: '0',
     bounds: NL_LABRADOR_BOUNDS,
@@ -1517,6 +1625,7 @@ export const WMS_CONFIG = {
     indicatorClass: 'wms-nickel',
     sidebarLabel: 'Magmatic nickel',
     label: 'Magmatic Nickel Prospectivity',
+    provider: 'nrcan-geo',
     service: '2023_Prospectivity_Magmatic_Nickel_Preferred_EPSG3978_en',
     layers: '0',
     bounds: NL_LABRADOR_BOUNDS,
@@ -1535,6 +1644,7 @@ export const WMS_CONFIG = {
     indicatorClass: 'wms-zincCd',
     sidebarLabel: 'Zinc (CD)',
     label: 'CD Zinc Prospectivity',
+    provider: 'nrcan-geo',
     service: '2023_Prospectivity_CD_Zinc_Preferred_EPSG3978_en',
     layers: '0',
     bounds: NL_LABRADOR_BOUNDS,
@@ -1553,6 +1663,7 @@ export const WMS_CONFIG = {
     indicatorClass: 'wms-zincMvt',
     sidebarLabel: 'Zinc (MVT)',
     label: 'MVT Zinc Prospectivity',
+    provider: 'nrcan-geo',
     service: '2023_Prospectivity_MVT_Zinc_Preferred_EPSG3978_en',
     layers: '0',
     bounds: NL_LABRADOR_BOUNDS,
@@ -1571,6 +1682,7 @@ export const WMS_CONFIG = {
     indicatorClass: 'wms-bedrock',
     sidebarLabel: 'National (GSC)',
     label: 'Bedrock Geology (national)',
+    provider: 'nrcan-geo',
     service: 'gsc_bedrock_geology_en',
     layers: '0',
     bounds: NL_LABRADOR_BOUNDS,
@@ -1591,6 +1703,7 @@ export const WMS_CONFIG = {
     indicatorClass: 'wms-surficial',
     sidebarLabel: 'National (GSC)',
     label: 'Surficial Geology (national)',
+    provider: 'nrcan-geo',
     service: 'gsc_surficial_geology_en',
     layers: '1',
     bounds: NL_LABRADOR_BOUNDS,
@@ -1604,5 +1717,134 @@ export const WMS_CONFIG = {
     // REST sub-layer 3 = "Surficial geology category" (the thematic classes);
     // 0/2 are footprint/boundary reference layers, not the fill classification.
     legendLayerId: 3
+  },
+  // --- Phase 4.1 Signals (GeoAtlas ExportMap bake; npm run fetch:geophysics) ---
+  aeromag: {
+    group: 'signals',
+    indicatorClass: 'wms-aeromag',
+    sidebarLabel: 'Aeromag (regional)',
+    label: 'Residual Magnetics — Labrador',
+    provider: 'geoatlas-export',
+    layers: '65',
+    bounds: NL_LABRADOR_BOUNDS,
+    opacity: 0.7,
+    visible: false,
+    imageUrl: './data/wms-aeromag-nll.png',
+    cacheKey: 'wms-aeromag-nll',
+    cacheVersion: '296a830f4d53',
+    legendRamp: {
+      colors: ['#3b0764', '#1d4ed8', '#22c55e', '#eab308', '#b91c1c'],
+      lowLabel: 'Lower intensity',
+      highLabel: 'Higher intensity'
+    },
+    legendNote:
+      'GSC regional residual magnetic compilation (GeoAtlas). Relative color stretch — not absolute nT. Free forever.'
+  },
+  mag1vd: {
+    group: 'signals',
+    indicatorClass: 'wms-mag1vd',
+    sidebarLabel: '1VD (detailed surveys)',
+    label: 'Magnetic 1st Vertical Derivative',
+    provider: 'geoatlas-export',
+    layers: '6,21,30,35,38,64',
+    bounds: DETAILED_SURVEY_BOUNDS,
+    opacity: 0.7,
+    visible: false,
+    imageUrl: './data/wms-mag1vd-nll.png',
+    cacheKey: 'wms-mag1vd-nll',
+    cacheVersion: 'abe9393c1b9e',
+    legendRamp: {
+      colors: ['#14532d', '#22c55e', '#eab308', '#ea580c', '#7f1d1d'],
+      lowLabel: 'Lower 1VD',
+      highLabel: 'Higher 1VD'
+    },
+    legendNote:
+      'No province-wide 1VD — detailed survey blocks only (tight Labrador bake). Relative stretch; use Survey footprints for coverage. Free forever.'
+  },
+  radioEu: {
+    group: 'signals',
+    indicatorClass: 'wms-radioEu',
+    sidebarLabel: 'eU (detailed surveys)',
+    label: 'Equivalent Uranium (ppm)',
+    provider: 'geoatlas-export',
+    layers: '11,25,44,54',
+    bounds: DETAILED_SURVEY_BOUNDS,
+    opacity: 0.7,
+    visible: false,
+    imageUrl: './data/wms-radioEu-nll.png',
+    cacheKey: 'wms-radioEu-nll',
+    cacheVersion: '48e115b22e78',
+    legendRamp: {
+      colors: ['#0c4a6e', '#0284c7', '#eab308', '#ea580c', '#9f1239'],
+      lowLabel: 'Lower eU',
+      highLabel: 'Higher eU'
+    },
+    legendNote:
+      'Airborne gamma-ray equivalent uranium — Makkovik / Qipuqqaq-Postville / Schefferville only. High-res Labrador mosaic; relative stretch, not a grade map. Free forever.'
+  },
+  radioEth: {
+    group: 'signals',
+    indicatorClass: 'wms-radioEth',
+    sidebarLabel: 'eTh (detailed surveys)',
+    label: 'Equivalent Thorium (ppm)',
+    provider: 'geoatlas-export',
+    layers: '12,26,45,55',
+    bounds: DETAILED_SURVEY_BOUNDS,
+    opacity: 0.7,
+    visible: false,
+    imageUrl: './data/wms-radioEth-nll.png',
+    cacheKey: 'wms-radioEth-nll',
+    cacheVersion: 'f466ed00b686',
+    legendRamp: {
+      colors: ['#14532d', '#16a34a', '#eab308', '#f97316', '#9f1239'],
+      lowLabel: 'Lower eTh',
+      highLabel: 'Higher eTh'
+    },
+    legendNote:
+      'Airborne gamma-ray equivalent thorium — same detailed survey footprints as eU/K. High-res Labrador mosaic; relative stretch. Free forever.'
+  },
+  radioK: {
+    group: 'signals',
+    indicatorClass: 'wms-radioK',
+    sidebarLabel: 'K (detailed surveys)',
+    label: 'Potassium (percent)',
+    provider: 'geoatlas-export',
+    layers: '13,24,46,56',
+    bounds: DETAILED_SURVEY_BOUNDS,
+    opacity: 0.7,
+    visible: false,
+    imageUrl: './data/wms-radioK-nll.png',
+    cacheKey: 'wms-radioK-nll',
+    cacheVersion: '0305cb99e08f',
+    legendRamp: {
+      colors: ['#1e3a8a', '#6366f1', '#eab308', '#f59e0b', '#b45309'],
+      lowLabel: 'Lower K',
+      highLabel: 'Higher K'
+    },
+    legendNote:
+      'Airborne gamma-ray potassium (%) — same detailed survey footprints as eU/eTh. High-res Labrador mosaic; relative stretch. Free forever.'
+  },
+  gravity: {
+    group: 'signals',
+    indicatorClass: 'wms-gravity',
+    sidebarLabel: 'Gravity (Bouguer)',
+    label: 'Bouguer Gravity Anomaly',
+    // Baked from local NRCan GeoTIFF (npm run fetch:gravity-local). No live AGG fallback —
+    // that host is often unreachable; re-bake from data/Gravity/*.TIF when updating.
+    provider: 'local-bouguer-tif',
+    layers: 'Bouguer_AC',
+    bounds: NL_LABRADOR_BOUNDS,
+    opacity: 0.7,
+    visible: false,
+    imageUrl: './data/wms-gravity-nll.png',
+    cacheKey: 'wms-gravity-nll',
+    cacheVersion: 'ff3663a73edd',
+    legendRamp: {
+      colors: ['#0e7490', '#22c55e', '#eab308', '#dc2626', '#a21caf'],
+      lowLabel: 'Lower (mass deficit)',
+      highLabel: 'Higher (mass excess)'
+    },
+    legendNote:
+      'NRCan Canadian Gravity Database — Canada 2 km Bouguer color grid. Includes offshore; relative color stretch (not labelled mGal). Free forever.'
   }
 };

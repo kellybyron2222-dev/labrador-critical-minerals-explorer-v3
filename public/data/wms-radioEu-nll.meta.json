@@ -1,0 +1,24 @@
+{
+  "version": "48e115b22e78",
+  "contentHash": "48e115b22e788e3a84d9dd2b744ceafc388431fd711f41a9ea230d94171643af",
+  "cadenceMonths": 12,
+  "generatedAt": "2026-07-12T22:43:15.893Z",
+  "nextDue": "2027-07-12",
+  "refresh": "GitHub Actions refresh-data.yml (monthly; skips until nextDue) or npm run refresh:data",
+  "featureCount": null,
+  "width": 2400,
+  "height": 1776,
+  "channels": 4,
+  "bounds": [
+    -67.8,
+    52.5,
+    -56,
+    57.5
+  ],
+  "source": "https://dnrmaps.gov.nl.ca/arcgis/rest/services/GeoAtlas/Geophysics_Labrador/MapServer/export",
+  "provider": "geoatlas-export",
+  "layers": "11,25,44,54",
+  "mosaic": true,
+  "label": "Equiv. Uranium (detailed surveys)",
+  "imageWidthRequest": 2400
+}

@@ -2,7 +2,7 @@
 
 Open, Labrador-focused map for critical-minerals exploration and siting: geology,
 occurrences (MODS), mineral rights, land constraints, infrastructure, and
-(next) geophysics — built on public government data.
+geophysics (aeromag / 1VD) — built on public government data.
 
 **Live app:** https://kellybyron2222-dev.github.io/labrador-critical-minerals-explorer-v3/
 
@@ -24,8 +24,12 @@ occurrences (MODS), mineral rights, land constraints, infrastructure, and
   port distances
 - **UX** — collapsible layer groups, Settings (KPI / About data / GeoJSON
   export), mobile map-first chrome, bake-first data + monthly refresh CI
+- **Signals (Phase 4.1)** — regional aeromag + detailed-survey 1VD, radiometrics
+  (eU / eTh / K), NRCan Canada 2 km Bouguer gravity, airborne survey footprints
+  (full index; filter by survey type + digital availability; popup → NL detail
+  page); raster opacity, grayscale mode, mutual exclusion.
 
-**Not started yet:** Phase 4.1 geophysics (1VD / gravity).
+**Stage A engineering gate met.** Next: Stage B soft launch.
 
 ## Docs
 
@@ -66,6 +70,7 @@ npm run refresh:data     # Registry-driven data refresh (respects nextDue)
 
 ## Status
 
-Phases **0–3** complete (infrastructure + nearest-infra distances).
-**Next:** Phase **4.1** geophysics (1VD / gravity).
+Phases **0–4.1** complete (geophysics Signals group live, incl. footprint
+filters). **Next:** Stage B soft launch / Phase 5 remainder. Phase **4.2**
+geochem stays post-MVP.
 See [`BUILD_PLAN.md`](./BUILD_PLAN.md) for the live checklist.

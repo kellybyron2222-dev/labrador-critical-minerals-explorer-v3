@@ -25,6 +25,9 @@
     "fetch:mods": "node scripts/fetch-mods.js",
     "fetch:facilities": "node scripts/fetch-facilities.js",
     "fetch:wms": "node scripts/fetch-wms.js",
+    "fetch:geophysics": "node scripts/fetch-geophysics.js",
+    "fetch:gravity-local": "node scripts/fetch-gravity-local.js",
+    "fetch:survey-footprints": "node scripts/fetch-survey-footprints.js",
     "refresh:data": "node scripts/refresh-data.js",
     "validate:data": "node scripts/validate-data.js",
     "test": "vitest run"

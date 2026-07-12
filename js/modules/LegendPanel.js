@@ -45,15 +45,17 @@ export default class LegendPanel {
     return modal;
   }
 
-  /** @param {{title: string, imageUrl?: string, items?: {label:string, color?:string, icon?:string}[], shape?: string}} def */
-  openEnlarged({ title, imageUrl, items, shape }) {
+  /** @param {{title: string, imageUrl?: string, items?: {label:string, color?:string, icon?:string}[], shape?: string, ramp?: {colors: string[], lowLabel?: string, highLabel?: string, midLabel?: string}}} def */
+  openEnlarged({ title, imageUrl, items, shape, ramp }) {
     this.modal.querySelector('.legend-modal-title').textContent = title;
 
     const body = this.modal.querySelector('.legend-modal-body');
     body.innerHTML = '';
     body.classList.toggle('legend-modal-body-items', Boolean(items));
 
-    if (items) {
+    if (ramp?.colors?.length) {
+      body.appendChild(this._buildRamp(ramp, true));
+    } else if (items) {
       body.appendChild(this._buildItemsList(items, shape, true));
     } else if (imageUrl) {
       const img = document.createElement('img');
@@ -102,17 +104,55 @@ export default class LegendPanel {
     return list;
   }
 
+  /** Continuous color-bar for geophysics / raster anomaly layers. */
+  _buildRamp(ramp, enlarged = false) {
+    const wrap = document.createElement('div');
+    wrap.className = enlarged ? 'legend-ramp legend-ramp-enlarged' : 'legend-ramp';
+
+    const bar = document.createElement('div');
+    bar.className = 'legend-ramp-bar';
+    bar.style.background = `linear-gradient(90deg, ${ramp.colors.join(', ')})`;
+    bar.setAttribute('role', 'img');
+    bar.setAttribute(
+      'aria-label',
+      `${ramp.lowLabel || 'Low'} to ${ramp.highLabel || 'High'} color scale`
+    );
+    wrap.appendChild(bar);
+
+    const labels = document.createElement('div');
+    labels.className = 'legend-ramp-labels';
+    const low = document.createElement('span');
+    low.textContent = ramp.lowLabel || 'Low';
+    labels.appendChild(low);
+    if (ramp.midLabel) {
+      const mid = document.createElement('span');
+      mid.className = 'legend-ramp-mid';
+      mid.textContent = ramp.midLabel;
+      labels.appendChild(mid);
+    }
+    const high = document.createElement('span');
+    high.textContent = ramp.highLabel || 'High';
+    labels.appendChild(high);
+    wrap.appendChild(labels);
+
+    return wrap;
+  }
+
   /**
    * @param {string} key - unique id for this layer's card (e.g. 'layer-deposits', 'wms-bedrock')
    * @param {boolean} visible
-   * @param {{title: string, items?: {label:string, color?:string, icon?:string, shape?: string}[], shape?: 'circle'|'line'|'fill'|'icon', imageUrl?: string, note?: string, collapsed?: boolean, surfaceToggle?: {label: string, checked: boolean, onChange: (checked: boolean) => void}, commodityToggles?: {commodities: {value:string, label:string, color:string, description?:string}[], enabled: string[], onChange: (commodity: string, checked: boolean) => void, onAllOn: () => void, onAllOff: () => void}|null}} legendDef
+   * @param {{title: string, items?: {label:string, color?:string, icon?:string, shape?: string}[], shape?: 'circle'|'line'|'fill'|'icon', imageUrl?: string, note?: string, ramp?: {colors: string[], lowLabel?: string, highLabel?: string, midLabel?: string}, collapsed?: boolean, surfaceToggle?: {label: string, checked: boolean, onChange: (checked: boolean) => void}, commodityToggles?: {commodities: {value:string, label:string, color:string, description?:string}[], enabled: string[], onChange: (commodity: string, checked: boolean) => void, onAllOn: () => void, onAllOff: () => void}|null}} legendDef
    */
   setLayerLegend(key, visible, legendDef) {
     if (!visible) {
       this.hideLegend(key);
       return;
     }
-    if (this.cards[key] || !legendDef) return;
+    // Allow refresh (e.g. color ↔ grayscale ramp) by replacing an existing card.
+    if (this.cards[key]) {
+      this.hideLegend(key);
+    }
+    if (!legendDef) return;
 
     const card = document.createElement('div');
     card.className = 'legend-card';
@@ -202,6 +242,13 @@ export default class LegendPanel {
         list.appendChild(row);
       });
       body.appendChild(list);
+    } else if (legendDef.ramp?.colors?.length) {
+      const rampEl = this._buildRamp(legendDef.ramp, false);
+      rampEl.title = 'Click to enlarge';
+      rampEl.addEventListener('click', () =>
+        this.openEnlarged({ title: legendDef.title, ramp: legendDef.ramp })
+      );
+      body.appendChild(rampEl);
     } else if (legendDef.items) {
       const list = this._buildItemsList(legendDef.items, legendDef.shape, false);
       const isLarge = legendDef.items.length > ITEMS_ENLARGE_THRESHOLD;

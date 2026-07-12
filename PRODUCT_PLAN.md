@@ -2,8 +2,8 @@
 
 > **Strategic overview** (go-to-market, freemium, geography expansion).
 > Engineering checklist stays in [`BUILD_PLAN.md`](./BUILD_PLAN.md).
-> Last updated: 2026-07-12 — README/docs aligned; Stage A soft-launch bar met;
-> next eng = Phase 4.1 geophysics
+> Last updated: 2026-07-12 — Stage A engineering gate met (Phase 4.1 complete,
+> incl. radiometrics + footprint filters); next = Stage B soft launch
 
 ---
 
@@ -87,23 +87,25 @@ higher-convenience signal packs.
 
 ## 3. Stage detail
 
-### Stage A — Labrador MVP (free)  [~ in progress]
+### Stage A — Labrador MVP (free)  [x eng gate met]
 
 **Engineering MVP gate** (call Stage A “built” when these are done):
 
 - Phase **3.1–3.4** infrastructure (roads, rail, ports, power, communities,
   NRCan facilities under Infrastructure, nearest-infra distances on MODS
   popup) ✅
-- Phase **4.1** geophysics MVP slice (**1VD / aeromag** + **gravity**; survey
-  footprints when available) ← **next**
+- Phase **4.1** geophysics MVP slice (**1VD / aeromag / radiometrics** +
+  **gravity** + survey footprints w/ type·digital filters + detail popup) ✅
+  (2026-07-12) — gravity via local NRCan 2 km Bouguer GeoTIFF bake; footprints
+  stay full index (not digital-only); no extra per-survey raster bakes for MVP
 - Phase **2.4** hard exclusions (fatal-flaw) preset ✅ (2026-07-12) — CPCAD +
   public water supplies only; Indigenous lands = consultation context
 - Phase **1.1g** facilities / value-chain label honesty ✅ (2026-07-12)
 - Soft-launch Shoulds ✅ (2026-07-12): **2.1c** claim expiry · **1.4** bedrock
   mutual exclusion · About data · GeoJSON export · legend declutter
 
-**Soft-launch bar** (met): engineering gate items above that are done, plus
-expiry colors + About — ready for niche outreach once Phase 4.1 lands.
+**Soft-launch bar** (met): engineering gate + expiry colors + About — ready for
+niche outreach (Stage B).
 
 **Exit:** public GitHub Pages app that a prospector can use without an account.
 
@@ -391,6 +393,16 @@ who pays** layer above it.
 
 ## 8. Changelog
 
+- **2026-07-12** — Phase **4.1** footprint UX closed: keep full survey index;
+  type + digital filters; detail popup → NL airborne page. Confirmed no MVP
+  need to bake top-N individual digital surveys (already covered / not on
+  MapServer). Stage A eng gate remains met; **next = Stage B soft launch**.
+- **2026-07-12** — Phase **4.1** complete: gravity (NRCan Canada 2 km Bouguer)
+  baked from local GeoTIFF; Stage A eng gate closed. Soft launch (Stage B) unblocked.
+- **2026-07-12** — Phase **4.1** partial ship: GeoAtlas aeromag + detailed 1VD +
+  survey footprints in Signals group. Gravity corrected to NRCan AGG (not
+  GeoAtlas); bake blocked on AGG host reachability. Soft-launch still waits on
+  gravity for full Stage A eng gate.
 - **2026-07-12** — Stage A: Phase **3** infrastructure closed (facilities under
   Infrastructure, nearest-infra distances, accuracy polish) and curated Labrador
   airport/port/community inventory expanded after CFS coverage audit (16/10/21).
