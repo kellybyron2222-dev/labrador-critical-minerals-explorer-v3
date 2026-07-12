@@ -1,11 +1,11 @@
 {
-  "version": "1749824e9f4b",
-  "contentHash": "1749824e9f4ba4c199afcb07232992b827de155d2ffe6b10bc99792aaf37cd05",
+  "version": "9a44c833e887",
+  "contentHash": "9a44c833e88723ef36221833c674f640e2c2a20e39c4aa81279c8474d110a509",
   "cadenceMonths": 12,
-  "generatedAt": "2026-07-12T21:43:56.582Z",
+  "generatedAt": "2026-07-12T22:05:08.690Z",
   "nextDue": "2027-07-12",
   "refresh": "GitHub Actions refresh-data.yml (monthly; skips until nextDue) or npm run refresh:data",
-  "featureCount": 11,
+  "featureCount": 16,
   "source": "curated Labrador infrastructure points (explorer-v3)",
   "kinds": [
     "airport"

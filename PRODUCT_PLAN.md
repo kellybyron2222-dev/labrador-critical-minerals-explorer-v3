@@ -391,9 +391,10 @@ who pays** layer above it.
 
 ## 8. Changelog
 
-- **2026-07-12** — Stage A: Phase **3** infrastructure closed (incl. facilities
-  under Infrastructure, nearest-infra distances, data-accuracy polish). Next
-  engineering gate item = Phase **4.1** geophysics.
+- **2026-07-12** — Stage A: Phase **3** infrastructure closed (facilities under
+  Infrastructure, nearest-infra distances, accuracy polish) and curated Labrador
+  airport/port/community inventory expanded after CFS coverage audit (16/10/21).
+  Next engineering gate item = Phase **4.1** geophysics.
 - **2026-07-12** — Docs pass: README standalone (no merger framing); Stage A
   / BUILD_PLAN mapping notes that soft-launch Shoulds + Must 2.4/1.1g are done.
 - **2026-07-12** — Added **Stage B+ Monthly Data Changelog**: zero-fluff

@@ -18,8 +18,10 @@ occurrences (MODS), mineral rights, land constraints, infrastructure, and
 - **Infrastructure** — roads (highway/collector + resource access), rail,
   HV transmission (Nalcor + CanVec; no distribution), ports, airports, power
   generation, communities & municipal boundaries; NRCan mines / processing /
-  advanced exploration / development (default off); one Infrastructure legend;
-  MODS popup shows nearest road / transmission / port distances
+  advanced exploration / development (default off); curated Labrador inventory
+  audited vs CFS/Wikipedia airports (16) + harbours (10) + communities (21);
+  one Infrastructure legend; MODS popup shows nearest road / transmission /
+  port distances
 - **UX** — collapsible layer groups, Settings (KPI / About data / GeoJSON
   export), mobile map-first chrome, bake-first data + monthly refresh CI
 

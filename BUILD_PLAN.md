@@ -867,7 +867,9 @@ work and what land constraints apply. ✅ (2.1 + 2.2 + 2.3)
 - [x] Resource access / forest roads — `Map_Layers/14` → `geoatlas-resource-roads-labrador`
 - [x] Railways (iron-ore / QNS&L) — `Map_Layers/12` ROADCLASS=Railroad → `geoatlas-rail-labrador`
 - [x] Ports / marine access — curated Labrador points → `infra-ports-labrador`
+      (10 harbours after 2026-07-12 coverage audit)
 - [x] Airstrips / airports — curated → `infra-airports-labrador`
+      (16 sites: all CFS public Labrador land strips + Voisey’s Bay private)
 **3.2 — Power** ✅
 - [x] Transmission lines — Nalcor `Map_Layers/15` + CanVec `/16` merged →
       `geoatlas-transmission-labrador` (**HV only** — no distribution; GeoAtlas
@@ -876,6 +878,7 @@ work and what land constraints apply. ✅ (2.1 + 2.2 + 2.3)
       plant coords audited vs Wikipedia/GEM (townsite vs plant corrected)
 **3.3 — Communities** ✅
 - [x] Settlements — curated Labrador places → `infra-communities-labrador`
+      (21 places after coverage audit vs Labrador-Grenfell / south-coast lists)
 - [x] GeoAtlas `Land_Use/6` Municipal Boundaries → `geoatlas-municipal-labrador`
 - [x] Each sub-item: config + style + popup + legend + bake + registry + test
 **3.3b — Critical-mineral facilities under Infrastructure** ✅
@@ -1233,6 +1236,11 @@ branch** with Actions enabled:
 
 ## 10. Changelog
 
+- **2026-07-12** — **Infrastructure coverage audit:** filled missing CFS Labrador
+  land airports (Black Tickle, Charlottetown, St. Lewis, Voisey’s Bay private),
+  Hopedale/Black Tickle harbours, and matching communities (incl. Red Bay).
+  Inventories now 16 airports / 10 ports / 21 communities. **Next:** Phase **4.1**
+  geophysics.
 - **2026-07-12** — **Phase 3 close-out polish:** facilities split under
   Infrastructure (mines / processing / exploration / development); SVG site
   icons; unified Infrastructure legend; data accuracy audit (Churchill Falls /

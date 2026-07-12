@@ -1,11 +1,11 @@
 {
-  "version": "abfb3aa19aba",
-  "contentHash": "abfb3aa19abaf2f4f6388862fe4c7c1b93f6695c189a08fbc7a7ee1d0832193b",
+  "version": "4dd4af206432",
+  "contentHash": "4dd4af206432c9f27b789621e37fbf7d7aba86ff019dd4143fb6e99521cf5732",
   "cadenceMonths": 12,
-  "generatedAt": "2026-07-12T21:43:56.585Z",
+  "generatedAt": "2026-07-12T22:05:08.693Z",
   "nextDue": "2027-07-12",
   "refresh": "GitHub Actions refresh-data.yml (monthly; skips until nextDue) or npm run refresh:data",
-  "featureCount": 17,
+  "featureCount": 21,
   "source": "curated Labrador infrastructure points (explorer-v3)",
   "kinds": [
     "community"

@@ -2,7 +2,7 @@
   "version": "d29fb36d7947",
   "contentHash": "d29fb36d79478f6b3c18e59dd71336e12bb59cdc4f5b093abb67c7e5b85bd683",
   "cadenceMonths": 12,
-  "generatedAt": "2026-07-12T21:43:56.584Z",
+  "generatedAt": "2026-07-12T22:05:08.691Z",
   "nextDue": "2027-07-12",
   "refresh": "GitHub Actions refresh-data.yml (monthly; skips until nextDue) or npm run refresh:data",
   "featureCount": 3,
