@@ -56,10 +56,23 @@ import SettingsPanel from './modules/SettingsPanel.js';
 import { getKpiEnabledIds } from './modules/UserPrefs.js';
 import { computeKpiMetrics, featureIntersectsBounds } from './modules/KpiEngine.js';
 import { buildPopupSection, buildModsPopupSection } from './modules/PopupBuilder.js';
+import { computeNearestInfraDistances, ensureInfraDistanceData } from './modules/infraDistance.js';
 
 const POPUP_LAYER_IDS = [
   'mods-layer',
-  'critical-minerals-layer',
+  'infra-mines-layer',
+  'infra-processing-layer',
+  'infra-exploration-layer',
+  'infra-development-layer',
+  'infra-ports-layer',
+  'infra-airports-layer',
+  'infra-generation-layer',
+  'infra-communities-layer',
+  'geoatlas-transmission-layer',
+  'geoatlas-rail-layer',
+  'geoatlas-roads-layer',
+  'geoatlas-resource-roads-layer',
+  'geoatlas-municipal-fill',
   'geoatlas-claims-fill',
   'geoatlas-tenure-fill',
   'inuit-nunatsiavut-fill',
@@ -157,6 +170,8 @@ class MineralsMapApp {
     this.bindKpiMapEvents();
     this.syncInitialLegends();
     this.refreshKpiBar();
+    // Warm nearest-infra distance cache (Phase 3.4) without blocking UI.
+    ensureInfraDistanceData().catch(() => {});
   }
 
   /** Soft-launch export: filtered MODS in view + claims if that layer is on. */
@@ -821,10 +836,114 @@ class MineralsMapApp {
     const [lon, lat] = feature.geometry.coordinates;
     this.map.flyTo({ center: [lon, lat], zoom: Math.max(this.map.getZoom(), 9) });
 
+    const token = (this._popupToken = (this._popupToken || 0) + 1);
     this.selectedPopup = new maplibregl.Popup({ closeButton: true, closeOnClick: true })
       .setLngLat([lon, lat])
-      .setHTML(buildModsPopupSection(feature, { standalone: true }))
+      .setHTML(buildModsPopupSection(feature, { standalone: true, distances: 'pending' }))
       .addTo(this.map);
+
+    this.fillModsInfraDistances(feature, token, { standalone: true });
+  }
+
+  /**
+   * Async Phase 3.4 distances into an open MODS popup (map click or list select).
+   * @param {object} modsFeature
+   * @param {number} token
+   * @param {{ standalone?: boolean, rebuildStacked?: () => string }} opts
+   */
+  async fillModsInfraDistances(modsFeature, token, opts = {}) {
+    let distances;
+    try {
+      distances = await computeNearestInfraDistances(modsFeature);
+    } catch {
+      distances = 'error';
+    }
+    if (token !== this._popupToken || !this.selectedPopup) return;
+
+    if (opts.rebuildStacked) {
+      this.selectedPopup.setHTML(opts.rebuildStacked(distances));
+      return;
+    }
+
+    this.selectedPopup.setHTML(
+      buildModsPopupSection(modsFeature, {
+        standalone: Boolean(opts.standalone),
+        distances
+      })
+    );
+  }
+
+  /** One popup for everything under the click (points + polygons), not one card per layer. */
+  openCombinedPopup(e) {
+    const layers = POPUP_LAYER_IDS.filter((id) => this.map.getLayer(id));
+    if (!layers.length) return;
+
+    // Query a small box around the click, not a single pixel, so thin line
+    // layers (resource-access roads, transmission, rail) are easy to hit.
+    const r = 6;
+    const box = [
+      [e.point.x - r, e.point.y - r],
+      [e.point.x + r, e.point.y + r]
+    ];
+    const hits = this.map.queryRenderedFeatures(box, { layers });
+    if (!hits.length) return;
+
+    // One feature per layer id (topmost), preserve priority order in POPUP_LAYER_IDS.
+    const byLayer = new Map();
+    for (const feature of hits) {
+      const layerId = feature.layer?.id;
+      if (!layerId || byLayer.has(layerId)) continue;
+      byLayer.set(layerId, feature);
+    }
+
+    const buildBody = (distances) => {
+      const sections = [];
+      for (const layerId of POPUP_LAYER_IDS) {
+        const feature = byLayer.get(layerId);
+        if (!feature) continue;
+        const html = buildPopupSection(
+          layerId,
+          feature,
+          layerId === 'mods-layer' ? { distances } : {}
+        );
+        if (html) sections.push(html);
+      }
+      if (!sections.length) return null;
+      return sections.length === 1
+        ? sections[0]
+        : `<div class="popup-stacked">${sections.join('')}</div>`;
+    };
+
+    const pendingBody = buildBody(byLayer.has('mods-layer') ? 'pending' : null);
+    if (!pendingBody) return;
+
+    const modsFeature = byLayer.get('mods-layer');
+    if (modsFeature?.properties?.NMINO && this.occurrenceBrowser) {
+      this.occurrenceBrowser.selectByNmino(modsFeature.properties.NMINO);
+    }
+
+    const sectionCount = [...byLayer.keys()].filter((id) => POPUP_LAYER_IDS.includes(id)).length;
+    const token = (this._popupToken = (this._popupToken || 0) + 1);
+
+    this.selectedPopup?.remove();
+    this.selectedPopup = new maplibregl.Popup({
+      closeButton: true,
+      closeOnClick: true,
+      maxWidth: sectionCount > 1 || modsFeature ? '360px' : '300px',
+      className: sectionCount > 1 ? 'popup-multi' : ''
+    })
+      .setLngLat(e.lngLat)
+      .setHTML(`<div class="popup-content">${pendingBody}</div>`)
+      .addTo(this.map);
+
+    if (modsFeature) {
+      this.fillModsInfraDistances(modsFeature, token, {
+        rebuildStacked: (distances) => {
+          const body = buildBody(distances);
+          return `<div class="popup-content">${body}</div>`;
+        }
+      });
+    }
   }
 
   /**
@@ -966,6 +1085,13 @@ class MineralsMapApp {
   updateVectorLegend(name, visible) {
     const config = LAYER_CONFIG[name];
     if (!config) return;
+
+    // One combined Infrastructure card — items only for layers currently on.
+    if (config.group === 'infrastructure') {
+      this.updateInfrastructureLegend();
+      return;
+    }
+
     const key = `layer-${name}`;
 
     // ArcGIS classification legends (e.g. GeoAtlas bedrock) — fetch async like WMS.
@@ -1020,6 +1146,57 @@ class MineralsMapApp {
       note,
       surfaceToggle: null,
       commodityToggles
+    });
+  }
+
+  /**
+   * Single Infrastructure legend card. Shows only symbols for layers that are
+   * currently toggled on; hides the card when none are on. Default collapsed.
+   */
+  updateInfrastructureLegend() {
+    const key = 'layer-infrastructure';
+    const existing = this.legendPanel.cards[key];
+    const keepCollapsed = existing ? existing.classList.contains('collapsed') : true;
+
+    const active = Object.entries(LAYER_CONFIG).filter(([name, config]) => {
+      if (config.group !== 'infrastructure') return false;
+      const cb = document.getElementById(`layer-${name}`);
+      return cb ? cb.checked : Boolean(config.visible);
+    });
+
+    this.legendPanel.hideLegend(key);
+    // Drop any leftover per-layer infrastructure cards from earlier sessions.
+    Object.keys(LAYER_CONFIG).forEach((name) => {
+      if (LAYER_CONFIG[name].group === 'infrastructure') {
+        this.legendPanel.hideLegend(`layer-${name}`);
+      }
+    });
+
+    if (!active.length) return;
+
+    const items = [];
+    for (const [, config] of active) {
+      const shape = config.legendShape === 'icon' ? 'circle' : config.legendShape || 'circle';
+      for (const item of config.legend || []) {
+        items.push({
+          label: item.label,
+          color: item.color,
+          icon: item.icon,
+          shape: item.icon ? undefined : shape
+        });
+      }
+    }
+
+    // Prefer a short shared note over stacking every layer note.
+    const note =
+      'HV transmission is GeoAtlas only (no distribution feeders). Facility sites are NRCan; ports/airports/generation/communities are curated Labrador points.';
+
+    this.legendPanel.setLayerLegend(key, true, {
+      title: 'Infrastructure',
+      items,
+      shape: 'circle',
+      note,
+      collapsed: keepCollapsed
     });
   }
 
@@ -1366,53 +1543,6 @@ class MineralsMapApp {
         this.map.getCanvas().style.cursor = '';
       });
     });
-  }
-
-  /** One popup for everything under the click (points + polygons), not one card per layer. */
-  openCombinedPopup(e) {
-    const layers = POPUP_LAYER_IDS.filter((id) => this.map.getLayer(id));
-    if (!layers.length) return;
-
-    const hits = this.map.queryRenderedFeatures(e.point, { layers });
-    if (!hits.length) return;
-
-    // One feature per layer id (topmost), preserve priority order in POPUP_LAYER_IDS.
-    const byLayer = new Map();
-    for (const feature of hits) {
-      const layerId = feature.layer?.id;
-      if (!layerId || byLayer.has(layerId)) continue;
-      byLayer.set(layerId, feature);
-    }
-
-    const sections = [];
-    for (const layerId of POPUP_LAYER_IDS) {
-      const feature = byLayer.get(layerId);
-      if (!feature) continue;
-      const html = buildPopupSection(layerId, feature);
-      if (html) sections.push(html);
-    }
-    if (!sections.length) return;
-
-    const modsFeature = byLayer.get('mods-layer');
-    if (modsFeature?.properties?.NMINO && this.occurrenceBrowser) {
-      this.occurrenceBrowser.selectByNmino(modsFeature.properties.NMINO);
-    }
-
-    const body =
-      sections.length === 1
-        ? sections[0]
-        : `<div class="popup-stacked">${sections.join('')}</div>`;
-
-    this.selectedPopup?.remove();
-    this.selectedPopup = new maplibregl.Popup({
-      closeButton: true,
-      closeOnClick: true,
-      maxWidth: sections.length > 1 ? '360px' : '300px',
-      className: sections.length > 1 ? 'popup-multi' : ''
-    })
-      .setLngLat(e.lngLat)
-      .setHTML(`<div class="popup-content">${body}</div>`)
-      .addTo(this.map);
   }
 }
 

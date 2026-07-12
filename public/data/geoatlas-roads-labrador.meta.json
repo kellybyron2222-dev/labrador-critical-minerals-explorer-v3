@@ -1,0 +1,27 @@
+{
+  "version": "fed82d13d477",
+  "contentHash": "fed82d13d477c3f44b83c674b63fe3cbbe22fbec4703b2642f805e6c0f84faec",
+  "cadenceMonths": 6,
+  "generatedAt": "2026-07-12T21:06:22.060Z",
+  "nextDue": "2027-01-12",
+  "refresh": "GitHub Actions refresh-data.yml (monthly; skips until nextDue) or npm run refresh:data",
+  "featureCount": 1099,
+  "source": "https://dnrmaps.gov.nl.ca/arcgis/rest/services/GeoAtlas/Map_Layers/MapServer/12/query",
+  "where": "ROADCLASS IN ('Expressway / Highway','Freeway','Arterial','Collector','Ramp')",
+  "outSR": 4326,
+  "maxAllowableOffset": 0.002,
+  "outFields": "OBJECTID,ROADCLASS,RTNUMBER1,RTENAME1EN,PAVSTATUS,PAVSURF,NBRLANES",
+  "clip": "Labrador bbox (south of Strait of Belle Isle)",
+  "clipBbox": {
+    "xmin": -67.8,
+    "ymin": 51.5,
+    "xmax": -55.5,
+    "ymax": 60.6,
+    "spatialReference": {
+      "wkid": 4326
+    }
+  },
+  "layerId": 12,
+  "layerName": "Regional Road Network",
+  "note": "NRN highways + collectors; local streets and railroad excluded"
+}

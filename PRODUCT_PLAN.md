@@ -3,7 +3,7 @@
 > **Strategic overview** (go-to-market, freemium, geography expansion).
 > Engineering checklist stays in [`BUILD_PLAN.md`](./BUILD_PLAN.md).
 > Last updated: 2026-07-12 — README/docs aligned; Stage A soft-launch bar met;
-> next eng = Phase 3.1 + 4.1
+> next eng = Phase 4.1 geophysics
 
 ---
 
@@ -91,9 +91,11 @@ higher-convenience signal packs.
 
 **Engineering MVP gate** (call Stage A “built” when these are done):
 
-- Phase **3.1–3.2** infrastructure (roads, rail, ports, power) ← **next**
+- Phase **3.1–3.4** infrastructure (roads, rail, ports, power, communities,
+  NRCan facilities under Infrastructure, nearest-infra distances on MODS
+  popup) ✅
 - Phase **4.1** geophysics MVP slice (**1VD / aeromag** + **gravity**; survey
-  footprints when available)
+  footprints when available) ← **next**
 - Phase **2.4** hard exclusions (fatal-flaw) preset ✅ (2026-07-12) — CPCAD +
   public water supplies only; Indigenous lands = consultation context
 - Phase **1.1g** facilities / value-chain label honesty ✅ (2026-07-12)
@@ -101,7 +103,7 @@ higher-convenience signal packs.
   mutual exclusion · About data · GeoJSON export · legend declutter
 
 **Soft-launch bar** (met): engineering gate items above that are done, plus
-expiry colors + About — ready for niche outreach once Phase 3/4.1 land.
+expiry colors + About — ready for niche outreach once Phase 4.1 lands.
 
 **Exit:** public GitHub Pages app that a prospector can use without an account.
 
@@ -389,6 +391,9 @@ who pays** layer above it.
 
 ## 8. Changelog
 
+- **2026-07-12** — Stage A: Phase **3** infrastructure closed (incl. facilities
+  under Infrastructure, nearest-infra distances, data-accuracy polish). Next
+  engineering gate item = Phase **4.1** geophysics.
 - **2026-07-12** — Docs pass: README standalone (no merger framing); Stage A
   / BUILD_PLAN mapping notes that soft-launch Shoulds + Must 2.4/1.1g are done.
 - **2026-07-12** — Added **Stage B+ Monthly Data Changelog**: zero-fluff

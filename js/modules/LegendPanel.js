@@ -75,7 +75,7 @@ export default class LegendPanel {
     const list = document.createElement('div');
     list.className = enlarged ? 'legend-items legend-items-enlarged' : 'legend-items';
 
-    items.forEach(({ label, color, icon }) => {
+    items.forEach(({ label, color, icon, shape: itemShape }) => {
       const row = document.createElement('div');
       row.className = 'legend-row';
 
@@ -87,7 +87,7 @@ export default class LegendPanel {
         row.appendChild(img);
       } else {
         const swatch = document.createElement('span');
-        swatch.className = `legend-swatch legend-swatch-${shape || 'circle'}`;
+        swatch.className = `legend-swatch legend-swatch-${itemShape || shape || 'circle'}`;
         if (color) swatch.style.background = color;
         row.appendChild(swatch);
       }
@@ -105,7 +105,7 @@ export default class LegendPanel {
   /**
    * @param {string} key - unique id for this layer's card (e.g. 'layer-deposits', 'wms-bedrock')
    * @param {boolean} visible
-   * @param {{title: string, items?: {label:string, color:string}[], shape?: 'circle'|'line'|'fill', imageUrl?: string, note?: string, surfaceToggle?: {label: string, checked: boolean, onChange: (checked: boolean) => void}, commodityToggles?: {commodities: {value:string, label:string, color:string, description?:string}[], enabled: string[], onChange: (commodity: string, checked: boolean) => void, onAllOn: () => void, onAllOff: () => void}|null}} legendDef
+   * @param {{title: string, items?: {label:string, color?:string, icon?:string, shape?: string}[], shape?: 'circle'|'line'|'fill'|'icon', imageUrl?: string, note?: string, collapsed?: boolean, surfaceToggle?: {label: string, checked: boolean, onChange: (checked: boolean) => void}, commodityToggles?: {commodities: {value:string, label:string, color:string, description?:string}[], enabled: string[], onChange: (commodity: string, checked: boolean) => void, onAllOn: () => void, onAllOff: () => void}|null}} legendDef
    */
   setLayerLegend(key, visible, legendDef) {
     if (!visible) {
@@ -120,7 +120,8 @@ export default class LegendPanel {
 
     const openCount = Object.keys(this.cards).length;
     // Light declutter: when several cards already open, start new ones collapsed.
-    const startCollapsed = openCount >= 2;
+    // Callers can force collapsed (e.g. combined Infrastructure legend).
+    const startCollapsed = legendDef.collapsed === true || (legendDef.collapsed !== false && openCount >= 2);
     if (startCollapsed) card.classList.add('collapsed');
 
     const heading = document.createElement('button');

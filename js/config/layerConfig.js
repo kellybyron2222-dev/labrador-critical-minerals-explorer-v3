@@ -1,6 +1,7 @@
 /** Module 2: GeoJSON and WMS layer configuration */
 
 import { facilityIconDataUri } from '../modules/facilityIcons.js';
+import { infraIconDataUri } from '../modules/infraIcons.js';
 import {
   CLAIMS_OUT_FIELDS,
   MINERAL_LANDS_QUERY_BASE,
@@ -24,6 +25,25 @@ import {
   buildCpcadPaginatedQuery,
   buildLandUsePaginatedQueries
 } from './protectedAreas.js';
+import {
+  MAP_LAYERS_QUERY_BASE,
+  LAND_USE_QUERY_BASE,
+  ROADS_WHERE,
+  RAIL_WHERE,
+  ROADS_OUT_FIELDS,
+  RESOURCE_ROADS_OUT_FIELDS,
+  NALCOR_OUT_FIELDS,
+  CANVEC_TX_OUT_FIELDS,
+  MUNICIPAL_OUT_FIELDS,
+  RAIL_COLOR,
+  SITE_KIND_COLORS,
+  buildRoadsLegendItems,
+  buildResourceRoadsLegendItems,
+  buildTransmissionLegendItems,
+  buildSitesLegendItems,
+  roadsLineColorExpression,
+  roadsLineWidthExpression
+} from './infrastructure.js';
 
 // This project is Labrador/NL-scoped, so national feeds are visually clipped
 // to this region (the underlying data/query is untouched - only what's
@@ -348,6 +368,32 @@ const CRITICAL_MINERALS_SOURCES = [0, 1, 2, 3].map(
     `?where=1%3D1&outFields=${CRITICAL_MINERALS_FIELDS}&f=geojson`
 );
 
+/** Facility point layers drawn above geology / rights / line infra. */
+export const FACILITY_STACK_LAYER_IDS = [
+  'infra-mines-layer',
+  'infra-processing-layer',
+  'infra-exploration-layer',
+  'infra-development-layer'
+];
+
+const FACILITY_DATA = {
+  lazy: true,
+  visible: false,
+  dataUrl: './data/critical-minerals-nl.geojson',
+  cacheKey: 'critical-minerals-nl',
+  cacheVersion: '0aac8ae0b666',
+  sources: CRITICAL_MINERALS_SOURCES,
+  beforeLayerIds: ['mods-layer']
+};
+
+function facilityProvinceAndGroupFilter(operationGroup) {
+  return [
+    'all',
+    ['in', NL_LABRADOR_PROVINCE_NAME, ['get', 'ProvincesEN']],
+    ['==', ['get', 'OperationGroupEN'], operationGroup]
+  ];
+}
+
 /** Thematic sidebar groups — order defines display sequence in the UI. */
 export const LAYER_GROUP_ORDER = [
   'endowment',
@@ -391,7 +437,7 @@ export const LAYER_GROUPS = {
   },
   occurrences: {
     title: 'Occurrences & Activity',
-    hint: 'MODS mineral occurrences, mines, facilities & advanced projects',
+    hint: 'MODS mineral occurrences (prospects through producers)',
     defaultExpanded: false
   },
   rights: {
@@ -402,7 +448,7 @@ export const LAYER_GROUPS = {
   },
   infrastructure: {
     title: 'Infrastructure',
-    hint: 'Roads, rail, power, ports & communities',
+    hint: 'Roads, rail, HV transmission (no distribution), ports, power, communities & critical-mineral facilities. Off by default.',
     defaultExpanded: false
   },
   signals: {
@@ -420,7 +466,7 @@ export const LAYER_GROUPS = {
 /*
  * Demo deposits/tenures/infrastructure were removed 2026-07-06.
  * MODS (1.1) and Mineral Lands claims/tenure (2.1) replace deposits/tenures.
- * Still pending: Infrastructure → NRCan/StatCan (Phase 3).
+ * Still pending: none for Infrastructure (Phase 3) — see LAYER_CONFIG infra* entries.
  *
  * Value chain: endowment → occurrences → rights → infrastructure.
  */
@@ -457,7 +503,7 @@ export const LAYER_CONFIG = {
       'mods-surface-fill',
       'mods-surface-outline',
       'mods-layer',
-      'critical-minerals-layer'
+      ...FACILITY_STACK_LAYER_IDS
     ],
     // Live GeoAtlas fallback if the static file is missing (dev / first clone).
     paginatedQuery: {
@@ -523,7 +569,7 @@ export const LAYER_CONFIG = {
       'mods-surface-fill',
       'mods-surface-outline',
       'mods-layer',
-      'critical-minerals-layer'
+      ...FACILITY_STACK_LAYER_IDS
     ],
     paginatedQuery: {
       url: `${GEOATLAS_REST_BASE}/Surficial_Geology_All/MapServer/12/query`,
@@ -580,7 +626,7 @@ export const LAYER_CONFIG = {
       'mods-surface-fill',
       'mods-surface-outline',
       'mods-layer',
-      'critical-minerals-layer'
+      ...FACILITY_STACK_LAYER_IDS
     ],
     paginatedQuery: buildCpcadPaginatedQuery(),
     paint: {
@@ -629,7 +675,7 @@ export const LAYER_CONFIG = {
       'mods-surface-fill',
       'mods-surface-outline',
       'mods-layer',
-      'critical-minerals-layer'
+      ...FACILITY_STACK_LAYER_IDS
     ],
     paginatedQueries: buildLandUsePaginatedQueries(),
     paint: {
@@ -651,6 +697,436 @@ export const LAYER_CONFIG = {
     legendNote:
       'NL GeoAtlas Land_Use (plan 2020, specified materials, water supplies, planning areas). Toggle kinds when they overlap.'
   },
+
+  // ——— Phase 3 Infrastructure ———
+  geoatlasMunicipal: {
+    group: 'infrastructure',
+    sidebarLabel: 'Municipal boundaries',
+    indicatorClass: 'geoatlasMunicipal',
+    source: 'geoatlas-municipal-source',
+    layer: 'geoatlas-municipal-fill',
+    outline: 'geoatlas-municipal-outline',
+    lazy: true,
+    visible: false,
+    enrichment: 'municipal',
+    dataUrl: './data/geoatlas-municipal-labrador.geojson',
+    cacheKey: 'geoatlas-municipal-labrador',
+    cacheVersion: 'b5ea8c3c2ce3',
+    beforeLayerIds: [
+      'geoatlas-resource-roads-layer',
+      'geoatlas-roads-layer',
+      'geoatlas-rail-layer',
+      'geoatlas-transmission-layer',
+      'infra-ports-layer',
+      'infra-airports-layer',
+      'infra-generation-layer',
+      'infra-communities-layer',
+      'mods-surface-fill',
+      'mods-surface-outline',
+      'mods-layer',
+      ...FACILITY_STACK_LAYER_IDS
+    ],
+    paginatedQuery: {
+      url: `${LAND_USE_QUERY_BASE}/6/query`,
+      where: '1=1',
+      outFields: MUNICIPAL_OUT_FIELDS,
+      outSR: 4326,
+      format: 'esrijson',
+      maxAllowableOffset: 0.002,
+      pageSize: 200,
+      concurrency: 2,
+      ...labradorGeometryQueryParams()
+    },
+    paint: {
+      fill: {
+        'fill-color': ['get', 'fillColor'],
+        'fill-opacity': 0.18,
+        'fill-outline-color': 'rgba(71, 85, 105, 0.5)'
+      },
+      line: {
+        'line-color': 'rgba(71, 85, 105, 0.85)',
+        'line-width': 1.2,
+        'line-opacity': 0.9
+      }
+    },
+    legendTitle: 'Municipal Boundaries',
+    legendShape: 'fill',
+    legend: [{ label: 'Municipal area', color: '#94a3b8' }],
+    legendNote: 'NL GeoAtlas Land_Use municipal boundaries (Labrador clip).'
+  },
+  geoatlasResourceRoads: {
+    group: 'infrastructure',
+    sidebarLabel: 'Resource access roads',
+    indicatorClass: 'geoatlasResourceRoads',
+    source: 'geoatlas-resource-roads-source',
+    layer: 'geoatlas-resource-roads-layer',
+    lazy: true,
+    visible: false,
+    enrichment: 'resourceRoads',
+    dataUrl: './data/geoatlas-resource-roads-labrador.geojson',
+    cacheKey: 'geoatlas-resource-roads-labrador',
+    cacheVersion: '72719de3833d',
+    beforeLayerIds: [
+      'geoatlas-roads-layer',
+      'geoatlas-rail-layer',
+      'geoatlas-transmission-layer',
+      'infra-ports-layer',
+      'infra-airports-layer',
+      'infra-generation-layer',
+      'infra-communities-layer',
+      'mods-layer',
+      ...FACILITY_STACK_LAYER_IDS
+    ],
+    paginatedQuery: {
+      url: `${MAP_LAYERS_QUERY_BASE}/14/query`,
+      where: '1=1',
+      outFields: RESOURCE_ROADS_OUT_FIELDS,
+      outSR: 4326,
+      format: 'esrijson',
+      maxAllowableOffset: 0.002,
+      pageSize: 200,
+      concurrency: 4,
+      ...labradorGeometryQueryParams()
+    },
+    paint: {
+      line: {
+        'line-color': ['coalesce', ['get', 'lineColor'], '#cbd5e1'],
+        'line-width': 1.1,
+        'line-opacity': 0.85
+      }
+    },
+    legendTitle: 'Resource Access Roads',
+    legendShape: 'line',
+    legend: buildResourceRoadsLegendItems(),
+    legendNote: 'Forest / resource tracks (GeoAtlas Map_Layers/14). Colored by access status.'
+  },
+  geoatlasRoads: {
+    group: 'infrastructure',
+    sidebarLabel: 'Roads (highway & collector)',
+    indicatorClass: 'geoatlasRoads',
+    source: 'geoatlas-roads-source',
+    layer: 'geoatlas-roads-layer',
+    lazy: true,
+    visible: false,
+    enrichment: 'roads',
+    dataUrl: './data/geoatlas-roads-labrador.geojson',
+    cacheKey: 'geoatlas-roads-labrador',
+    cacheVersion: 'fed82d13d477',
+    beforeLayerIds: [
+      'geoatlas-rail-layer',
+      'geoatlas-transmission-layer',
+      'infra-ports-layer',
+      'infra-airports-layer',
+      'infra-generation-layer',
+      'infra-communities-layer',
+      'mods-layer',
+      ...FACILITY_STACK_LAYER_IDS
+    ],
+    paginatedQuery: {
+      url: `${MAP_LAYERS_QUERY_BASE}/12/query`,
+      where: ROADS_WHERE,
+      outFields: ROADS_OUT_FIELDS,
+      outSR: 4326,
+      format: 'esrijson',
+      maxAllowableOffset: 0.002,
+      pageSize: 200,
+      concurrency: 4,
+      ...labradorGeometryQueryParams()
+    },
+    paint: {
+      line: {
+        'line-color': roadsLineColorExpression(),
+        'line-width': roadsLineWidthExpression(),
+        'line-opacity': 0.95
+      }
+    },
+    legendTitle: 'Roads',
+    legendShape: 'line',
+    legend: buildRoadsLegendItems(),
+    legendNote:
+      'National Road Network via GeoAtlas (highways + collectors). Local streets omitted for clarity; railroad is a separate layer.'
+  },
+  geoatlasRail: {
+    group: 'infrastructure',
+    sidebarLabel: 'Railways',
+    indicatorClass: 'geoatlasRail',
+    source: 'geoatlas-rail-source',
+    layer: 'geoatlas-rail-layer',
+    lazy: true,
+    visible: false,
+    enrichment: 'rail',
+    dataUrl: './data/geoatlas-rail-labrador.geojson',
+    cacheKey: 'geoatlas-rail-labrador',
+    cacheVersion: '62df829e46cc',
+    beforeLayerIds: [
+      'geoatlas-transmission-layer',
+      'infra-ports-layer',
+      'infra-airports-layer',
+      'infra-generation-layer',
+      'infra-communities-layer',
+      'mods-layer',
+      ...FACILITY_STACK_LAYER_IDS
+    ],
+    paginatedQuery: {
+      url: `${MAP_LAYERS_QUERY_BASE}/12/query`,
+      where: RAIL_WHERE,
+      outFields: ROADS_OUT_FIELDS,
+      outSR: 4326,
+      format: 'esrijson',
+      maxAllowableOffset: 0.002,
+      pageSize: 200,
+      concurrency: 2,
+      ...labradorGeometryQueryParams()
+    },
+    paint: {
+      line: {
+        'line-color': RAIL_COLOR,
+        'line-width': 2.2,
+        'line-opacity': 0.95,
+        'line-dasharray': [2, 1.5]
+      }
+    },
+    legendTitle: 'Railways',
+    legendShape: 'line',
+    legend: [{ label: 'Railroad (NRN)', color: RAIL_COLOR }],
+    legendNote: 'Iron-ore / QNS&L corridor segments (ROADCLASS=Railroad in GeoAtlas NRN).'
+  },
+  geoatlasTransmission: {
+    group: 'infrastructure',
+    sidebarLabel: 'Transmission lines',
+    indicatorClass: 'geoatlasTransmission',
+    source: 'geoatlas-transmission-source',
+    layer: 'geoatlas-transmission-layer',
+    lazy: true,
+    visible: false,
+    enrichment: 'transmission',
+    dataUrl: './data/geoatlas-transmission-labrador.geojson',
+    cacheKey: 'geoatlas-transmission-labrador',
+    cacheVersion: '652a32db3c27',
+    beforeLayerIds: [
+      'infra-ports-layer',
+      'infra-airports-layer',
+      'infra-generation-layer',
+      'infra-communities-layer',
+      'mods-layer',
+      ...FACILITY_STACK_LAYER_IDS
+    ],
+    paginatedQueries: [
+      {
+        url: `${MAP_LAYERS_QUERY_BASE}/15/query`,
+        where: '1=1',
+        outFields: NALCOR_OUT_FIELDS,
+        outSR: 4326,
+        format: 'esrijson',
+        maxAllowableOffset: 0.002,
+        pageSize: 200,
+        concurrency: 1,
+        featureProps: { txSource: 'nalcor' },
+        ...labradorGeometryQueryParams()
+      },
+      {
+        url: `${MAP_LAYERS_QUERY_BASE}/16/query`,
+        where: '1=1',
+        outFields: CANVEC_TX_OUT_FIELDS,
+        outSR: 4326,
+        format: 'esrijson',
+        maxAllowableOffset: 0.002,
+        pageSize: 200,
+        concurrency: 2,
+        featureProps: { txSource: 'canvec' },
+        ...labradorGeometryQueryParams()
+      }
+    ],
+    paint: {
+      line: {
+        'line-color': ['coalesce', ['get', 'lineColor'], '#d97706'],
+        'line-width': 2.4,
+        'line-opacity': 0.9
+      }
+    },
+    legendTitle: 'Transmission Lines',
+    legendShape: 'line',
+    legend: buildTransmissionLegendItems(),
+    legendNote:
+      'HV transmission only (GeoAtlas Nalcor/15 + CanVec/16). No distribution / feeder network. Nalcor LTA geometry is generalized and may stop short of plant footprints.'
+  },
+  infraPorts: {
+    group: 'infrastructure',
+    sidebarLabel: 'Ports / marine access',
+    indicatorClass: 'infraPorts',
+    source: 'infra-ports-source',
+    layer: 'infra-ports-layer',
+    lazy: true,
+    visible: false,
+    enrichment: 'infraSite',
+    dataUrl: './data/infra-ports-labrador.geojson',
+    cacheKey: 'infra-ports-labrador',
+    cacheVersion: 'db9349587f75',
+    beforeLayerIds: ['mods-layer', ...FACILITY_STACK_LAYER_IDS],
+    icon: { iconField: 'iconId', default: 'port', size: 0.72, offset: [-15, -12] },
+    legendTitle: 'Ports / Marine Access',
+    legendShape: 'icon',
+    legend: [{ label: 'Port / marine access', icon: infraIconDataUri('port') }],
+    legendNote: 'Curated Labrador ports & harbours (not a complete CanVec extract).'
+  },
+  infraAirports: {
+    group: 'infrastructure',
+    sidebarLabel: 'Airports / airstrips',
+    indicatorClass: 'infraAirports',
+    source: 'infra-airports-source',
+    layer: 'infra-airports-layer',
+    lazy: true,
+    visible: false,
+    enrichment: 'infraSite',
+    dataUrl: './data/infra-airports-labrador.geojson',
+    cacheKey: 'infra-airports-labrador',
+    cacheVersion: '1749824e9f4b',
+    beforeLayerIds: ['mods-layer', ...FACILITY_STACK_LAYER_IDS],
+    icon: { iconField: 'iconId', default: 'airport', size: 0.72, offset: [15, -12] },
+    legendTitle: 'Airports / Airstrips',
+    legendShape: 'icon',
+    legend: [{ label: 'Airport / airstrip', icon: infraIconDataUri('airport') }],
+    legendNote: 'Curated Labrador airports & community airstrips for remote access context.'
+  },
+  infraGeneration: {
+    group: 'infrastructure',
+    sidebarLabel: 'Power generation',
+    indicatorClass: 'infraGeneration',
+    source: 'infra-generation-source',
+    layer: 'infra-generation-layer',
+    lazy: true,
+    visible: false,
+    enrichment: 'infraSite',
+    dataUrl: './data/infra-generation-labrador.geojson',
+    cacheKey: 'infra-generation-labrador',
+    cacheVersion: 'd29fb36d7947',
+    beforeLayerIds: ['mods-layer', ...FACILITY_STACK_LAYER_IDS],
+    icon: { iconField: 'iconId', default: 'hydro', size: 0.76, offset: [0, 15] },
+    legendTitle: 'Power Generation',
+    legendShape: 'icon',
+    legend: [
+      { label: 'Operating hydro', icon: infraIconDataUri('hydro') },
+      { label: 'Potential (Gull Island)', icon: infraIconDataUri('hydroPotential') }
+    ],
+    legendNote: 'Churchill Falls & Muskrat Falls (operating); Gull Island marked as proposed / not operating.'
+  },
+  infraCommunities: {
+    group: 'infrastructure',
+    sidebarLabel: 'Communities',
+    indicatorClass: 'infraCommunities',
+    source: 'infra-communities-source',
+    layer: 'infra-communities-layer',
+    labels: 'infra-communities-labels',
+    lazy: true,
+    visible: false,
+    enrichment: 'infraSite',
+    dataUrl: './data/infra-communities-labrador.geojson',
+    cacheKey: 'infra-communities-labrador',
+    cacheVersion: 'abfb3aa19aba',
+    minzoom: 5,
+    beforeLayerIds: ['mods-layer', ...FACILITY_STACK_LAYER_IDS],
+    paint: {
+      circle: {
+        'circle-radius': 4.5,
+        'circle-color': SITE_KIND_COLORS.community,
+        'circle-stroke-width': 1.2,
+        'circle-stroke-color': '#ffffff'
+      },
+      label: {
+        'text-color': '#1e293b',
+        'text-halo-color': '#ffffff',
+        'text-halo-width': 1.2
+      }
+    },
+    legendTitle: 'Communities',
+    legendShape: 'circle',
+    legend: buildSitesLegendItems(['community']),
+    legendNote: 'Curated Labrador settlements (labels appear when zoomed in).'
+  },
+
+  // NRCan critical-mineral facilities — split by OperationGroupEN under Infrastructure.
+  // Early prospecting / showings are NOT in this dataset; use MODS for those.
+  infraMines: {
+    group: 'infrastructure',
+    sidebarLabel: 'Mines / primary producers',
+    indicatorClass: 'infraMines',
+    source: 'infra-mines-source',
+    layer: 'infra-mines-layer',
+    ...FACILITY_DATA,
+    filter: facilityProvinceAndGroupFilter('Mines and other primary producing sites'),
+    icon: {
+      field: 'OperationGroupEN',
+      mapping: { 'Mines and other primary producing sites': 'mine' },
+      default: 'mine',
+      size: 0.78
+    },
+    legendTitle: 'Mines / Primary Producers',
+    legendShape: 'icon',
+    legend: [{ label: 'Mine / primary producer', icon: facilityIconDataUri('mine') }],
+    legendNote:
+      'NRCan critical-mineral mines & primary sites (NL&L). Includes active (e.g. Voisey’s Bay, Carol Lake) and past producers on hold.'
+  },
+  infraProcessing: {
+    group: 'infrastructure',
+    sidebarLabel: 'Processing / midstream',
+    indicatorClass: 'infraProcessing',
+    source: 'infra-processing-source',
+    layer: 'infra-processing-layer',
+    ...FACILITY_DATA,
+    filter: facilityProvinceAndGroupFilter('Processing'),
+    icon: {
+      field: 'OperationGroupEN',
+      mapping: { Processing: 'processing' },
+      default: 'processing',
+      size: 0.78
+    },
+    legendTitle: 'Processing / Midstream',
+    legendShape: 'icon',
+    legend: [{ label: 'Processing / midstream', icon: facilityIconDataUri('processing') }],
+    legendNote:
+      'NRCan processing facilities (NL&L). May be off-island (e.g. Long Harbour) — not local Labrador refining capacity.'
+  },
+  infraExploration: {
+    group: 'infrastructure',
+    sidebarLabel: 'Advanced exploration',
+    indicatorClass: 'infraExploration',
+    source: 'infra-exploration-source',
+    layer: 'infra-exploration-layer',
+    ...FACILITY_DATA,
+    filter: facilityProvinceAndGroupFilter('Advanced exploration project'),
+    icon: {
+      field: 'OperationGroupEN',
+      mapping: { 'Advanced exploration project': 'advancedExploration' },
+      default: 'advancedExploration',
+      size: 0.78
+    },
+    legendTitle: 'Advanced Exploration',
+    legendShape: 'icon',
+    legend: [{ label: 'Advanced exploration project', icon: facilityIconDataUri('advancedExploration') }],
+    legendNote:
+      'NRCan advanced exploration projects only. Early prospecting / showings / MODS occurrences are under Occurrences & Activity.'
+  },
+  infraDevelopment: {
+    group: 'infrastructure',
+    sidebarLabel: 'Development projects',
+    indicatorClass: 'infraDevelopment',
+    source: 'infra-development-source',
+    layer: 'infra-development-layer',
+    ...FACILITY_DATA,
+    filter: facilityProvinceAndGroupFilter('Advanced processing project'),
+    icon: {
+      field: 'OperationGroupEN',
+      mapping: { 'Advanced processing project': 'advancedProcessing' },
+      default: 'advancedProcessing',
+      size: 0.78
+    },
+    legendTitle: 'Development Projects',
+    legendShape: 'icon',
+    legend: [{ label: 'Advanced processing / development', icon: facilityIconDataUri('advancedProcessing') }],
+    legendNote:
+      'NRCan advanced processing / development-stage projects (NL&L).'
+  },
+
   atrisLandClaims: {
     group: 'rights',
     sidebarLabel: 'ATRIS land claims',
@@ -675,7 +1151,7 @@ export const LAYER_CONFIG = {
       'mods-surface-fill',
       'mods-surface-outline',
       'mods-layer',
-      'critical-minerals-layer'
+      ...FACILITY_STACK_LAYER_IDS
     ],
     paginatedQuery: {
       url: ATRIS_CLAIMS_QUERY,
@@ -728,7 +1204,7 @@ export const LAYER_CONFIG = {
       'mods-surface-fill',
       'mods-surface-outline',
       'mods-layer',
-      'critical-minerals-layer'
+      ...FACILITY_STACK_LAYER_IDS
     ],
     paginatedQuery: {
       url: INUIT_REGIONS_QUERY,
@@ -777,7 +1253,7 @@ export const LAYER_CONFIG = {
       'mods-surface-fill',
       'mods-surface-outline',
       'mods-layer',
-      'critical-minerals-layer'
+      ...FACILITY_STACK_LAYER_IDS
     ],
     paginatedQuery: {
       url: `${MINERAL_LANDS_QUERY_BASE}/0/query`,
@@ -829,7 +1305,7 @@ export const LAYER_CONFIG = {
       'mods-surface-fill',
       'mods-surface-outline',
       'mods-layer',
-      'critical-minerals-layer'
+      ...FACILITY_STACK_LAYER_IDS
     ],
     paginatedQuery: {
       url: `${MINERAL_LANDS_QUERY_BASE}/5/query`,
@@ -860,61 +1336,6 @@ export const LAYER_CONFIG = {
     legend: buildTenureLegendFromFeatures([]),
     legendNote:
       'Labrador mineral rights (leases, exempt mineral land, etc.). Parks & protected areas are on Protected & conserved — not duplicated here.'
-  },
-  criticalMinerals: {
-    group: 'occurrences',
-    sidebarLabel: 'Critical Mineral Facilities',
-    indicatorClass: 'criticalMinerals',
-    source: 'critical-minerals-source',
-    layer: 'critical-minerals-layer',
-    // No `labels` key - ~290 national points would clutter the map; details
-    // are shown via click popup instead (see bindInteractions in app.js).
-    // Baked NL&L subset (npm run fetch:facilities). Live `sources` = fallback.
-    dataUrl: './data/critical-minerals-nl.geojson',
-    cacheKey: 'critical-minerals-nl',
-    cacheVersion: '0aac8ae0b666',
-    sources: CRITICAL_MINERALS_SOURCES,
-    visible: true,
-    // Data stays national on live fallback - only what's drawn is
-    // scoped to NL&L, since 'ProvincesEN' can list multiple provinces for
-    // cross-boundary projects, hence a substring ('in') check rather than '=='.
-    // Baked file is already NL-filtered; filter remains harmless.
-    filter: ['in', NL_LABRADOR_PROVINCE_NAME, ['get', 'ProvincesEN']],
-    icon: {
-      field: 'OperationGroupEN',
-      mapping: {
-        'Mines and other primary producing sites': 'mine',
-        'Processing': 'processing',
-        'Advanced processing project': 'advancedProcessing',
-        'Advanced exploration project': 'advancedExploration'
-      },
-      default: 'default',
-      size: 0.75,
-      // Maturity encoding: MapLibre draws higher symbol-sort-key values last
-      // (on top), so operating sites sit above earlier-stage pipeline projects
-      // where markers overlap - the eye is drawn to what's producing today.
-      sortKey: {
-        field: 'OperationGroupEN',
-        mapping: {
-          'Advanced exploration project': 1,
-          'Advanced processing project': 2,
-          'Mines and other primary producing sites': 3,
-          'Processing': 4
-        },
-        default: 0
-      }
-    },
-    legendTitle: 'Critical Mineral Value Chain',
-    legendShape: 'icon',
-    // Ordered upstream -> downstream / pipeline -> operating (maturity ladder).
-    legend: [
-      { label: 'Exploration — advanced project', icon: facilityIconDataUri('advancedExploration') },
-      { label: 'Development — advanced processing', icon: facilityIconDataUri('advancedProcessing') },
-      { label: 'Producing — mine / primary producer', icon: facilityIconDataUri('mine') },
-      { label: 'Producing — processing / midstream', icon: facilityIconDataUri('processing') }
-    ],
-    legendNote:
-      'NL&L NRCan facilities. Labrador has primary production (e.g. Voisey’s Bay); processing/midstream sites may be off-island (e.g. Long Harbour, NL) — not local Labrador refining capacity.'
   },
   modsOccurrences: {
     group: 'occurrences',
@@ -1029,8 +1450,9 @@ export const CANADA_BOUNDS = [-141, 41, -52, 75];
 // error) since NL&L doesn't reach anywhere near the old national cap.
 export const NL_LABRADOR_BOUNDS = [-68, 46, -52, 61];
 
-// Note: mines/processing facilities are served as a vector point layer
-// (see `criticalMinerals` in LAYER_CONFIG above) rather than a WMS image -
+// Note: mines/processing facilities are served as vector point layers
+// (see `infraMines` / `infraProcessing` / `infraExploration` / `infraDevelopment`
+// in LAYER_CONFIG) rather than a WMS image -
 // point symbols in a raster overlay don't rescale with zoom the way vector
 // circles do, and it would duplicate the Data Layers section.
 export const WMS_CONFIG = {

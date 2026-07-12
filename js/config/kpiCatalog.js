@@ -29,8 +29,8 @@ export const KPI_CATALOG = [
     label: 'Facilities intersecting view',
     shortLabel: 'facilities',
     description:
-      'NL&L critical mineral facilities intersecting the map view (same province filter as the map layer).',
-    layer: 'criticalMinerals'
+      'NL&L critical mineral facilities intersecting the map view (mines, processing, exploration, development).',
+    layer: 'infraMines'
   },
   {
     id: 'claimsInView',

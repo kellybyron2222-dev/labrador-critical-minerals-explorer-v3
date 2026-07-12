@@ -36,7 +36,16 @@ const FEATURE_FLOORS = {
   'geoatlas-landuse-labrador': 100,
   'atris-claims-labrador': 4,
   'inuit-nunatsiavut': 1,
-  'critical-minerals-nl': 10
+  'critical-minerals-nl': 10,
+  'geoatlas-roads-labrador': 1000,
+  'geoatlas-rail-labrador': 150,
+  'geoatlas-resource-roads-labrador': 900,
+  'geoatlas-transmission-labrador': 50,
+  'infra-ports-labrador': 5,
+  'infra-airports-labrador': 8,
+  'infra-generation-labrador': 2,
+  'infra-communities-labrador': 10,
+  'geoatlas-municipal-labrador': 10
 };
 
 async function fileExists(filePath) {

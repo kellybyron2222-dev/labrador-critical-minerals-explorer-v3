@@ -1,0 +1,26 @@
+{
+  "version": "72719de3833d",
+  "contentHash": "72719de3833d4bc0dd4a51b9cca685168af2e9598440f987fd77cfd51dc03ea4",
+  "cadenceMonths": 6,
+  "generatedAt": "2026-07-12T21:06:26.975Z",
+  "nextDue": "2027-01-12",
+  "refresh": "GitHub Actions refresh-data.yml (monthly; skips until nextDue) or npm run refresh:data",
+  "featureCount": 1014,
+  "source": "https://dnrmaps.gov.nl.ca/arcgis/rest/services/GeoAtlas/Map_Layers/MapServer/14/query",
+  "where": "1=1",
+  "outSR": 4326,
+  "maxAllowableOffset": 0.002,
+  "outFields": "OBJECTID,ROAD_NAME,ROAD_NETWORK,ROAD_ACCESS,ROAD_TYPE,ROAD_SURFACE,AUTHORITY,MAINTENANCE,COMMENTS",
+  "clip": "Labrador bbox (south of Strait of Belle Isle)",
+  "clipBbox": {
+    "xmin": -67.8,
+    "ymin": 51.5,
+    "xmax": -55.5,
+    "ymax": 60.6,
+    "spatialReference": {
+      "wkid": 4326
+    }
+  },
+  "layerId": 14,
+  "layerName": "Resource Access Roads"
+}

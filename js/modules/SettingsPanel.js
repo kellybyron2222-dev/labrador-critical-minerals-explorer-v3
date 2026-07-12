@@ -186,11 +186,11 @@ export default class SettingsPanel {
       </div>`;
 
     const aboutBody = `
-      <p class="settings-note"><strong>Labrador Critical Minerals Explorer</strong> — free, open map integrating public Labrador geoscience, occurrences, rights, and (soon) infrastructure.</p>
+      <p class="settings-note"><strong>Labrador Critical Minerals Explorer</strong> — free, open map integrating public Labrador geoscience, occurrences, rights, and infrastructure.</p>
       <ul class="settings-about-list">
         <li><strong>Focus:</strong> mainland Labrador (not a Canada-wide thin map).</li>
         <li><strong>Load path:</strong> bake-first GeoJSON / WMS under <code>public/data/</code>, then IndexedDB, live ArcGIS only as fallback.</li>
-        <li><strong>Sources:</strong> NL GeoAtlas (MODS, bedrock, surficial, mineral lands, land use / CPCAD mirror), NRCan (facilities, prospectivity WMS, national geology), CIRNAC/ISC (Nunatsiavut, ATRIS).</li>
+        <li><strong>Sources:</strong> NL GeoAtlas (MODS, bedrock, surficial, mineral lands, land use / CPCAD, roads / rail / transmission, municipal), NRCan (mines / processing / exploration / development facilities, prospectivity WMS, national geology), CIRNAC/ISC (Nunatsiavut, ATRIS), curated Labrador ports / airports / generation / communities.</li>
         <li><strong>Hard exclusions:</strong> parks / conserved + public water supplies only — Indigenous lands are consultation context, not a total block.</li>
         <li><strong>Honesty:</strong> processing/midstream icons may be off-island (e.g. Long Harbour); Labrador has primary production, not local critical-mineral refining.</li>
       </ul>

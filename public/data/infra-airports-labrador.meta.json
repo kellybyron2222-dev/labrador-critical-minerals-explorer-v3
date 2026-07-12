@@ -1,0 +1,14 @@
+{
+  "version": "1749824e9f4b",
+  "contentHash": "1749824e9f4ba4c199afcb07232992b827de155d2ffe6b10bc99792aaf37cd05",
+  "cadenceMonths": 12,
+  "generatedAt": "2026-07-12T21:43:56.582Z",
+  "nextDue": "2027-07-12",
+  "refresh": "GitHub Actions refresh-data.yml (monthly; skips until nextDue) or npm run refresh:data",
+  "featureCount": 11,
+  "source": "curated Labrador infrastructure points (explorer-v3)",
+  "kinds": [
+    "airport"
+  ],
+  "label": "Airports / airstrips"
+}

@@ -9,6 +9,7 @@ import {
   MAP_OPTIONS
 } from '../config/mapConfig.js';
 import { registerFacilityIconLoader } from './facilityIcons.js';
+import { registerInfraIconLoader } from './infraIcons.js';
 
 export default class MapBase {
   constructor() {
@@ -41,6 +42,7 @@ export default class MapBase {
     this.map.on('load', () => this._readyResolve(this.map));
     this.map.on('error', (e) => console.error('Map error:', e.error));
     registerFacilityIconLoader(this.map);
+    registerInfraIconLoader(this.map);
 
     this._bindHud();
     this._bindControls();

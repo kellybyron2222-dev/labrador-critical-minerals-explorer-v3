@@ -242,10 +242,25 @@ export function computeKpiMetrics(ctx) {
 
     if (id === 'facilitiesInView') {
       if (!bounds) continue;
-      const features = ctx
-        .getFeatures('criticalMinerals')
-        .filter(featureMatchesFacilitiesFilter);
-      const n = features.filter((f) => featureIntersectsBounds(f, bounds)).length;
+      const facilityLayers = [
+        'infraMines',
+        'infraProcessing',
+        'infraExploration',
+        'infraDevelopment'
+      ];
+      const seen = new Set();
+      let n = 0;
+      for (const layer of facilityLayers) {
+        for (const f of ctx.getFeatures(layer).filter(featureMatchesFacilitiesFilter)) {
+          const key =
+            f.properties?.PropertyNameEN ||
+            f.properties?.name ||
+            `${f.geometry?.coordinates?.[0]},${f.geometry?.coordinates?.[1]}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          if (featureIntersectsBounds(f, bounds)) n += 1;
+        }
+      }
       out.push({ id, kind: 'count', label: meta.shortLabel, value: n });
       continue;
     }

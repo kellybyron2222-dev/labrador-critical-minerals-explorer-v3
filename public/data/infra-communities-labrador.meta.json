@@ -1,0 +1,14 @@
+{
+  "version": "abfb3aa19aba",
+  "contentHash": "abfb3aa19abaf2f4f6388862fe4c7c1b93f6695c189a08fbc7a7ee1d0832193b",
+  "cadenceMonths": 12,
+  "generatedAt": "2026-07-12T21:43:56.585Z",
+  "nextDue": "2027-07-12",
+  "refresh": "GitHub Actions refresh-data.yml (monthly; skips until nextDue) or npm run refresh:data",
+  "featureCount": 17,
+  "source": "curated Labrador infrastructure points (explorer-v3)",
+  "kinds": [
+    "community"
+  ],
+  "label": "Communities"
+}

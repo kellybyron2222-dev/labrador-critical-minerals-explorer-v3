@@ -1,0 +1,14 @@
+{
+  "version": "db9349587f75",
+  "contentHash": "db9349587f7549577839b47252e1917190e0131d733792e3d333fb18d9fbb99f",
+  "cadenceMonths": 12,
+  "generatedAt": "2026-07-12T21:43:56.571Z",
+  "nextDue": "2027-07-12",
+  "refresh": "GitHub Actions refresh-data.yml (monthly; skips until nextDue) or npm run refresh:data",
+  "featureCount": 8,
+  "source": "curated Labrador infrastructure points (explorer-v3)",
+  "kinds": [
+    "port"
+  ],
+  "label": "Ports / marine access"
+}

@@ -1,8 +1,8 @@
 # Labrador Critical Minerals Explorer
 
 Open, Labrador-focused map for critical-minerals exploration and siting: geology,
-occurrences (MODS), mineral rights, land constraints, and (next) infrastructure
-and geophysics — built on public government data.
+occurrences (MODS), mineral rights, land constraints, infrastructure, and
+(next) geophysics — built on public government data.
 
 **Live app:** https://kellybyron2222-dev.github.io/labrador-critical-minerals-explorer-v3/
 
@@ -11,16 +11,19 @@ and geophysics — built on public government data.
 - **Geological endowment** — provincial bedrock & surficial (GeoAtlas), national
   GSC context WMS, NRCan commodity prospectivity models
 - **Occurrences & activity** — Labrador MODS (~3k points), commodity picker,
-  status filters, search/list, optional density surfaces, NRCan facilities
-  (honest midstream labeling; off-island sites called out)
+  status filters, search/list, optional density surfaces
 - **Rights & constraints** — map-staked claims (expiry bands), mineral tenure,
   Nunatsiavut, ATRIS, CPCAD, land use; **Hard exclusions** preset (parks +
   protected water supplies only)
+- **Infrastructure** — roads (highway/collector + resource access), rail,
+  HV transmission (Nalcor + CanVec; no distribution), ports, airports, power
+  generation, communities & municipal boundaries; NRCan mines / processing /
+  advanced exploration / development (default off); one Infrastructure legend;
+  MODS popup shows nearest road / transmission / port distances
 - **UX** — collapsible layer groups, Settings (KPI / About data / GeoJSON
   export), mobile map-first chrome, bake-first data + monthly refresh CI
 
-**Not started yet:** Phase 3 infrastructure (roads, rail, ports, power);
-Phase 4.1 geophysics (1VD / gravity).
+**Not started yet:** Phase 4.1 geophysics (1VD / gravity).
 
 ## Docs
 
@@ -61,6 +64,6 @@ npm run refresh:data     # Registry-driven data refresh (respects nextDue)
 
 ## Status
 
-Phases **0–2** complete (including hard exclusions + pre–Phase 3 polish).
-**Next:** Phase **3.1** transport infrastructure, then Phase **4.1** geophysics.
+Phases **0–3** complete (infrastructure + nearest-infra distances).
+**Next:** Phase **4.1** geophysics (1VD / gravity).
 See [`BUILD_PLAN.md`](./BUILD_PLAN.md) for the live checklist.

@@ -20,6 +20,14 @@ import {
   enrichCpcadFeatureProperties,
   enrichLandUseFeatureProperties
 } from '../config/protectedAreas.js';
+import {
+  enrichRoadsFeatureProperties,
+  enrichRailFeatureProperties,
+  enrichResourceRoadProperties,
+  enrichTransmissionProperties,
+  enrichMunicipalProperties,
+  enrichSiteProperties
+} from '../config/infrastructure.js';
 import { getCachedGeoJSON, setCachedGeoJSON } from './layerCache.js';
 import { reprojectToMercator } from './wmsReprojection.js';
 
@@ -88,6 +96,25 @@ export default class LayerManager {
   }
 
   /**
+   * Esri geometry → GeoJSON (rings / paths / point).
+   * GeoAtlas infrastructure layers return polylines; geology/rights return polygons.
+   */
+  esriGeometryToGeoJSON(geometry) {
+    if (!geometry) return null;
+    if (Array.isArray(geometry.rings)) return this.esriPolygonToGeoJSON(geometry);
+    if (Array.isArray(geometry.paths)) {
+      const paths = geometry.paths.filter((p) => Array.isArray(p) && p.length >= 2);
+      if (!paths.length) return null;
+      if (paths.length === 1) return { type: 'LineString', coordinates: paths[0] };
+      return { type: 'MultiLineString', coordinates: paths };
+    }
+    if (typeof geometry.x === 'number' && typeof geometry.y === 'number') {
+      return { type: 'Point', coordinates: [geometry.x, geometry.y] };
+    }
+    return null;
+  }
+
+  /**
    * Esri polygon rings → GeoJSON Polygon / MultiPolygon.
    * Exterior rings are clockwise in ArcGIS; opposite winding = holes.
    */
@@ -124,7 +151,7 @@ export default class LayerManager {
   }
 
   esriFeatureToGeoJSON(feature) {
-    const geometry = this.esriPolygonToGeoJSON(feature?.geometry);
+    const geometry = this.esriGeometryToGeoJSON(feature?.geometry);
     if (!geometry) return null;
     return {
       type: 'Feature',
@@ -461,6 +488,31 @@ export default class LayerManager {
       data.features.forEach((feature) => {
         enrichLandUseFeatureProperties(feature.properties);
       });
+    } else if (config.enrichment === 'roads') {
+      data.features.forEach((feature) => {
+        enrichRoadsFeatureProperties(feature.properties);
+      });
+    } else if (config.enrichment === 'rail') {
+      data.features.forEach((feature) => {
+        enrichRailFeatureProperties(feature.properties);
+      });
+    } else if (config.enrichment === 'resourceRoads') {
+      data.features.forEach((feature) => {
+        enrichResourceRoadProperties(feature.properties);
+      });
+    } else if (config.enrichment === 'transmission') {
+      data.features.forEach((feature) => {
+        const tag = feature.properties.txSource || 'canvec';
+        enrichTransmissionProperties(feature.properties, tag);
+      });
+    } else if (config.enrichment === 'municipal') {
+      data.features.forEach((feature) => {
+        enrichMunicipalProperties(feature.properties);
+      });
+    } else if (config.enrichment === 'infraSite') {
+      data.features.forEach((feature) => {
+        enrichSiteProperties(feature.properties);
+      });
     }
 
     this.loadedData[name] = data;
@@ -501,68 +553,102 @@ export default class LayerManager {
 
   addPointLayer(name, config) {
     if (config.icon) {
-      this.addIconPointLayer(config);
+      this.addIconPointLayer(name, config);
     } else {
       this.addCirclePointLayer(config);
     }
   }
 
   addCirclePointLayer(config) {
+    const beforeId = this.resolveBeforeLayerId(config);
+
     if (!this.map.getLayer(config.layer)) {
-      this.map.addLayer({
-        id: config.layer,
-        type: 'circle',
-        source: config.source,
-        paint: config.paint.circle,
-        ...(config.filter ? { filter: config.filter } : {})
-      });
+      this.map.addLayer(
+        {
+          id: config.layer,
+          type: 'circle',
+          source: config.source,
+          paint: config.paint.circle,
+          ...(config.minzoom != null ? { minzoom: config.minzoom } : {}),
+          ...(config.filter ? { filter: config.filter } : {})
+        },
+        beforeId
+      );
     }
 
     if (config.labels && !this.map.getLayer(config.labels)) {
-      this.map.addLayer({
-        id: config.labels,
-        type: 'symbol',
-        source: config.source,
-        layout: {
-          'text-field': ['get', 'name'],
-          'text-offset': [0, 1.5],
-          'text-size': 11,
-          'text-anchor': 'top',
-          'text-font': ['Open Sans Regular', 'Arial Unicode MS Regular']
+      this.map.addLayer(
+        {
+          id: config.labels,
+          type: 'symbol',
+          source: config.source,
+          layout: {
+            'text-field': ['get', 'name'],
+            'text-offset': [0, 1.5],
+            'text-size': 11,
+            'text-anchor': 'top',
+            'text-font': ['Open Sans Regular', 'Arial Unicode MS Regular']
+          },
+          paint: config.paint.label,
+          ...(config.minzoom != null ? { minzoom: config.minzoom } : {})
         },
-        paint: config.paint.label
-      });
+        beforeId
+      );
     }
   }
 
   /** Renders points as category-specific badge icons instead of plain circles (see facilityIcons.js). */
-  addIconPointLayer(config) {
-    if (this.map.getLayer(config.layer)) return;
+  addIconPointLayer(name, config) {
+    const beforeId = this.resolveBeforeLayerId(config);
+    const { field, mapping, iconField, default: defaultIcon, size, offset, sortKey } = config.icon;
 
-    const { field, mapping, default: defaultIcon, size, sortKey } = config.icon;
+    if (!this.map.getLayer(config.layer)) {
+      // `iconField` = each feature already carries its resolved icon id (e.g.
+      // infra sites' `iconId`); otherwise map a source field through `mapping`.
+      const iconImage = iconField
+        ? ['coalesce', ['get', iconField], defaultIcon]
+        : this.buildMatchExpression(field, mapping, defaultIcon);
 
-    const layout = {
-      'icon-image': this.buildMatchExpression(field, mapping, defaultIcon),
-      'icon-size': size || 1,
-      'icon-allow-overlap': true,
-      'icon-ignore-placement': true
-    };
+      const layout = {
+        'icon-image': iconImage,
+        'icon-size': size || 1,
+        'icon-allow-overlap': true,
+        'icon-ignore-placement': true,
+        // Nudge co-located site types apart so a port/airport/plant sharing a
+        // community location fan out instead of stacking (offset scales with size).
+        ...(offset ? { 'icon-offset': offset } : {})
+      };
 
-    if (sortKey) {
-      layout['symbol-sort-key'] = this.buildMatchExpression(
-        sortKey.field,
-        sortKey.mapping,
-        sortKey.default ?? 0
+      if (config.labels) {
+        layout['text-field'] = ['get', 'name'];
+        layout['text-optional'] = true;
+        layout['text-size'] = 11;
+        layout['text-offset'] = [0, 1.3];
+        layout['text-anchor'] = 'top';
+        layout['text-font'] = ['Open Sans Regular', 'Arial Unicode MS Regular'];
+      }
+
+      if (sortKey) {
+        layout['symbol-sort-key'] = this.buildMatchExpression(
+          sortKey.field,
+          sortKey.mapping,
+          sortKey.default ?? 0
+        );
+      }
+
+      this.map.addLayer(
+        {
+          id: config.layer,
+          type: 'symbol',
+          source: config.source,
+          layout,
+          ...(config.paint?.symbol ? { paint: config.paint.symbol } : {}),
+          ...(config.minzoom != null ? { minzoom: config.minzoom } : {}),
+          ...(config.filter ? { filter: config.filter } : {})
+        },
+        beforeId
       );
     }
-
-    this.map.addLayer({
-      id: config.layer,
-      type: 'symbol',
-      source: config.source,
-      layout,
-      ...(config.filter ? { filter: config.filter } : {})
-    });
   }
 
   /** Builds a MapLibre `match` expression from a {value: output} mapping plus a fallback. */
@@ -576,28 +662,38 @@ export default class LayerManager {
   }
 
   addLineLayer(name, config) {
+    const beforeId = this.resolveBeforeLayerId(config);
+
     if (!this.map.getLayer(config.layer)) {
-      this.map.addLayer({
-        id: config.layer,
-        type: 'line',
-        source: config.source,
-        paint: config.paint.line,
-        ...(config.filter ? { filter: config.filter } : {})
-      });
+      this.map.addLayer(
+        {
+          id: config.layer,
+          type: 'line',
+          source: config.source,
+          paint: config.paint.line,
+          ...(config.layout?.line ? { layout: config.layout.line } : {}),
+          ...(config.minzoom != null ? { minzoom: config.minzoom } : {}),
+          ...(config.filter ? { filter: config.filter } : {})
+        },
+        beforeId
+      );
     }
 
     if (!this.map.getLayer(`${config.layer}-hover`)) {
-      this.map.addLayer({
-        id: `${config.layer}-hover`,
-        type: 'line',
-        source: config.source,
-        paint: {
-          'line-color': config.paint.line['line-color'],
-          'line-width': 5,
-          'line-opacity': 0.5
+      this.map.addLayer(
+        {
+          id: `${config.layer}-hover`,
+          type: 'line',
+          source: config.source,
+          paint: {
+            'line-color': config.paint.line['line-color'],
+            'line-width': 5,
+            'line-opacity': 0.5
+          },
+          filter: ['==', 'id', '']
         },
-        filter: ['==', 'id', '']
-      });
+        beforeId
+      );
     }
   }
 

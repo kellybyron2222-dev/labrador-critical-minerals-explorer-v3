@@ -12,8 +12,8 @@
 > checklist for the project. Review and update it as we move along — tick boxes,
 > flip status markers, and add notes in place.
 > **Product / GTM / freemium arc:** see [`PRODUCT_PLAN.md`](./PRODUCT_PLAN.md).
-> Last updated: 2026-07-12 — README refreshed (standalone product doc); pre–Phase 3
-> close-out complete; **next = Phase 3.1 transport** (+ 4.1 geophysics)
+> Last updated: 2026-07-12 — **Phase 3 complete** (3.1–3.4 + polish);
+> **next = Phase 4.1 geophysics**
 
 **Status marker key:** `[x]` done · `[~]` in progress · `[ ]` not started · `[!]` blocked/needs decision
 Layer catalog status: `✅ done/in app` · `🟢 verified available` · `⬜ to confirm/wire` · `🔒 blocked`
@@ -24,9 +24,9 @@ Layer catalog status: `✅ done/in app` · `🟢 verified available` · `⬜ to 
 
 **Phase 0** ✅ · **Phase 1** ✅ (MODS, endowment, facilities honesty **1.1g**,
 bedrock mutual exclusion **1.4**) · **Phase 2** ✅ (2.1–2.3 + **2.1c** expiry
-bands + **2.4** hard exclusions) · **Pre–Phase 3 close-out** ✅ (About data,
-GeoJSON export, legend declutter) · **CI / audit harden** ✅ ·
-**Phases 3–4** not started · **Phase 5** lite pulled forward; full provenance /
+bands + **2.4** hard exclusions) · **Pre–Phase 3 close-out** ✅ ·
+**Phase 3** ✅ (3.1–3.4 incl. nearest-infra distances) ·
+**Phase 4** not started · **Phase 5** lite pulled forward; full provenance /
 shareable URL remain.
 
 | Area | Status |
@@ -44,14 +44,15 @@ shareable URL remain.
 | Tenure↔CPCAD de-overlap (parks only on CPCAD; tenure 69 rights polys) | ✅ |
 | Status filters, search, list/detail, bottom KPI + Settings | ✅ |
 | Soft-launch Phase 5 lite (About data, GeoJSON export, legend collapse) | ✅ |
-| Bake registry + monthly auto-refresh → PR (§6.2) | ✅ (18 registry entries) |
+| Bake registry + monthly auto-refresh → PR (§6.2) | ✅ (27 registry entries) |
 | GitHub repo + Pages hosting + CI validate/Vitest | ✅ |
-| Infrastructure (roads, power, communities) | [ ] Phase 3 ← **next (Must)** |
-| Geophysics MVP slice (1VD/aeromag + gravity; survey footprints) | [ ] Phase **4.1** (**Must**) |
+| Infrastructure (roads, power, communities, facilities + nearest distances) | ✅ Phase 3 (3.1–3.4) |
+| Geophysics MVP slice (1VD/aeromag + gravity; survey footprints) | [ ] Phase **4.1** (**Must**) ← **next** |
 | Geochemistry / ice-flow / grade filters | [ ] Phase 4.2 (post-MVP) |
 | Provenance panel, shareable URL | [ ] Phase 5 remainder |
 | Optional later: detailed surficial, faults/contacts, LiDAR, aerial, EO | [ ] see §5 “Optional later” |
 | Optional later: historical claims, quarries, cancelled rights | [ ] Phase 2.1b |
+| Nearest-infra distances (3.4) | ✅ (2026-07-12) |
 | Post-MVP backlog (drillholes, live claims API, ESG habitats, …) | [ ] see **§5.2** |
 
 **Public app:** https://kellybyron2222-dev.github.io/labrador-critical-minerals-explorer-v3/  
@@ -63,16 +64,13 @@ shareable URL remain.
 > Pre–Phase 3 Must/Should close-out is done. Phase **4.2** geochemistry and
 > §5.2 stay post-MVP. Full triage → **§5.2**.
 
-1. **Must — Phase 3.1–3.2** — transport (Trans-Labrador + forest access,
-   rail, ports, airstrips) then power (transmission / Churchill Falls).
-   Communities (3.3) can follow.
-2. **Must — Phase 4.1** — Labrador geophysics MVP slice: regional **1VD /
+1. **Must — Phase 4.1** — Labrador geophysics MVP slice: regional **1VD /
    aeromag** + **gravity** (GeoAtlas), opacity + legend; add **survey /
    assessment footprints** if readily available so blank ≠ unexplored.
    (Geochemistry 4.2 stays post-MVP.)
-3. **Phase 5 remainder** — full provenance panel, shareable URL, measure tools.
-4. **Then Phase 4.2** — geochemistry / grade filters / ice-flow (beyond MVP).
-5. **§5.2 Post-MVP backlog** — drillholes, live claims API, ESG habitats,
+2. **Phase 5 remainder** — full provenance panel, shareable URL, measure tools.
+3. **Then Phase 4.2** — geochemistry / grade filters / ice-flow (beyond MVP).
+4. **§5.2 Post-MVP backlog** — drillholes, live claims API, ESG habitats,
    viability score, spatial query engine, etc.
 
 > ✅ Pre–Phase 3 close-out (2026-07-12): **1.1g** facilities honesty · **1.4**
@@ -343,10 +341,11 @@ Occurrences/MODS), `Mineral_Lands` (claims/tenure/quarries), `Land_Use`,
 ### 6. Can I physically develop it? — infrastructure
 | Layer | Source | Endpoint / service | Status |
 |---|---|---|---|
-| Roads (Trans-Labrador Hwy, forest access) | NL GeoAtlas (Nat'l Road Network) | `GeoAtlas` transportation | 🟢 verified |
-| Transmission lines (Churchill Falls, Muskrat Falls) | Nalcor/NL Hydro + CanVec | `GeoAtlas` (Nalcor Transmission Line) | 🟢 verified |
-| Railways (iron-ore lines), ports, airstrips | NRCan CanVec | CanVec distribution | ⬜ to wire |
-| Communities / settlements | CanVec / StatCan | open data | ⬜ to wire |
+| Roads (Trans-Labrador, forest access) | NL GeoAtlas NRN + resource roads | `Map_Layers/12` + `/14` → baked | ✅ in app (lazy; 6 mo) |
+| Transmission lines (Churchill Falls, Muskrat Falls) | Nalcor + CanVec via GeoAtlas | `Map_Layers/15` + `/16` → baked | ✅ in app (lazy; 6 mo) |
+| Railways (iron-ore lines) | GeoAtlas NRN Railroad class | `Map_Layers/12` ROADCLASS=Railroad → baked | ✅ in app (lazy; 6 mo) |
+| Ports / airstrips / generation / communities | Curated Labrador points | `infra-*-labrador.geojson` | ✅ in app (lazy; 12 mo) |
+| Municipal boundaries | NL GeoAtlas | `Land_Use/6` → baked | ✅ in app (lazy; 12 mo) |
 
 ### 7. Base context
 | Layer | Source | Endpoint / service | Status |
@@ -857,37 +856,53 @@ work and what land constraints apply. ✅ (2.1 + 2.2 + 2.3)
   `FATAL_FLAW_LAND_USE_KINDS` = `publicWaterSupplies`;
   `applyFatalFlawPreset` / `ensureFatalFlawLandUseFilter` in `app.js`
 
-### Phase 3 — Infrastructure ("can I develop it?")  [ ] ← **NEXT** · **Must (MVP)**
+### Phase 3 — Infrastructure ("can I develop it?")  ✅ COMPLETE (2026-07-12) · **Must (MVP)**
 > External review Issue 11: without roads/rail/ports/power, remote wilderness
 > looks as viable as ground next to a shipping lane. Completing 3.1–3.2 is the
 > MVP finish line for purpose question #4.
 
-**3.1 — Transport** ← first Phase 3 slice
-- [ ] Roads (Trans-Labrador Hwy + forest access) — `GeoAtlas` transportation
-- [ ] Railways (iron-ore lines / QNS&L) — CanVec
-- [ ] Ports / marine access (Goose Bay, Cartwright, Voisey's Bay wharf, etc.)
-      — CanVec + curated Labrador points if CanVec is thin
-- [ ] Airstrips / airports (remote camp access) — CanVec
-**3.2 — Power**
-- [ ] Transmission lines (Nalcor + CanVec; Churchill Falls HV context)
-- [ ] Generation (Churchill Falls, Muskrat Falls; Gull Island potential)
-**3.3 — Communities**
-- [ ] Settlements / populated places — CanVec / StatCan
-      (incl. GeoAtlas `Land_Use/6` Municipal Boundaries deferred from 2.3)
-- [ ] Each sub-item: config + style + popup + legend + test + status
+**3.1 — Transport** ✅
+- [x] Roads (Trans-Labrador Hwy + collectors) — GeoAtlas `Map_Layers/12` NRN
+      (highway/arterial/collector; local streets omitted) → `geoatlas-roads-labrador`
+- [x] Resource access / forest roads — `Map_Layers/14` → `geoatlas-resource-roads-labrador`
+- [x] Railways (iron-ore / QNS&L) — `Map_Layers/12` ROADCLASS=Railroad → `geoatlas-rail-labrador`
+- [x] Ports / marine access — curated Labrador points → `infra-ports-labrador`
+- [x] Airstrips / airports — curated → `infra-airports-labrador`
+**3.2 — Power** ✅
+- [x] Transmission lines — Nalcor `Map_Layers/15` + CanVec `/16` merged →
+      `geoatlas-transmission-labrador` (**HV only** — no distribution; GeoAtlas
+      Nalcor is generalized and may stop ~1 km short of plant footprints)
+- [x] Generation — curated Churchill Falls, Muskrat Falls (operating) + Gull Island (potential);
+      plant coords audited vs Wikipedia/GEM (townsite vs plant corrected)
+**3.3 — Communities** ✅
+- [x] Settlements — curated Labrador places → `infra-communities-labrador`
+- [x] GeoAtlas `Land_Use/6` Municipal Boundaries → `geoatlas-municipal-labrador`
+- [x] Each sub-item: config + style + popup + legend + bake + registry + test
+**3.3b — Critical-mineral facilities under Infrastructure** ✅
+- [x] Removed single Occurrences “Critical Mineral Facilities” toggle
+- [x] Split NRCan bake into Infrastructure layers: mines, processing, advanced
+      exploration, development (shared `critical-minerals-nl` bake + filters)
+- [x] Early prospecting / showings remain on MODS (not in NRCan facilities)
+**Phase 3 polish** ✅
+- [x] SVG symbols for ports / airports / generation (type); per-type icon offsets
+- [x] Unified Infrastructure legend (one card, default collapsed; items only for
+      layers currently on)
+- [x] Development KPIs in popups; curated vs source attributes labeled honestly
+- [x] Data accuracy audit — no invented TX connectors; curated provenance clear
 
 **Phase 3 exit criteria:** logistics/infrastructure overlay complete enough to
-reason about development feasibility. (**MVP complete** once 3.1–3.2 + **4.1**
-geophysics + Must items 1.1g + 2.4 are done; 3.3 and Should items improve
-quality.)
+reason about development feasibility. ✅ (**MVP Must** 3.1–3.2 done; 3.3/3.3b
+done; **3.4** done; **4.1** geophysics still required for full product MVP.)
 
-**3.4 — Nearest-infrastructure distances** [ ] ← **Should (after 3.1–3.2)**
+**3.4 — Nearest-infrastructure distances** ✅ (2026-07-12) · **Should**
 > Lite version of external “Logistical Viability Score.” Click a prospect →
 > distance to nearest road, transmission, and deep-water port. Full scored
 > model → §5.2.
 
-- [ ] Reuse / extend Phase 5 measure tooling where possible
-- [ ] Show distances in popup or side panel (km); no composite score for MVP
+- [x] MODS popup (map click + occurrence list) shows nearest road (highway or
+      resource access), transmission, and port — straight-line km
+- [x] Bake-backed cache (`infraDistance.js`); independent of layer toggles
+- [x] Explicit “not a viability score” note; no composite score
 
 ### Phase 4 — Signals  [ ]
 > **4.1 geophysics is Must for MVP** (2026-07-12 product decision): prospectors
@@ -1110,9 +1125,11 @@ Force all: Actions `workflow_dispatch` with force=true, or
 | **Li / REE / Graphite / Ni / CD+MVT Zn / national bedrock / surficial** | ✅ Baked Mercator PNG (`fetch:wms`) | **12 mo** | see `wms-*-nll.meta.json` |
 | **MODS density surface** | Client Turf from loaded MODS | n/a (derived) | — |
 
-Registry: `scripts/data-refresh-registry.json` (18 entries). Manual bakes:
+Registry: `scripts/data-refresh-registry.json` (27 entries). Manual bakes:
 `npm run fetch:bedrock` · `fetch:surficial` · `fetch:claims` · `fetch:tenure` ·
 `fetch:nunatsiavut` · `fetch:atris` · `fetch:cpcad` · `fetch:landuse` ·
+`fetch:roads` · `fetch:rail` · `fetch:resource-roads` · `fetch:transmission` ·
+`fetch:infra-sites` · `fetch:municipal` ·
 `fetch:mods` · `fetch:facilities` · `fetch:wms`.
 
 **Audit (2026-07-12):** every registry row has matching baked asset + meta
@@ -1169,8 +1186,8 @@ branch** with Actions enabled:
 - **MVP gate (2026-07-12, close-out):** Must for pre–Phase 3 = **2.4** hard
   exclusions ✅ + **1.1g** facilities honesty ✅. Should soft-launch = **2.1c**
   expiry ✅ + **1.4** bedrock exclusion ✅ + Phase 5 lite (About / export /
-  legend collapse / KPI status bits) ✅. Remaining Must for product MVP =
-  Phase **3.1–3.2** infra + **4.1** geophysics.
+  legend collapse / KPI status bits) ✅. Phase **3.1–3.4** infrastructure ✅.
+  Remaining Must for product MVP = Phase **4.1** geophysics.
 - **Performance:** MODS ~3k points — always-visible circles with zoom-scaled
   radius + commodity picker (no clustering/heatmap). Density surfaces are
   optional (legend toggle; **default off** so cold start skips Turf). Heavy
@@ -1216,6 +1233,19 @@ branch** with Actions enabled:
 
 ## 10. Changelog
 
+- **2026-07-12** — **Phase 3 close-out polish:** facilities split under
+  Infrastructure (mines / processing / exploration / development); SVG site
+  icons; unified Infrastructure legend; data accuracy audit (Churchill Falls /
+  Gull Island coords fixed; no invented TX connectors; curated vs source
+  attributes labeled). Phase **3 fully closed**. **Next:** Phase **4.1**
+  geophysics.
+- **2026-07-12** — **Phase 3.4** nearest-infra distances on MODS popups
+  (road / transmission / port km; bake-cached; not a viability score).
+- **2026-07-12** — **Phase 3 Infrastructure complete:** GeoAtlas roads (NRN
+  highway/collector), resource access roads, rail, Nalcor+CanVec transmission;
+  curated ports / airports / generation / communities; municipal boundaries
+  (`Land_Use/6`). Bake-first + registry (27 entries); Infrastructure sidebar
+  group live (default OFF).
 - **2026-07-12** — Docs: README rewritten as standalone product overview
   (removed Enes / merger framing); BUILD_PLAN header + “Where we are”
   reconciled; package description cleaned.

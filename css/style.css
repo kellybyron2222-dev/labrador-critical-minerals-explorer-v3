@@ -1422,10 +1422,6 @@ html, body {
   flex-shrink: 0;
 }
 
-.layer-indicator.criticalMinerals {
-  background: #f59e0b;
-}
-
 .layer-indicator.geoatlasBedrock {
   background: #b45309;
   border-radius: 2px;
@@ -1464,6 +1460,59 @@ html, body {
 .layer-indicator.geoatlasLandUse {
   background: #0369a1;
   border-radius: 2px;
+}
+
+.layer-indicator.geoatlasMunicipal {
+  background: #94a3b8;
+  border-radius: 2px;
+}
+
+.layer-indicator.geoatlasRoads {
+  background: #1e3a8a;
+}
+
+.layer-indicator.geoatlasResourceRoads {
+  background: #15803d;
+}
+
+.layer-indicator.geoatlasRail {
+  background: #7c2d12;
+}
+
+.layer-indicator.geoatlasTransmission {
+  background: #d97706;
+}
+
+.layer-indicator.infraPorts {
+  background: #0369a1;
+}
+
+.layer-indicator.infraAirports {
+  background: #4f46e5;
+}
+
+.layer-indicator.infraGeneration {
+  background: #c2410c;
+}
+
+.layer-indicator.infraCommunities {
+  background: #334155;
+}
+
+.layer-indicator.infraMines {
+  background: #b45309;
+}
+
+.layer-indicator.infraProcessing {
+  background: #ca8a04;
+}
+
+.layer-indicator.infraExploration {
+  background: #0284c7;
+}
+
+.layer-indicator.infraDevelopment {
+  background: #7c3aed;
 }
 
 /* MapLibre Popup Styling */
@@ -1522,6 +1571,26 @@ html, body {
   text-transform: uppercase;
   color: var(--card-light-text-muted);
   margin-bottom: 4px;
+}
+
+.popup-infra-distances {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--card-light-border);
+}
+
+.popup-infra-distances .popup-section-label {
+  margin-bottom: 8px;
+}
+
+.popup-infra-note .popup-value {
+  font-size: 11px;
+  color: var(--card-light-text-muted);
+}
+
+.popup-infra-pending .popup-value {
+  font-style: italic;
+  color: var(--card-light-text-muted);
 }
 
 .popup-title {

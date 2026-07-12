@@ -1,0 +1,22 @@
+{
+  "version": "b5ea8c3c2ce3",
+  "contentHash": "b5ea8c3c2ce3ddd63d329a9d28c24cf045c07fabfc65aca5318146d303e5b28e",
+  "cadenceMonths": 12,
+  "generatedAt": "2026-07-12T21:06:30.150Z",
+  "nextDue": "2027-07-12",
+  "refresh": "GitHub Actions refresh-data.yml (monthly; skips until nextDue) or npm run refresh:data",
+  "featureCount": 13,
+  "source": "https://dnrmaps.gov.nl.ca/arcgis/rest/services/GeoAtlas/Land_Use/MapServer/6/query",
+  "layerId": 6,
+  "layerName": "Municipal Boundaries",
+  "clip": "Labrador bbox (south of Strait of Belle Isle)",
+  "clipBbox": {
+    "xmin": -67.8,
+    "ymin": 51.5,
+    "xmax": -55.5,
+    "ymax": 60.6,
+    "spatialReference": {
+      "wkid": 4326
+    }
+  }
+}

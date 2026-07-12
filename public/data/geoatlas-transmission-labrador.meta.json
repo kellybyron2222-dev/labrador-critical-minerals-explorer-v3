@@ -1,0 +1,10 @@
+{
+  "version": "652a32db3c27",
+  "contentHash": "652a32db3c27cbaea37c74135d8812a4f19857ace27e02d695ee6c31b43ac8b1",
+  "cadenceMonths": 6,
+  "generatedAt": "2026-07-12T21:40:21.752Z",
+  "nextDue": "2027-01-12",
+  "refresh": "GitHub Actions refresh-data.yml (monthly; skips until nextDue) or npm run refresh:data",
+  "featureCount": 84,
+  "note": "GeoAtlas HV transmission only (Nalcor 15 + CanVec 16); no distribution; no invented plant connectors"
+}

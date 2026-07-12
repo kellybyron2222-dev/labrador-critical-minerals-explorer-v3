@@ -276,5 +276,144 @@
     "assetPath": "public/data/wms-surficial-nll.png",
     "cacheVersionPath": "js/config/layerConfig.js",
     "cacheKey": "wms-surficial-nll"
+  },
+  {
+    "id": "geoatlas-roads-labrador",
+    "label": "Roads (Labrador NRN)",
+    "cadenceMonths": 6,
+    "fetchScript": "fetch:roads",
+    "kind": "geojson",
+    "outputs": [
+      "public/data/geoatlas-roads-labrador.geojson",
+      "public/data/geoatlas-roads-labrador.meta.json"
+    ],
+    "metaPath": "public/data/geoatlas-roads-labrador.meta.json",
+    "assetPath": "public/data/geoatlas-roads-labrador.geojson",
+    "cacheVersionPath": "js/config/layerConfig.js",
+    "cacheKey": "geoatlas-roads-labrador"
+  },
+  {
+    "id": "geoatlas-rail-labrador",
+    "label": "Railways (Labrador)",
+    "cadenceMonths": 6,
+    "fetchScript": "fetch:rail",
+    "kind": "geojson",
+    "outputs": [
+      "public/data/geoatlas-rail-labrador.geojson",
+      "public/data/geoatlas-rail-labrador.meta.json"
+    ],
+    "metaPath": "public/data/geoatlas-rail-labrador.meta.json",
+    "assetPath": "public/data/geoatlas-rail-labrador.geojson",
+    "cacheVersionPath": "js/config/layerConfig.js",
+    "cacheKey": "geoatlas-rail-labrador"
+  },
+  {
+    "id": "geoatlas-resource-roads-labrador",
+    "label": "Resource Access Roads (Labrador)",
+    "cadenceMonths": 6,
+    "fetchScript": "fetch:resource-roads",
+    "kind": "geojson",
+    "outputs": [
+      "public/data/geoatlas-resource-roads-labrador.geojson",
+      "public/data/geoatlas-resource-roads-labrador.meta.json"
+    ],
+    "metaPath": "public/data/geoatlas-resource-roads-labrador.meta.json",
+    "assetPath": "public/data/geoatlas-resource-roads-labrador.geojson",
+    "cacheVersionPath": "js/config/layerConfig.js",
+    "cacheKey": "geoatlas-resource-roads-labrador"
+  },
+  {
+    "id": "geoatlas-transmission-labrador",
+    "label": "Transmission Lines (Labrador)",
+    "cadenceMonths": 6,
+    "fetchScript": "fetch:transmission",
+    "kind": "geojson",
+    "outputs": [
+      "public/data/geoatlas-transmission-labrador.geojson",
+      "public/data/geoatlas-transmission-labrador.meta.json"
+    ],
+    "metaPath": "public/data/geoatlas-transmission-labrador.meta.json",
+    "assetPath": "public/data/geoatlas-transmission-labrador.geojson",
+    "cacheVersionPath": "js/config/layerConfig.js",
+    "cacheKey": "geoatlas-transmission-labrador"
+  },
+  {
+    "id": "infra-ports-labrador",
+    "label": "Ports / marine access (curated)",
+    "cadenceMonths": 12,
+    "fetchScript": "fetch:infra-sites",
+    "fetchOncePerScript": true,
+    "kind": "geojson",
+    "outputs": [
+      "public/data/infra-ports-labrador.geojson",
+      "public/data/infra-ports-labrador.meta.json"
+    ],
+    "metaPath": "public/data/infra-ports-labrador.meta.json",
+    "assetPath": "public/data/infra-ports-labrador.geojson",
+    "cacheVersionPath": "js/config/layerConfig.js",
+    "cacheKey": "infra-ports-labrador"
+  },
+  {
+    "id": "infra-airports-labrador",
+    "label": "Airports / airstrips (curated)",
+    "cadenceMonths": 12,
+    "fetchScript": "fetch:infra-sites",
+    "fetchOncePerScript": true,
+    "kind": "geojson",
+    "outputs": [
+      "public/data/infra-airports-labrador.geojson",
+      "public/data/infra-airports-labrador.meta.json"
+    ],
+    "metaPath": "public/data/infra-airports-labrador.meta.json",
+    "assetPath": "public/data/infra-airports-labrador.geojson",
+    "cacheVersionPath": "js/config/layerConfig.js",
+    "cacheKey": "infra-airports-labrador"
+  },
+  {
+    "id": "infra-generation-labrador",
+    "label": "Power generation (curated)",
+    "cadenceMonths": 12,
+    "fetchScript": "fetch:infra-sites",
+    "fetchOncePerScript": true,
+    "kind": "geojson",
+    "outputs": [
+      "public/data/infra-generation-labrador.geojson",
+      "public/data/infra-generation-labrador.meta.json"
+    ],
+    "metaPath": "public/data/infra-generation-labrador.meta.json",
+    "assetPath": "public/data/infra-generation-labrador.geojson",
+    "cacheVersionPath": "js/config/layerConfig.js",
+    "cacheKey": "infra-generation-labrador"
+  },
+  {
+    "id": "infra-communities-labrador",
+    "label": "Communities (curated)",
+    "cadenceMonths": 12,
+    "fetchScript": "fetch:infra-sites",
+    "fetchOncePerScript": true,
+    "kind": "geojson",
+    "outputs": [
+      "public/data/infra-communities-labrador.geojson",
+      "public/data/infra-communities-labrador.meta.json"
+    ],
+    "metaPath": "public/data/infra-communities-labrador.meta.json",
+    "assetPath": "public/data/infra-communities-labrador.geojson",
+    "cacheVersionPath": "js/config/layerConfig.js",
+    "cacheKey": "infra-communities-labrador"
+  },
+  {
+    "id": "geoatlas-municipal-labrador",
+    "label": "Municipal Boundaries (Labrador)",
+    "cadenceMonths": 12,
+    "fetchScript": "fetch:municipal",
+    "kind": "geojson",
+    "outputs": [
+      "public/data/geoatlas-municipal-labrador.geojson",
+      "public/data/geoatlas-municipal-labrador.meta.json"
+    ],
+    "metaPath": "public/data/geoatlas-municipal-labrador.meta.json",
+    "assetPath": "public/data/geoatlas-municipal-labrador.geojson",
+    "cacheVersionPath": "js/config/layerConfig.js",
+    "cacheKey": "geoatlas-municipal-labrador"
   }
 ]

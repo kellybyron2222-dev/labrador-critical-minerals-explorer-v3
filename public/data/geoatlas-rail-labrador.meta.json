@@ -1,0 +1,27 @@
+{
+  "version": "62df829e46cc",
+  "contentHash": "62df829e46cc6b0c80b874d5b49e3396948f242ff8480b353255cd8825eda7b7",
+  "cadenceMonths": 6,
+  "generatedAt": "2026-07-12T21:06:23.732Z",
+  "nextDue": "2027-01-12",
+  "refresh": "GitHub Actions refresh-data.yml (monthly; skips until nextDue) or npm run refresh:data",
+  "featureCount": 187,
+  "source": "https://dnrmaps.gov.nl.ca/arcgis/rest/services/GeoAtlas/Map_Layers/MapServer/12/query",
+  "where": "ROADCLASS = 'Railroad'",
+  "outSR": 4326,
+  "maxAllowableOffset": 0.002,
+  "outFields": "OBJECTID,ROADCLASS,RTNUMBER1,RTENAME1EN,PAVSTATUS,PAVSURF,NBRLANES",
+  "clip": "Labrador bbox (south of Strait of Belle Isle)",
+  "clipBbox": {
+    "xmin": -67.8,
+    "ymin": 51.5,
+    "xmax": -55.5,
+    "ymax": 60.6,
+    "spatialReference": {
+      "wkid": 4326
+    }
+  },
+  "layerId": 12,
+  "layerName": "Regional Road Network (Railroad class)",
+  "note": "Iron-ore / QNS&L corridor segments tagged ROADCLASS=Railroad in NRN"
+}
