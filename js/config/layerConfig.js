@@ -6,7 +6,7 @@ import {
   MINERAL_LANDS_QUERY_BASE,
   TENURE_OUT_FIELDS,
   TENURE_WHERE,
-  buildClaimsLegendFromFeatures,
+  buildClaimsExpiryLegendItems,
   buildTenureLegendFromFeatures,
   labradorGeometryQueryParams
 } from './mineralLands.js';
@@ -358,11 +358,30 @@ export const LAYER_GROUP_ORDER = [
   'base'
 ];
 
+/**
+ * Phase 2.4 — Hard exclusions (fatal-flaw) preset.
+ * Tier-1 blockers only: gazetted protected/conserved areas + protected public
+ * water supplies. Indigenous lands / ATRIS are process hurdles (tier 2), not
+ * undevelopable — leave them as normal Rights toggles. Claims/tenure are
+ * competition (tier 3), not included.
+ */
+export const FATAL_FLAW_PRESET_LAYERS = ['geoatlasCpcad', 'geoatlasLandUse'];
+
+/** Land-use kinds included in the hard-exclusion mask (subset of geoatlasLandUse). */
+export const FATAL_FLAW_LAND_USE_KINDS = ['publicWaterSupplies'];
+
+/** Uniform high-contrast mask applied to preset fill layers while active. */
+export const FATAL_FLAW_MASK_PAINT = {
+  'fill-color': '#7f1d1d',
+  'fill-opacity': 0.55
+};
+
 export const LAYER_GROUPS = {
   endowment: {
     title: 'Geological Endowment',
-    hint: 'Mapped geology and commodity prospectivity (provincial + national)',
-    defaultExpanded: true,
+    hint:
+      'Mapped geology and commodity prospectivity (provincial + national). Prefer provincial 1:1M bedrock when zoomed in; national when regional — only one bedrock layer at a time.',
+    defaultExpanded: false,
     // Nested category headers inside this group (sidebar only).
     subgroups: [
       { id: 'bedrock', title: 'Bedrock' },
@@ -373,12 +392,12 @@ export const LAYER_GROUPS = {
   occurrences: {
     title: 'Occurrences & Activity',
     hint: 'MODS mineral occurrences, mines, facilities & advanced projects',
-    defaultExpanded: true
+    defaultExpanded: false
   },
   rights: {
     title: 'Rights & Constraints',
     hint:
-      'Mineral tenure, Indigenous lands, protected areas & land use (Labrador mainland clip; off by default)',
+      'Mineral tenure, Indigenous lands, protected areas & land use (Labrador mainland clip; off by default). Hard exclusions = parks & water supplies only.',
     defaultExpanded: false
   },
   infrastructure: {
@@ -470,7 +489,8 @@ export const LAYER_CONFIG = {
     },
     legendTitle: 'Bedrock Geology (NL 1:1M)',
     legendShape: 'icon',
-    legendNote: 'Provincial 1:1M bedrock units (NL GeoAtlas). Colors from source RGB.',
+    legendNote:
+      'Provincial 1:1M bedrock units (NL GeoAtlas). Colors from source RGB. Mutually exclusive with National (GSC) bedrock.',
     // Same ArcGIS legend JSON pattern as NRCan WMS — ~153 classification rows.
     legendJsonUrl: `${GEOATLAS_REST_BASE}/Bedrock_Geology_All/MapServer/legend?f=json`,
     legendLayerId: 23
@@ -685,7 +705,7 @@ export const LAYER_CONFIG = {
     // Checklist built in app.updateVectorLegend from loaded TAG_IDs.
     legend: null,
     legendNote:
-      'Federal comprehensive land-claim areas (CIRNAC/ISC ATRIS) — not mineral licences. Toggle claims individually when they overlap.'
+      'Federal comprehensive land-claim areas (CIRNAC/ISC ATRIS) — consultation / permitting context, not a mineral licence or hard exclusion. Toggle claims when they overlap.'
   },
   inuitNunatsiavut: {
     group: 'rights',
@@ -737,7 +757,7 @@ export const LAYER_CONFIG = {
     legendShape: 'fill',
     legend: NUNATSIAVUT_LEGEND_ITEMS,
     legendNote:
-      'Labrador Inuit Settlement Area (Inuit Nunangat). CIRNAC/ISC; boundaries approximate.'
+      'Labrador Inuit Settlement Area (Inuit Nunangat). Settled governance / consultation context — not a hard exclusion. CIRNAC/ISC; boundaries approximate.'
   },
   geoatlasClaims: {
     group: 'rights',
@@ -785,9 +805,9 @@ export const LAYER_CONFIG = {
     legendTitle: 'Map-staked Claims',
     legendShape: 'fill',
     // Built from loaded STATUS values in app.updateVectorLegend.
-    legend: buildClaimsLegendFromFeatures([]),
+    legend: buildClaimsExpiryLegendItems(),
     legendNote:
-      'Active map-staked mineral claims in Labrador (NL GeoAtlas Mineral Lands). Styled by STATUS.'
+      'Active map-staked mineral claims in Labrador (NL GeoAtlas Mineral Lands). Colored by expiry band (≤90 / ≤180 days); longer-dated keep STATUS colors. Popup shows STATUS + EXPIRYDATE.'
   },
   geoatlasTenure: {
     group: 'rights',
@@ -891,8 +911,10 @@ export const LAYER_CONFIG = {
       { label: 'Exploration — advanced project', icon: facilityIconDataUri('advancedExploration') },
       { label: 'Development — advanced processing', icon: facilityIconDataUri('advancedProcessing') },
       { label: 'Producing — mine / primary producer', icon: facilityIconDataUri('mine') },
-      { label: 'Producing — processing / refinery', icon: facilityIconDataUri('processing') }
-    ]
+      { label: 'Producing — processing / midstream', icon: facilityIconDataUri('processing') }
+    ],
+    legendNote:
+      'NL&L NRCan facilities. Labrador has primary production (e.g. Voisey’s Bay); processing/midstream sites may be off-island (e.g. Long Harbour, NL) — not local Labrador refining capacity.'
   },
   modsOccurrences: {
     group: 'occurrences',

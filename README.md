@@ -1,19 +1,33 @@
-# Labrador Critical Minerals Explorer — V3
+# Labrador Critical Minerals Explorer
 
-A’s **MapLibre multi-layer explorer**, plus a small UX cherry-pick from
-[labrador-critical-minerals](https://github.com/enesgrahovac/labrador-critical-minerals):
-status filters, search, occurrence list/detail, and a KPI strip.
+Open, Labrador-focused map for critical-minerals exploration and siting: geology,
+occurrences (MODS), mineral rights, land constraints, and (next) infrastructure
+and geophysics — built on public government data.
 
-**No B datasets** — no featured deposits, no commodity groups, no static GeoJSON.
-Live ArcGIS MODS remains the source of truth. Critical preset still excludes iron.
+**Live app:** https://kellybyron2222-dev.github.io/labrador-critical-minerals-explorer-v3/
 
-## Relationship to other versions
+## What’s in the app today
 
-| Version | Path / repo | Role |
-|---------|-------------|------|
-| **A (V1)** | `../project` | Untouched baseline — keep as reference |
-| **B** | [enesgrahovac/labrador-critical-minerals](https://github.com/enesgrahovac/labrador-critical-minerals) | UX reference only (list / search / status / KPIs) |
-| **V3 (this repo)** | `explorer-v3` | Active development |
+- **Geological endowment** — provincial bedrock & surficial (GeoAtlas), national
+  GSC context WMS, NRCan commodity prospectivity models
+- **Occurrences & activity** — Labrador MODS (~3k points), commodity picker,
+  status filters, search/list, optional density surfaces, NRCan facilities
+  (honest midstream labeling; off-island sites called out)
+- **Rights & constraints** — map-staked claims (expiry bands), mineral tenure,
+  Nunatsiavut, ATRIS, CPCAD, land use; **Hard exclusions** preset (parks +
+  protected water supplies only)
+- **UX** — collapsible layer groups, Settings (KPI / About data / GeoJSON
+  export), mobile map-first chrome, bake-first data + monthly refresh CI
+
+**Not started yet:** Phase 3 infrastructure (roads, rail, ports, power);
+Phase 4.1 geophysics (1VD / gravity).
+
+## Docs
+
+| Doc | Role |
+|-----|------|
+| [`BUILD_PLAN.md`](./BUILD_PLAN.md) | Engineering checklist (layers, phases, data pipeline) |
+| [`PRODUCT_PLAN.md`](./PRODUCT_PLAN.md) | Product arc: free Labrador MVP → marketing → premium → national |
 
 ## Run
 
@@ -22,13 +36,31 @@ npm install
 npm run dev
 ```
 
-## Stack (inherited from A)
+Other useful scripts:
+
+```bash
+npm test                 # Vitest
+npm run validate:data    # Bake integrity vs registry
+npm run refresh:data     # Registry-driven data refresh (respects nextDue)
+```
+
+## Stack
 
 - Vite 5 + vanilla ES modules
 - MapLibre GL JS
 - Turf.js (occurrence density surfaces)
-- Live NL GeoAtlas MODS + NRCan facilities / WMS
+- Baked GeoJSON / WMS under `public/data/` → IndexedDB → live ArcGIS REST/WMS fallback
+- GitHub Actions: Pages deploy + monthly data refresh PRs
 
-## Merger guide
+## Data principles
 
-[`revised-merger-guide.canvas.tsx`](C:/Users/byron/.cursor/projects/c-Developer-Critical-Minerals-explorer-v3/canvases/revised-merger-guide.canvas.tsx)
+- **Open & free** — authoritative public sources (NL GeoAtlas, NRCan, CIRNAC/ISC)
+- **Bake-first** — fast cold loads; live services as fallback
+- **Labrador-deep** — mainland clip for rights layers; regionally useful detail
+- **Provenance-aware** — Settings → About data; full registry panel still on the Phase 5 remainder list
+
+## Status
+
+Phases **0–2** complete (including hard exclusions + pre–Phase 3 polish).
+**Next:** Phase **3.1** transport infrastructure, then Phase **4.1** geophysics.
+See [`BUILD_PLAN.md`](./BUILD_PLAN.md) for the live checklist.

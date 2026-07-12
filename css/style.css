@@ -409,6 +409,38 @@ html, body {
   background: var(--card-light-border);
 }
 
+.settings-primary-btn {
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  color: #fff;
+  background: #1e3a5f;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.settings-primary-btn:hover {
+  background: #16304f;
+}
+
+.settings-about-list {
+  margin: 8px 0 0;
+  padding-left: 1.1rem;
+  font-size: var(--text-2xs);
+  line-height: 1.45;
+  color: var(--card-light-text);
+}
+
+.settings-about-list li {
+  margin-bottom: 6px;
+}
+
+.settings-about-list code {
+  font-size: 0.95em;
+}
+
 .hidden {
   display: none !important;
 }
@@ -680,6 +712,50 @@ html, body {
   padding: 0 var(--space-1) var(--space-2) 32px;
 }
 
+.fatal-flaw-preset {
+  margin: 0 0 4px;
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+
+.fatal-flaw-preset .fatal-flaw-preset-label {
+  margin: 0;
+}
+
+.fatal-flaw-preset.active .fatal-flaw-preset-label {
+  border-left-color: #991b1b;
+  background: #fef2f2;
+}
+
+.fatal-flaw-preset.active .fatal-flaw-preset-label:hover {
+  background: #fee2e2;
+}
+
+.fatal-flaw-preset-meta {
+  margin-left: auto;
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  color: var(--card-light-text-muted);
+  white-space: nowrap;
+}
+
+.fatal-flaw-preset.active .fatal-flaw-preset-meta {
+  color: #9f1239;
+}
+
+.fatal-flaw-preset-note {
+  margin: 0 0 6px 34px;
+  font-size: var(--text-2xs);
+  line-height: 1.35;
+  color: var(--card-light-text-muted);
+}
+
+.layer-indicator.fatalFlawPreset {
+  background: #7f1d1d;
+  opacity: 0.85;
+}
+
 .commodity-select {
   width: 100%;
   padding: 5px 8px;
@@ -827,14 +903,39 @@ html, body {
 }
 
 .legend-card-title {
+  display: block;
+  width: 100%;
+  text-align: left;
   font-size: 11px;
   font-weight: 600;
+  font-family: inherit;
   color: var(--card-light-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  margin-bottom: 8px;
-  padding-bottom: 6px;
+  margin: 0 0 8px;
+  padding: 0 0 6px;
+  border: none;
   border-bottom: 1px solid var(--card-light-border);
+  background: transparent;
+  cursor: pointer;
+}
+
+.legend-card-title:hover {
+  color: var(--card-light-text);
+}
+
+.legend-card.collapsed .legend-card-title {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.legend-card.collapsed .legend-card-body {
+  display: none;
+}
+
+.legend-card-body {
+  display: block;
 }
 
 .legend-items {

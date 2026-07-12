@@ -77,13 +77,13 @@
             <button type="button" id="occ-clear-filters" class="occ-clear hidden">Clear</button>
           </div>
           <div id="occ-status-filters" class="occ-status-filters"></div>
-          <button type="button" id="occ-list-toggle" class="occ-list-toggle" aria-expanded="true">
+          <button type="button" id="occ-list-toggle" class="occ-list-toggle collapsed" aria-expanded="false">
             <svg class="occ-list-chevron" viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <polyline points="6 9 12 15 18 9"></polyline>
             </svg>
-            <span id="occ-list-toggle-label">Hide list</span>
+            <span id="occ-list-toggle-label">Show list</span>
           </button>
-          <div id="occ-list-wrap" class="occ-list-wrap">
+          <div id="occ-list-wrap" class="occ-list-wrap collapsed">
             <div id="occ-list" class="occ-list"></div>
           </div>
         </section>
@@ -91,7 +91,7 @@
 
       <div class="sidebar-footer">
         <button type="button" id="settings-open-sidebar" class="settings-sidebar-btn">Settings</button>
-        <p class="data-status">Mineral claims, tenure, Indigenous lands, protected areas &amp; land use available under Rights (off by default). Infrastructure pending — Phase 3.</p>
+        <p class="data-status">Rights: claims, tenure, Indigenous lands, protected areas &amp; land use (off by default). Hard exclusions preset for parks + water supplies. Infrastructure pending — Phase 3.</p>
         <div class="coordinates">
           <span id="coordinates-display">Lat: -- | Lon: --</span>
         </div>

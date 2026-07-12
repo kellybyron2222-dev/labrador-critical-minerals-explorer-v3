@@ -13,6 +13,9 @@ import {
   WMS_CONFIG,
   LAYER_GROUPS,
   LAYER_GROUP_ORDER,
+  FATAL_FLAW_PRESET_LAYERS,
+  FATAL_FLAW_LAND_USE_KINDS,
+  FATAL_FLAW_MASK_PAINT,
   buildMODSColorExpression,
   buildMODSEnabledCommodityFilter,
   buildMODSLegendItems,
@@ -23,9 +26,17 @@ import {
   featureBelongsToCommodity,
   MODS_SURFACE_DEFAULT_COUNT
 } from './config/layerConfig.js';
-import { combineMODSFilters, filterMODSFeatures, featureMatchesBrowserFilters, modsUsesPrimaryOnlyFilter } from './config/modsFilters.js';
+import { downloadGeoJSON } from './modules/geoJsonExport.js';
 import {
-  buildClaimsLegendFromFeatures,
+  combineMODSFilters,
+  filterMODSFeatures,
+  featureMatchesBrowserFilters,
+  modsUsesPrimaryOnlyFilter
+} from './config/modsFilters.js';
+import {
+  buildClaimsExpiryLegendItems,
+  buildClaimsExpiryBandToggles,
+  buildClaimsExpiryBandFilter,
   buildTenureLegendFromFeatures
 } from './config/mineralLands.js';
 import {
@@ -81,8 +92,13 @@ class MineralsMapApp {
     this.enabledAtrisClaims = null;
     /** null = not yet initialized; [] = all land-use kinds hidden via legend. */
     this.enabledLandUseKinds = null;
+    /** null = all expiry bands; else subset of vulnerable|approaching|active */
+    this.enabledClaimExpiryBands = null;
     this.modsSurfaceCache = new Map();
     this.currentMODSPickerValue = null;
+    /** Phase 2.4 — Fatal-flaw / restricted-land preset active. */
+    this.fatalFlawPresetActive = false;
+    this._fatalFlawApplying = false;
     this._modsFilteredCache = [];
     this._kpiTimer = null;
     this.kpiBar = null;
@@ -117,7 +133,8 @@ class MineralsMapApp {
       onOpenSettings: (opts) => this.settingsPanel?.show(opts)
     });
     this.settingsPanel = new SettingsPanel({
-      onChange: () => this.refreshKpiBar()
+      onChange: () => this.refreshKpiBar(),
+      onExportVisible: () => this.exportVisibleGeoJSON()
     });
     document.getElementById('settings-open')?.addEventListener('click', () => {
       this.settingsPanel?.show();
@@ -135,10 +152,73 @@ class MineralsMapApp {
     // preset) legend on the first paint rather than a generic one that
     // immediately gets replaced.
     this.bindMODSCommodityPicker();
+    this.bindFatalFlawPreset();
     this.bindInteractions();
     this.bindKpiMapEvents();
     this.syncInitialLegends();
     this.refreshKpiBar();
+  }
+
+  /** Soft-launch export: filtered MODS in view + claims if that layer is on. */
+  exportVisibleGeoJSON() {
+    const bounds = this.map?.getBounds?.();
+    const features = [];
+
+    const value = this.currentMODSPickerValue;
+    const resolved = resolveMODSCommodities(value);
+    const primaryOnly = modsUsesPrimaryOnlyFilter(resolved);
+    const browser = this.occurrenceBrowser?.getFilterState() || { statuses: new Set(), query: '' };
+    const modsAll = this.layerManager.getLoadedFeatures('modsOccurrences');
+    const modsFiltered = filterMODSFeatures(modsAll, {
+      pickerCommodities: resolved,
+      enabledCommodities: this.enabledCommodities?.length
+        ? this.enabledCommodities
+        : resolveMODSLegendCommodities(value),
+      primaryOnly,
+      statuses: browser.statuses,
+      query: browser.query
+    });
+    const modsInView = bounds
+      ? modsFiltered.filter((f) => featureIntersectsBounds(f, bounds))
+      : modsFiltered;
+    modsInView.forEach((f) => {
+      features.push({
+        type: 'Feature',
+        geometry: f.geometry,
+        properties: { ...f.properties, _exportLayer: 'modsOccurrences' }
+      });
+    });
+
+    const claimsOn = document.getElementById('layer-geoatlasClaims')?.checked;
+    if (claimsOn) {
+      let claims = this.layerManager.getLoadedFeatures('geoatlasClaims');
+      const bands = this.enabledClaimExpiryBands;
+      if (bands?.length) {
+        claims = claims.filter((f) => bands.includes(f.properties?.expiryBand));
+      }
+      const claimsInView = bounds
+        ? claims.filter((f) => featureIntersectsBounds(f, bounds))
+        : claims;
+      claimsInView.forEach((f) => {
+        features.push({
+          type: 'Feature',
+          geometry: f.geometry,
+          properties: { ...f.properties, _exportLayer: 'geoatlasClaims' }
+        });
+      });
+    }
+
+    if (!features.length) {
+      this.setDataStatus('Nothing to export in the current view / filters.', 'error');
+      return;
+    }
+
+    const stamp = new Date().toISOString().slice(0, 10);
+    downloadGeoJSON(
+      { type: 'FeatureCollection', features },
+      `labrador-explorer-visible-${stamp}.geojson`
+    );
+    this.setDataStatus(`Exported ${features.length} features (GeoJSON).`, 'info');
   }
 
   /** Sidebar footer status (default copy or load errors). */
@@ -218,6 +298,7 @@ class MineralsMapApp {
 
       const section = document.createElement('section');
       section.className = 'layer-group';
+      section.dataset.groupId = groupId;
       if (groupDef.defaultExpanded) section.classList.add('expanded');
 
       const toggle = document.createElement('button');
@@ -239,6 +320,10 @@ class MineralsMapApp {
 
       const body = document.createElement('div');
       body.className = 'layer-group-body';
+
+      if (groupId === 'rights') {
+        body.appendChild(this.buildFatalFlawPresetControl());
+      }
 
       const subgroups = this.partitionGroupLayers(layers, groupDef);
       subgroups.forEach(({ title, layers: subgroupLayers }) => {
@@ -319,6 +404,216 @@ class MineralsMapApp {
     select.value = pickerConfig.defaultValue;
     wrap.appendChild(select);
     return wrap;
+  }
+
+  /** Rights-group control: hard exclusions / fatal-flaw mask (Phase 2.4). */
+  buildFatalFlawPresetControl() {
+    const wrap = document.createElement('div');
+    wrap.className = 'fatal-flaw-preset';
+
+    const label = document.createElement('label');
+    label.className = 'fatal-flaw-preset-label layer-item';
+    label.htmlFor = 'fatal-flaw-preset-toggle';
+    label.title =
+      'Show parks, conserved areas, and protected water supplies only. Indigenous lands and claims are not hard exclusions.';
+
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.id = 'fatal-flaw-preset-toggle';
+    checkbox.checked = this.fatalFlawPresetActive;
+
+    const indicator = document.createElement('span');
+    indicator.className = 'layer-indicator fatalFlawPreset';
+    indicator.setAttribute('aria-hidden', 'true');
+
+    const text = document.createElement('span');
+    text.className = 'layer-label';
+    text.textContent = 'Hard exclusions';
+
+    const meta = document.createElement('span');
+    meta.className = 'fatal-flaw-preset-meta';
+    meta.textContent = 'parks & water';
+
+    label.appendChild(checkbox);
+    label.appendChild(indicator);
+    label.appendChild(text);
+    label.appendChild(meta);
+    wrap.appendChild(label);
+
+    const note = document.createElement('p');
+    note.className = 'fatal-flaw-preset-note';
+    note.hidden = !this.fatalFlawPresetActive;
+    note.textContent = 'Protected / conserved areas and water-supply buffers only.';
+    wrap.appendChild(note);
+
+    return wrap;
+  }
+
+  bindFatalFlawPreset() {
+    const checkbox = document.getElementById('fatal-flaw-preset-toggle');
+    if (!checkbox) return;
+
+    checkbox.addEventListener('change', async (e) => {
+      const active = e.target.checked;
+      checkbox.disabled = true;
+      try {
+        await this.applyFatalFlawPreset(active);
+      } finally {
+        checkbox.disabled = false;
+        this.syncFatalFlawUi();
+      }
+    });
+  }
+
+  syncFatalFlawUi() {
+    const checkbox = document.getElementById('fatal-flaw-preset-toggle');
+    if (checkbox) checkbox.checked = this.fatalFlawPresetActive;
+    const note = document.querySelector('.fatal-flaw-preset-note');
+    if (note) note.hidden = !this.fatalFlawPresetActive;
+    const wrap = document.querySelector('.fatal-flaw-preset');
+    wrap?.classList.toggle('active', this.fatalFlawPresetActive);
+  }
+
+  expandRightsGroup() {
+    const section = document.querySelector('.layer-group[data-group-id="rights"]');
+    if (!section) return;
+    section.classList.add('expanded');
+    const toggle = section.querySelector('.layer-group-toggle');
+    toggle?.setAttribute('aria-expanded', 'true');
+  }
+
+  /**
+   * Enable/disable a vector layer (lazy load + legend + KPI), shared by
+   * checkbox handlers and the fatal-flaw preset.
+   */
+  async setLayerEnabled(name, on) {
+    const config = LAYER_CONFIG[name];
+    if (!config) return false;
+
+    const checkbox = document.getElementById(`layer-${name}`);
+    const item = checkbox?.closest('.layer-item');
+
+    if (on) {
+      if (config.lazy && !this.layerManager.isLayerLoaded(name)) {
+        if (checkbox) checkbox.disabled = true;
+        item?.classList.add('loading');
+        try {
+          const ok = await this.layerManager.loadLayerOnDemand(name);
+          if (!ok) {
+            if (checkbox) checkbox.checked = false;
+            this.setDataStatus(
+              `Could not load ${config.sidebarLabel || name}. Try again or check your connection.`,
+              'error'
+            );
+            return false;
+          }
+          this.setDataStatus(null);
+        } finally {
+          if (checkbox) checkbox.disabled = false;
+          item?.classList.remove('loading');
+        }
+      }
+      if (checkbox) checkbox.checked = true;
+      this.layerManager.setLayerVisibility(name, true);
+      if (this.layerManager.layers[name]) {
+        this.layerManager.layers[name].visible = true;
+      }
+      await this.updateVectorLegend(name, true);
+      return true;
+    }
+
+    if (checkbox) checkbox.checked = false;
+    this.layerManager.setLayerVisibility(name, false);
+    await this.updateVectorLegend(name, false);
+    return true;
+  }
+
+  applyFatalFlawMask() {
+    FATAL_FLAW_PRESET_LAYERS.forEach((name) => {
+      Object.entries(FATAL_FLAW_MASK_PAINT).forEach(([property, value]) => {
+        this.layerManager.setPaintProperty(name, property, value);
+      });
+    });
+  }
+
+  clearFatalFlawMask() {
+    FATAL_FLAW_PRESET_LAYERS.forEach((name) => {
+      this.layerManager.clearPaintOverrides(name);
+    });
+  }
+
+  /** Restrict land-use layer to hard-exclusion kinds (public water supplies). */
+  ensureFatalFlawLandUseFilter() {
+    const landUseFeatures = this.layerManager.getLoadedFeatures('geoatlasLandUse');
+    if (!landUseFeatures.length) {
+      this.enabledLandUseKinds = [...FATAL_FLAW_LAND_USE_KINDS];
+      this.applyLandUseKindVisibility();
+      return;
+    }
+    const present = new Set(
+      landUseFeatures.map((f) => f.properties?.landUseKind).filter(Boolean)
+    );
+    this.enabledLandUseKinds = FATAL_FLAW_LAND_USE_KINDS.filter((k) => present.has(k));
+    if (!this.enabledLandUseKinds.length) {
+      // Still apply filter so other land-use kinds stay hidden if bake has none.
+      this.enabledLandUseKinds = [...FATAL_FLAW_LAND_USE_KINDS];
+    }
+    this.applyLandUseKindVisibility();
+  }
+
+  async applyFatalFlawPreset(active) {
+    this._fatalFlawApplying = true;
+    try {
+      if (active) {
+        this.expandRightsGroup();
+        const results = await Promise.all(
+          FATAL_FLAW_PRESET_LAYERS.map((name) => this.setLayerEnabled(name, true))
+        );
+        if (results.some((ok) => !ok)) {
+          this.fatalFlawPresetActive = false;
+          await Promise.all(
+            FATAL_FLAW_PRESET_LAYERS.map((name) => this.setLayerEnabled(name, false))
+          );
+          this.clearFatalFlawMask();
+          this.refreshKpiBar();
+          return;
+        }
+        this.ensureFatalFlawLandUseFilter();
+        this.fatalFlawPresetActive = true;
+        this.applyFatalFlawMask();
+        for (const name of FATAL_FLAW_PRESET_LAYERS) {
+          await this.updateVectorLegend(name, true);
+        }
+      } else {
+        this.fatalFlawPresetActive = false;
+        this.clearFatalFlawMask();
+        await Promise.all(
+          FATAL_FLAW_PRESET_LAYERS.map((name) => this.setLayerEnabled(name, false))
+        );
+      }
+      this.refreshKpiBar();
+    } finally {
+      this._fatalFlawApplying = false;
+      this.syncFatalFlawUi();
+    }
+  }
+
+  /**
+   * If the user manually toggles a preset layer while hard exclusions is on,
+   * drop preset mode and restore normal paints (leave layers as the user set them).
+   */
+  onFatalFlawLayerManualChange(name, checked) {
+    if (this._fatalFlawApplying || !this.fatalFlawPresetActive) return;
+    if (!FATAL_FLAW_PRESET_LAYERS.includes(name)) return;
+
+    this.fatalFlawPresetActive = false;
+    this.clearFatalFlawMask();
+    this.syncFatalFlawUi();
+    FATAL_FLAW_PRESET_LAYERS.forEach((layerName) => {
+      const cb = document.getElementById(`layer-${layerName}`);
+      if (cb?.checked) this.updateVectorLegend(layerName, true);
+    });
+    if (!checked) this.updateVectorLegend(name, false);
   }
 
   /** Wires the MODS commodity picker to a MapLibre filter + color override on the underlying circle layer (no re-fetch - same source data, just filtered/recolored), recomputes the occurrence-density surface for the new selection, and keeps the legend in sync. */
@@ -688,17 +983,23 @@ class MineralsMapApp {
     let items = config.legend;
     let note = config.legendNote;
     let commodityToggles = null;
+    const fatalMask =
+      this.fatalFlawPresetActive && FATAL_FLAW_PRESET_LAYERS.includes(name);
 
     if (name === 'geoatlasClaims') {
-      items = buildClaimsLegendFromFeatures(this.layerManager.getLoadedFeatures(name));
-      note = 'STATUS values present in the loaded Labrador claims.';
+      this.updateClaimsLegend(visible);
+      return;
     } else if (name === 'geoatlasTenure') {
       items = buildTenureLegendFromFeatures(this.layerManager.getLoadedFeatures(name));
       note =
         'Mineral-rights types only. Parks & protected areas are on Protected & conserved (not duplicated here).';
     } else if (name === 'geoatlasCpcad') {
-      items = buildCpcadLegendFromFeatures(this.layerManager.getLoadedFeatures(name));
-      note = 'Protected-area types present in the Labrador CPCAD bake (GeoAtlas Land_Use/4).';
+      items = fatalMask
+        ? [{ label: 'Hard exclusion (protected / conserved)', color: FATAL_FLAW_MASK_PAINT['fill-color'] }]
+        : buildCpcadLegendFromFeatures(this.layerManager.getLoadedFeatures(name));
+      note = fatalMask
+        ? 'Hard-exclusion mode: parks and conserved areas (tier-1 blocker).'
+        : 'Protected-area types present in the Labrador CPCAD bake (GeoAtlas Land_Use/4).';
     } else if (name === 'geoatlasLandUse') {
       this.updateLandUseLegend(visible);
       return;
@@ -707,7 +1008,7 @@ class MineralsMapApp {
       return;
     } else if (name === 'inuitNunatsiavut') {
       items = NUNATSIAVUT_LEGEND_ITEMS;
-      note = 'Labrador Inuit Settlement Area (Inuit Nunangat). CIRNAC/ISC; boundaries approximate.';
+      note = 'Labrador Inuit Settlement Area (Inuit Nunangat). CIRNAC/ISC; boundaries approximate. Consultation / governance context — not a hard exclusion.';
     }
 
     // Allow rebuild when lazy data arrives after first toggle.
@@ -720,6 +1021,66 @@ class MineralsMapApp {
       surfaceToggle: null,
       commodityToggles
     });
+  }
+
+  /** Claims legend: expiry bands (2.1c) with optional band filter; STATUS remains in popup. */
+  updateClaimsLegend(visible) {
+    const name = 'geoatlasClaims';
+    const config = LAYER_CONFIG[name];
+    const key = `layer-${name}`;
+    if (!visible) {
+      this.legendPanel.hideLegend(key);
+      return;
+    }
+
+    const bands = buildClaimsExpiryBandToggles();
+    if (this.enabledClaimExpiryBands == null) {
+      this.enabledClaimExpiryBands = bands.map((b) => b.value);
+    }
+
+    this.applyClaimsExpiryBandVisibility();
+
+    const commodityToggles = {
+      commodities: bands,
+      enabled: [...this.enabledClaimExpiryBands],
+      onChange: (band, checked) => this.setClaimExpiryBandEnabled(band, checked),
+      onAllOn: () => this.setAllClaimExpiryBandsEnabled(true),
+      onAllOff: () => this.setAllClaimExpiryBandsEnabled(false)
+    };
+
+    this.legendPanel.hideLegend(key);
+    this.legendPanel.setLayerLegend(key, true, {
+      title: config.legendTitle,
+      items: buildClaimsExpiryLegendItems(),
+      shape: 'fill',
+      note:
+        'Fill emphasizes expiry (≤90 / ≤180 days). Active/unknown keep STATUS colors. Registry STATUS still in popup. Bake refreshes every 3 months — not live.',
+      commodityToggles
+    });
+  }
+
+  applyClaimsExpiryBandVisibility() {
+    const enabled = this.enabledClaimExpiryBands || [];
+    this.layerManager.setLayerFilter('geoatlasClaims', buildClaimsExpiryBandFilter(enabled));
+    this.refreshKpiBar();
+  }
+
+  setClaimExpiryBandEnabled(band, checked) {
+    const current = this.enabledClaimExpiryBands || [];
+    if (checked) {
+      if (!current.includes(band)) this.enabledClaimExpiryBands = [...current, band];
+    } else {
+      this.enabledClaimExpiryBands = current.filter((id) => id !== band);
+    }
+    this.applyClaimsExpiryBandVisibility();
+    this.updateClaimsLegend(true);
+  }
+
+  setAllClaimExpiryBandsEnabled(enabled) {
+    const bands = buildClaimsExpiryBandToggles();
+    this.enabledClaimExpiryBands = enabled ? bands.map((b) => b.value) : [];
+    this.applyClaimsExpiryBandVisibility();
+    this.updateClaimsLegend(true);
   }
 
   /** ATRIS legend: per-claim checklist so overlapping polygons can be toggled independently. */
@@ -757,7 +1118,8 @@ class MineralsMapApp {
       title: config.legendTitle,
       items: null,
       shape: 'fill',
-      note: config.legendNote,
+      note:
+        'Asserted comprehensive land claims — consultation / permitting context, not a mineral licence or hard exclusion.',
       commodityToggles
     });
   }
@@ -822,9 +1184,13 @@ class MineralsMapApp {
     this.legendPanel.hideLegend(key);
     this.legendPanel.setLayerLegend(key, true, {
       title: config.legendTitle,
-      items: null,
+      items: this.fatalFlawPresetActive
+        ? [{ label: 'Hard exclusion (protected water supplies)', color: FATAL_FLAW_MASK_PAINT['fill-color'] }]
+        : null,
       shape: 'fill',
-      note: config.legendNote,
+      note: this.fatalFlawPresetActive
+        ? 'Hard-exclusion mode: public water-supply buffers only (other land-use kinds hidden). Indigenous lands are not included.'
+        : config.legendNote,
       commodityToggles
     });
   }
@@ -844,6 +1210,7 @@ class MineralsMapApp {
     } else {
       this.enabledLandUseKinds = current.filter((id) => id !== kind);
     }
+    this.exitHardExclusionsIfLandUseDiverged();
     this.applyLandUseKindVisibility();
   }
 
@@ -852,8 +1219,25 @@ class MineralsMapApp {
       this.layerManager.getLoadedFeatures('geoatlasLandUse')
     );
     this.enabledLandUseKinds = enabled ? kinds.map((k) => k.value) : [];
+    this.exitHardExclusionsIfLandUseDiverged();
     this.applyLandUseKindVisibility();
     this.updateLandUseLegend(true);
+  }
+
+  /** Legend kind edits that leave the water-supply-only set exit hard-exclusion mode. */
+  exitHardExclusionsIfLandUseDiverged() {
+    if (!this.fatalFlawPresetActive || this._fatalFlawApplying) return;
+    const enabled = [...(this.enabledLandUseKinds || [])].sort().join(',');
+    const expected = [...FATAL_FLAW_LAND_USE_KINDS].sort().join(',');
+    if (enabled === expected) return;
+
+    this.fatalFlawPresetActive = false;
+    this.clearFatalFlawMask();
+    this.syncFatalFlawUi();
+    FATAL_FLAW_PRESET_LAYERS.forEach((layerName) => {
+      const cb = document.getElementById(`layer-${layerName}`);
+      if (cb?.checked) this.updateVectorLegend(layerName, true);
+    });
   }
 
   async updateVectorArcGISLegend(name, visible) {
@@ -894,41 +1278,13 @@ class MineralsMapApp {
       const checkbox = document.getElementById(`layer-${name}`);
       if (!checkbox) return;
 
-      const config = LAYER_CONFIG[name];
-      const item = checkbox.closest('.layer-item');
-
       checkbox.addEventListener('change', async (e) => {
         const checked = e.target.checked;
-
-        if (config.lazy && checked && !this.layerManager.isLayerLoaded(name)) {
-          checkbox.disabled = true;
-          item?.classList.add('loading');
-          try {
-            const ok = await this.layerManager.loadLayerOnDemand(name);
-            if (!ok) {
-              checkbox.checked = false;
-              this.setDataStatus(
-                `Could not load ${config.sidebarLabel || name}. Try again or check your connection.`,
-                'error'
-              );
-              return;
-            }
-            this.setDataStatus(null);
-            this.layerManager.setLayerVisibility(name, true);
-            if (this.layerManager.layers[name]) {
-              this.layerManager.layers[name].visible = true;
-            }
-            await this.updateVectorLegend(name, true);
-            this.refreshKpiBar();
-          } finally {
-            checkbox.disabled = false;
-            item?.classList.remove('loading');
-          }
-          return;
+        if (checked && name === 'geoatlasBedrock') {
+          await this.enforceBedrockMutualExclusion('provincial');
         }
-
-        this.layerManager.setLayerVisibility(name, checked);
-        await this.updateVectorLegend(name, checked);
+        await this.setLayerEnabled(name, checked);
+        this.onFatalFlawLayerManualChange(name, checked);
         this.refreshKpiBar();
       });
     });
@@ -941,6 +1297,9 @@ class MineralsMapApp {
 
       checkbox.addEventListener('change', async (e) => {
         const checked = e.target.checked;
+        if (checked && name === 'bedrock') {
+          await this.enforceBedrockMutualExclusion('national');
+        }
         checkbox.disabled = true;
         item?.classList.add('loading');
         try {
@@ -964,6 +1323,36 @@ class MineralsMapApp {
         }
       });
     });
+  }
+
+  /**
+   * Phase 1.4 — only one bedrock layer at a time (provincial 1:1M vs national GSC).
+   * @param {'provincial'|'national'} enabling
+   */
+  async enforceBedrockMutualExclusion(enabling) {
+    if (this._bedrockExcluding) return;
+    this._bedrockExcluding = true;
+    try {
+      if (enabling === 'provincial') {
+        const wmsCb = document.getElementById('wms-bedrock');
+        if (wmsCb?.checked) {
+          wmsCb.checked = false;
+          await this.layerManager.setWMSLayerVisibility('bedrock', false);
+          await this.updateWMSLegend('bedrock', false);
+        }
+      } else {
+        const provCb = document.getElementById('layer-geoatlasBedrock');
+        if (provCb?.checked) {
+          await this.setLayerEnabled('geoatlasBedrock', false);
+        }
+      }
+      this.setDataStatus(
+        'Only one bedrock layer at a time — prefer provincial when zoomed in, national when regional.',
+        'info'
+      );
+    } finally {
+      this._bedrockExcluding = false;
+    }
   }
 
   bindInteractions() {

@@ -8,7 +8,8 @@ import {
 } from '../config/layerConfig.js';
 import { normalizeMODSStatus } from '../config/modsFilters.js';
 import {
-  resolveClaimsFillColor,
+  resolveClaimsFillColorByExpiry,
+  resolveClaimExpiryBand,
   resolveTenureFillColor
 } from '../config/mineralLands.js';
 import {
@@ -424,11 +425,11 @@ export default class LayerManager {
     } else if (config.enrichment === 'claimsStatus') {
       data.features.forEach((feature) => {
         const props = feature.properties;
-        if (props.fillColor && props.name) return;
         const license = props.LICENSE_NBR?.trim();
         const holder = props.CLIENT_NAME?.trim();
         props.name = license || holder || props.name || 'Unnamed claim';
-        props.fillColor = props.fillColor || resolveClaimsFillColor(props.STATUS);
+        props.expiryBand = resolveClaimExpiryBand(props.EXPIRYDATE);
+        props.fillColor = resolveClaimsFillColorByExpiry(props.STATUS, props.EXPIRYDATE);
       });
     } else if (config.enrichment === 'tenureType') {
       data.features.forEach((feature) => {
@@ -711,6 +712,30 @@ export default class LayerManager {
     if (this.layers[name]) {
       this.layers[name].paintOverrides = { ...(this.layers[name].paintOverrides || {}), [property]: value };
     }
+  }
+
+  /**
+   * Clears runtime paint overrides and restores `config.paint.fill` (or circle)
+   * on the primary MapLibre layer. Used when leaving fatal-flaw mask mode.
+   */
+  clearPaintOverrides(name) {
+    const config = LAYER_CONFIG[name];
+    if (!config || !this.layers[name]) return;
+
+    delete this.layers[name].paintOverrides;
+
+    const layerId = config.layer;
+    if (!this.map.getLayer(layerId)) return;
+
+    const paint =
+      config.paint?.fill ||
+      config.paint?.circle ||
+      null;
+    if (!paint) return;
+
+    Object.entries(paint).forEach(([property, value]) => {
+      this.map.setPaintProperty(layerId, property, value);
+    });
   }
 
   /** Raw loaded GeoJSON features for a layer (e.g. so app.js can commodity-filter MODS points before handing them to SurfaceInterpolation). */

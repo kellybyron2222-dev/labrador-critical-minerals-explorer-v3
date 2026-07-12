@@ -67,6 +67,56 @@ export const TENURE_TYPE_COLORS = {
 
 export const TENURE_TYPE_FALLBACK = '#94a3b8';
 
+/** Phase 2.1c — glanceable expiry bands (bake cadence 3 mo; not live). */
+export const CLAIMS_EXPIRY_BANDS = {
+  vulnerable: { id: 'vulnerable', label: 'Expires ≤90 days', maxDays: 90, color: '#b91c1c' },
+  approaching: { id: 'approaching', label: 'Expires ≤180 days', maxDays: 180, color: '#ea580c' },
+  active: { id: 'active', label: 'Expires >180 days / unknown', maxDays: Infinity, color: null }
+};
+
+/**
+ * Parse EXPIRYDATE (Esri date / ISO / epoch ms) → whole days remaining from now.
+ * @returns {number|null} null if unparseable
+ */
+export function parseClaimExpiryDaysRemaining(expiryRaw, now = Date.now()) {
+  if (expiryRaw == null || expiryRaw === '') return null;
+  let ms = null;
+  if (typeof expiryRaw === 'number' && Number.isFinite(expiryRaw)) {
+    ms = expiryRaw < 1e12 ? expiryRaw * 1000 : expiryRaw;
+  } else {
+    const s = String(expiryRaw).trim();
+    const asNum = Number(s);
+    if (Number.isFinite(asNum) && s !== '') {
+      ms = asNum < 1e12 ? asNum * 1000 : asNum;
+    } else {
+      const parsed = Date.parse(s);
+      if (Number.isFinite(parsed)) ms = parsed;
+    }
+  }
+  if (ms == null || !Number.isFinite(ms)) return null;
+  return Math.floor((ms - now) / 86400000);
+}
+
+/** @returns {'vulnerable'|'approaching'|'active'} */
+export function resolveClaimExpiryBand(expiryRaw, now = Date.now()) {
+  const days = parseClaimExpiryDaysRemaining(expiryRaw, now);
+  if (days == null) return 'active';
+  if (days <= 90) return 'vulnerable';
+  if (days <= 180) return 'approaching';
+  return 'active';
+}
+
+/**
+ * Fill color: near-expiry overrides STATUS colors so vulnerable ground is glanceable.
+ * Active / unknown keeps STATUS coloring.
+ */
+export function resolveClaimsFillColorByExpiry(status, expiryRaw, now = Date.now()) {
+  const band = resolveClaimExpiryBand(expiryRaw, now);
+  if (band === 'vulnerable') return CLAIMS_EXPIRY_BANDS.vulnerable.color;
+  if (band === 'approaching') return CLAIMS_EXPIRY_BANDS.approaching.color;
+  return resolveClaimsFillColor(status);
+}
+
 export function resolveClaimsFillColor(status) {
   const key = (status || '').trim();
   return CLAIMS_STATUS_COLORS[key] || CLAIMS_STATUS_FALLBACK;
@@ -75,6 +125,45 @@ export function resolveClaimsFillColor(status) {
 export function resolveTenureFillColor(typedesc) {
   const key = (typedesc || '').trim();
   return TENURE_TYPE_COLORS[key] || TENURE_TYPE_FALLBACK;
+}
+
+/** Legend rows for expiry bands (Phase 2.1c primary glance). */
+export function buildClaimsExpiryLegendItems() {
+  return [
+    { label: CLAIMS_EXPIRY_BANDS.vulnerable.label, color: CLAIMS_EXPIRY_BANDS.vulnerable.color },
+    { label: CLAIMS_EXPIRY_BANDS.approaching.label, color: CLAIMS_EXPIRY_BANDS.approaching.color },
+    { label: CLAIMS_EXPIRY_BANDS.active.label, color: CLAIMS_STATUS_COLORS.Issued }
+  ];
+}
+
+/** Legend checklist rows for expiry-band filters. */
+export function buildClaimsExpiryBandToggles() {
+  return [
+    {
+      value: 'vulnerable',
+      label: CLAIMS_EXPIRY_BANDS.vulnerable.label,
+      color: CLAIMS_EXPIRY_BANDS.vulnerable.color,
+      description: 'Claims with EXPIRYDATE within 90 days (vulnerable to lapsing).'
+    },
+    {
+      value: 'approaching',
+      label: CLAIMS_EXPIRY_BANDS.approaching.label,
+      color: CLAIMS_EXPIRY_BANDS.approaching.color,
+      description: 'Claims with EXPIRYDATE within 180 days.'
+    },
+    {
+      value: 'active',
+      label: CLAIMS_EXPIRY_BANDS.active.label,
+      color: CLAIMS_STATUS_COLORS.Issued,
+      description: 'Longer-dated or unknown expiry — STATUS color on map.'
+    }
+  ];
+}
+
+export function buildClaimsExpiryBandFilter(enabledBands = []) {
+  if (!enabledBands.length) return ['==', ['get', 'expiryBand'], '__none__'];
+  if (enabledBands.length === 1) return ['==', ['get', 'expiryBand'], enabledBands[0]];
+  return ['in', ['get', 'expiryBand'], ['literal', enabledBands]];
 }
 
 /** Legend rows for STATUS values present in loaded claims features. */

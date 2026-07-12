@@ -60,7 +60,8 @@ export default class OccurrenceBrowser {
     this.els.listToggle = document.getElementById('occ-list-toggle');
     this.els.listWrap = document.getElementById('occ-list-wrap');
     this.els.listToggleLabel = document.getElementById('occ-list-toggle-label');
-    this.listExpanded = !window.matchMedia('(max-width: 768px)').matches;
+    // Collapsed by default — sidebar stays compact until the user opens a list.
+    this.listExpanded = false;
 
     this.els.listToggle?.addEventListener('click', () => {
       this.listExpanded = !this.listExpanded;

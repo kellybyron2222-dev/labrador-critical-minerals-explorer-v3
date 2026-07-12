@@ -1,20 +1,19 @@
 # Labrador Critical Minerals Explorer — Master Build Plan (V3)
 
-> **This tree is V3** (`explorer-v3`). Copied from the untouched V1 baseline at
-> `../project`. Do not edit `../project` for V3 work.
+> **This tree is V3** (`explorer-v3`). Active development tree for the Labrador
+> Critical Minerals Explorer. Do not edit the archived V1 baseline at
+> `../project` for V3 work.
 >
-> **Merger policy (revised 2026-07-11):** keep A’s MapLibre live-data hub.
-> Cherry-pick only UX pieces F1–F5 from B (KPI, search, list/detail, status
-> filters) — see Cursor canvas `revised-merger-guide.canvas.tsx`. No featured
-> deposits, no B commodity groups, no iron-in-critical, no demo/static
-> featured-deposits GeoJSON. **Authoritative layers are baked** under
-> `public/data/` for fast cold loads (not the same as B’s demo GeoJSON).
+> **Authoritative layers are baked** under `public/data/` for fast cold loads
+> (IndexedDB + live ArcGIS REST/WMS as fallback). Demo/static featured-deposit
+> GeoJSON is not used.
 >
 > **Living document.** This is BOTH the master plan and the granular, step-by-step
 > checklist for the project. Review and update it as we move along — tick boxes,
 > flip status markers, and add notes in place.
-> Last updated: 2026-07-12 — §5.1.8 CI gate (validate:data + Vitest + legend
-> escape + DEV window.app); next = Phase 3.1 transport
+> **Product / GTM / freemium arc:** see [`PRODUCT_PLAN.md`](./PRODUCT_PLAN.md).
+> Last updated: 2026-07-12 — README refreshed (standalone product doc); pre–Phase 3
+> close-out complete; **next = Phase 3.1 transport** (+ 4.1 geophysics)
 
 **Status marker key:** `[x]` done · `[~]` in progress · `[ ]` not started · `[!]` blocked/needs decision
 Layer catalog status: `✅ done/in app` · `🟢 verified available` · `⬜ to confirm/wire` · `🔒 blocked`
@@ -23,61 +22,63 @@ Layer catalog status: `✅ done/in app` · `🟢 verified available` · `⬜ to 
 
 ## Where we are (2026-07-12)
 
-**Phase 0** ✅ complete · **Phase 1** ✅ complete — MODS + occurrence UX +
-provincial bedrock + provincial regional surficial + all 6 national NRCan
-prospectivity models; endowment sidebar subgroups (Bedrock / Surficial /
-Prospectivity); bake-first + monthly refresh; mobile map-first chrome ·
-**Phase 2** ✅ complete — 2.1 claims/tenure · 2.2 Nunatsiavut/ATRIS · 2.3
-CPCAD + Land_Use · tenure parks de-overlapped onto CPCAD (69 mineral-rights
-polys) · §5.1.13 extents ·
-**Audit harden (2026-07-12)** ✅ — popup escaping + `PopupBuilder`; layer-load
-error UX; content-hash `cacheVersion` + GeoJSON `?v=`; KPI filter/geometry
-fidelity; no `LAYER_CONFIG` legend mutation; skip IndexedDB for static bakes;
-MODS primary/secondary matrix documented; Settings focus trap + drawer `inert`
-+ reduced-motion · **§5.1.8/11/16 CI gate** ✅ · **Phases 3–4** not started ·
-**Phase 5** partially pulled forward (occurrence browser UX + Settings shell +
-public host + mobile + data refresh).
+**Phase 0** ✅ · **Phase 1** ✅ (MODS, endowment, facilities honesty **1.1g**,
+bedrock mutual exclusion **1.4**) · **Phase 2** ✅ (2.1–2.3 + **2.1c** expiry
+bands + **2.4** hard exclusions) · **Pre–Phase 3 close-out** ✅ (About data,
+GeoJSON export, legend declutter) · **CI / audit harden** ✅ ·
+**Phases 3–4** not started · **Phase 5** lite pulled forward; full provenance /
+shareable URL remain.
 
 | Area | Status |
 |---|---|
 | Live MODS + critical preset (iron excluded) + surfaces (opt-in) | ✅ |
 | Facilities + 8 NRCan WMS (6 prospectivity + national bedrock/surficial) | ✅ |
-| Provincial bedrock (GeoAtlas 1:1M, baked + IndexedDB + 6-mo cadence) | ✅ (2026-07-11) |
-| Provincial surficial (GeoAtlas regional /12, baked + IndexedDB + 6-mo) | ✅ (2026-07-12) |
-| Magmatic Ni + CD/MVT zinc prospectivity (baked WMS; 12-mo) | ✅ (2026-07-12) |
-| Endowment sidebar subgroups (Bedrock / Surficial / Prospectivity) | ✅ (2026-07-12) |
-| Map-staked claims + mineral tenure (Labrador; Rights; parks → CPCAD) | ✅ (2026-07-12) |
-| Nunatsiavut + ATRIS land claims (Rights; default OFF) | ✅ (2026-07-12) |
-| Protected & conserved (CPCAD) + land use constraints (Rights; default OFF) | ✅ (2026-07-12) |
-| Tenure↔CPCAD de-overlap (parks only on CPCAD; tenure 69 rights polys) | ✅ (2026-07-12) |
-| MODS + facilities baked (IndexedDB; monthly GHA) | ✅ (2026-07-11) |
-| Status filters, search, list/detail, bottom KPI | ✅ (2026-07-11) |
-| Customizable multi-layer KPI bar + Settings shell | ✅ (2026-07-12) |
-| Audit harden (XSS / cache / KPI / a11y / load errors) | ✅ (2026-07-12) |
-| Light sidebar chrome; legends on map | ✅ |
-| Mobile map-first chrome (drawer Layers + collapsible Legend) | ✅ (2026-07-11) |
+| Facilities midstream honesty (1.1g; off-island popup) | ✅ (2026-07-12) |
+| Provincial bedrock (GeoAtlas 1:1M) + mutual exclusion vs national GSC (1.4) | ✅ |
+| Provincial surficial (GeoAtlas regional /12) | ✅ |
+| Magmatic Ni + CD/MVT zinc prospectivity (baked WMS; 12-mo) | ✅ |
+| Endowment sidebar subgroups (Bedrock / Surficial / Prospectivity) | ✅ |
+| Map-staked claims + expiry bands (2.1c) + mineral tenure | ✅ |
+| Nunatsiavut + ATRIS land claims (Rights; default OFF) | ✅ |
+| Protected & conserved (CPCAD) + land use + Hard exclusions (2.4) | ✅ |
+| Tenure↔CPCAD de-overlap (parks only on CPCAD; tenure 69 rights polys) | ✅ |
+| Status filters, search, list/detail, bottom KPI + Settings | ✅ |
+| Soft-launch Phase 5 lite (About data, GeoJSON export, legend collapse) | ✅ |
 | Bake registry + monthly auto-refresh → PR (§6.2) | ✅ (18 registry entries) |
-| GitHub repo + Pages hosting | ✅ |
-| Phase 2 Rights & constraints (exit criteria) | ✅ complete |
-| CI bake validation + Vitest (§5.1.8 / 11 / 16) | ✅ (2026-07-12) |
-| Infrastructure (roads, power, communities) | [ ] Phase 3 ← **next** |
-| Geophysics / geochemistry | [ ] Phase 4 |
-| Provenance panel, shareable URL, export | [ ] Phase 5 remainder |
+| GitHub repo + Pages hosting + CI validate/Vitest | ✅ |
+| Infrastructure (roads, power, communities) | [ ] Phase 3 ← **next (Must)** |
+| Geophysics MVP slice (1VD/aeromag + gravity; survey footprints) | [ ] Phase **4.1** (**Must**) |
+| Geochemistry / ice-flow / grade filters | [ ] Phase 4.2 (post-MVP) |
+| Provenance panel, shareable URL | [ ] Phase 5 remainder |
 | Optional later: detailed surficial, faults/contacts, LiDAR, aerial, EO | [ ] see §5 “Optional later” |
 | Optional later: historical claims, quarries, cancelled rights | [ ] Phase 2.1b |
+| Post-MVP backlog (drillholes, live claims API, ESG habitats, …) | [ ] see **§5.2** |
 
 **Public app:** https://kellybyron2222-dev.github.io/labrador-critical-minerals-explorer-v3/  
 **Repo:** https://github.com/kellybyron2222-dev/labrador-critical-minerals-explorer-v3
 
 ### Recommended next steps (build sequence)
 
-1. **Phase 3.1 — Transport** — roads (Trans-Labrador + forest access) from
-   GeoAtlas; then rail / ports / airstrips (CanVec) as follow-ons in 3.1.
-2. **Phase 3.2–3.3** — power (Nalcor/transmission) → communities / settlements.
-3. **Phase 4** — geophysics / geochemistry (quantitative surfaces, not MODS).
-4. **Phase 5 remainder** — provenance/About data, shareable URL, export.
-5. **Optional / deferred** — 2.1b historical claims; §5.1.9 surface worker;
-   §5.1.14 bedrock/surficial bake-lib unify; detailed surficial / LiDAR / EO.
+> **MVP gate:** ship Must items before calling the product “MVP complete.”
+> Pre–Phase 3 Must/Should close-out is done. Phase **4.2** geochemistry and
+> §5.2 stay post-MVP. Full triage → **§5.2**.
+
+1. **Must — Phase 3.1–3.2** — transport (Trans-Labrador + forest access,
+   rail, ports, airstrips) then power (transmission / Churchill Falls).
+   Communities (3.3) can follow.
+2. **Must — Phase 4.1** — Labrador geophysics MVP slice: regional **1VD /
+   aeromag** + **gravity** (GeoAtlas), opacity + legend; add **survey /
+   assessment footprints** if readily available so blank ≠ unexplored.
+   (Geochemistry 4.2 stays post-MVP.)
+3. **Phase 5 remainder** — full provenance panel, shareable URL, measure tools.
+4. **Then Phase 4.2** — geochemistry / grade filters / ice-flow (beyond MVP).
+5. **§5.2 Post-MVP backlog** — drillholes, live claims API, ESG habitats,
+   viability score, spatial query engine, etc.
+
+> ✅ Pre–Phase 3 close-out (2026-07-12): **1.1g** facilities honesty · **1.4**
+> bedrock mutual exclusion · **2.1c** claim expiry bands · soft-launch Phase 5
+> lite (About data, GeoJSON export, legend collapse). **2.4** hard exclusions
+> already complete.
 
 Optional follow-ups on geology / imagery: detailed surficial (MapServer/11),
 1:1M faults/contacts, SE Labrador bedrock, LiDAR / aerial / EO — see
@@ -201,9 +202,8 @@ css/style.css               light sidebar + map overlay + mobile drawer
 - Data-driven collapsible sidebar layer groups (`LAYER_GROUPS` + `group` metadata)
 - **Light** sidebar chrome; **mobile map-first** (`MobileChrome`: off-canvas
   Layers drawer closed by default; Legend collapsed by default)
-- Occurrence browser (F1–F5): status chips; search; list/detail; bottom KPI
-  is a separate multi-layer HUD (`KpiBar`)
-  list collapsed by default on narrow screens
+- Occurrence browser: status chips; search; list/detail; bottom KPI is a
+  separate multi-layer HUD (`KpiBar`); list collapsed by default on narrow screens
 - Value-chain icon system with maturity draw-ordering (`symbol-sort-key`)
 - Popups + hover interactivity
 - Public host via GitHub Pages; monthly baked-data refresh workflow
@@ -279,9 +279,9 @@ css/style.css               light sidebar + map overlay + mobile drawer
 - ❌ Mining Tenures (demo) → replaced by GeoAtlas Mineral Lands (✅ 2026-07-12, Phase 2.1)
 - See `TODO (real data)` note in `js/config/layerConfig.js`.
 
-**Explicitly not in V3 (revised merger guide):** featured-deposits JSON, B
-commodity-group taxonomy, iron-in-critical default, static occurrences.geojson,
-full mission-control dual-rail chrome.
+**Out of scope (by design):** featured-deposits demo JSON, commodity-group
+taxonomy overlays, iron in the critical preset, static occurrences.geojson,
+heavy dual-rail “mission control” chrome.
 
 ---
 
@@ -611,10 +611,10 @@ but multiple commodities in metadata.
       via expression + filter on enabled commodity list
 - [x] `LegendPanel` + `css/style.css` — `commodityToggles` block styling
 
-**1.1e — Occurrence browser UX cherry-pick (F1–F5 from B)** ✅ COMPLETE (2026-07-11)
+**1.1e — Occurrence browser UX** ✅ COMPLETE (2026-07-11)
 
-Per `revised-merger-guide.canvas.tsx`: add B’s list/search/status/KPI UX onto
-A’s live MapLibre explorer **without** importing B datasets or group taxonomy.
+Status filters, search, occurrence list/detail, and KPI strip on the MapLibre
+live-data hub — without demo featured deposits or static enrichment GeoJSON.
 
 - [x] Status model (`js/config/modsFilters.js`) — normalize live MODS `STATUS`
       into filter buckets (Producer, Past Producer, Developed Prospect,
@@ -698,6 +698,28 @@ A’s live MapLibre explorer **without** importing B datasets or group taxonomy.
 demo-deposit gap fully replaced by real endowment + occurrence data. ✅
 *(Also: full published NRCan national prospectivity set of 6 models.)*
 
+**1.1g — Facilities value-chain honesty** ✅ COMPLETE (2026-07-12) · **Must (MVP)**
+> External review (2026-07-12): legend said “Producing — processing/refinery,”
+> but Labrador has no active critical-mineral refinery (e.g. Voisey's Bay
+> concentrate ships to Long Harbour, NL).
+
+- [x] Audit: NL&L bake processing site is off-island (Long Harbour); Labrador
+      mines remain primary producers
+- [x] Relabel legend to **Producing — processing / midstream**; `legendNote`
+      explains island midstream vs Labrador primary production
+- [x] Popup: location note **Off-island (Newfoundland)** when lat &lt; 51.5°N
+- [x] Icons unchanged; KPI facility counts unchanged
+
+**1.4 — Geology scale-clash policy** ✅ COMPLETE (2026-07-12) · **Should**
+> Provincial 1:1M bedrock and national GSC bedrock can disagree on boundaries
+> and unit names when both are on. Full zoom-dependent cross-fade is post-MVP
+> (§5.2).
+
+- [x] Mutual exclusion: enabling provincial bedrock turns off national WMS
+      (and reverse) via `enforceBedrockMutualExclusion` in `app.js`
+- [x] Endowment group hint + status line explain one-at-a-time policy
+- [x] Do **not** block on auto scale-dependent cross-fade
+
 ### Optional later — higher-res geology & remote sensing  [ ]
 
 > Not required for Phase 1 exit. Revisit after Phase 2–3 core layers if the
@@ -758,6 +780,10 @@ demo-deposit gap fully replaced by real endowment + occurrence data. ✅
       (bake **69** mineral-rights polys after filter).
 - [x] Popup: licence #, holder, issue/expiry, status, FILENUM + GeoFiles link
 - [ ] Optional later (2.1b): historical claims + cancelled + quarries
+- [x] **2.1c — Claim expiry / “vulnerable to lapsing” signals** ✅ (2026-07-12)
+      Fill by expiry band (≤90 / ≤180 days; longer-dated keep STATUS colors);
+      legend checklist filters bands; popup still shows raw EXPIRYDATE + STATUS.
+      Bake cadence stays 3 mo (not live API).
 - [x] Legend + wiring + test + status
       Shared palette/constants: `js/config/mineralLands.js`. LayerManager
       gains geometry envelope on `paginatedQuery` + `claimsStatus` /
@@ -812,14 +838,38 @@ demo-deposit gap fully replaced by real endowment + occurrence data. ✅
 **Phase 2 exit criteria:** user can see, for any spot, whether they can legally
 work and what land constraints apply. ✅ (2.1 + 2.2 + 2.3)
 
-### Phase 3 — Infrastructure ("can I develop it?")  [ ] ← **NEXT**
+**2.4 — Hard exclusions (fatal-flaw) preset** ✅ COMPLETE (2026-07-12) · **Must (MVP)**
+> Rights layers ship default OFF. One-click screen for **tier-1 blockers** only
+> (likely undevelopable). Indigenous lands are **tier-2 process hurdles**
+> (negotiation / consultation) — not painted as undevelopable. Claims/tenure
+> are tier-3 competition.
+
+- [x] One-click preset in Rights sidebar: **Hard exclusions**
+      enables **CPCAD** + **land-use filtered to public water supplies**
+- [x] Uniform dark-red mask (`#7f1d1d` @ 0.55) while active; clears on off;
+      paint overrides survive basemap refresh
+- [x] **Excluded by design:** Nunatsiavut, ATRIS, claims, tenure, planning
+      areas, specified materials, wind reserve, Protected Areas Plan 2020
+- [x] No first-visit auto-on — individual layer defaults stay OFF
+- [x] Documented in Rights group hint text (hard exclusions vs consultation)
+- [x] Do **not** block on caribou / salmon / SAR habitats (those → §5.2)
+- Impl: `FATAL_FLAW_PRESET_LAYERS` = CPCAD + land-use;
+  `FATAL_FLAW_LAND_USE_KINDS` = `publicWaterSupplies`;
+  `applyFatalFlawPreset` / `ensureFatalFlawLandUseFilter` in `app.js`
+
+### Phase 3 — Infrastructure ("can I develop it?")  [ ] ← **NEXT** · **Must (MVP)**
+> External review Issue 11: without roads/rail/ports/power, remote wilderness
+> looks as viable as ground next to a shipping lane. Completing 3.1–3.2 is the
+> MVP finish line for purpose question #4.
+
 **3.1 — Transport** ← first Phase 3 slice
 - [ ] Roads (Trans-Labrador Hwy + forest access) — `GeoAtlas` transportation
-- [ ] Railways (iron-ore lines) — CanVec
-- [ ] Ports / marine access — CanVec
+- [ ] Railways (iron-ore lines / QNS&L) — CanVec
+- [ ] Ports / marine access (Goose Bay, Cartwright, Voisey's Bay wharf, etc.)
+      — CanVec + curated Labrador points if CanVec is thin
 - [ ] Airstrips / airports (remote camp access) — CanVec
 **3.2 — Power**
-- [ ] Transmission lines (Nalcor + CanVec)
+- [ ] Transmission lines (Nalcor + CanVec; Churchill Falls HV context)
 - [ ] Generation (Churchill Falls, Muskrat Falls; Gull Island potential)
 **3.3 — Communities**
 - [ ] Settlements / populated places — CanVec / StatCan
@@ -827,14 +877,33 @@ work and what land constraints apply. ✅ (2.1 + 2.2 + 2.3)
 - [ ] Each sub-item: config + style + popup + legend + test + status
 
 **Phase 3 exit criteria:** logistics/infrastructure overlay complete enough to
-reason about development feasibility.
+reason about development feasibility. (**MVP complete** once 3.1–3.2 + **4.1**
+geophysics + Must items 1.1g + 2.4 are done; 3.3 and Should items improve
+quality.)
 
-### Phase 4 — Signals (heavier data)  [ ]
-**4.1 — Geophysics**
-- [ ] `GeoAtlas/Geophysics_Labrador` — inventory (aeromag / radiometric / gravity)
-- [ ] Likely raster → WMS image path + reprojection; per-survey toggles
-- [ ] Opacity control; legend
-**4.2 — Geochemistry**
+**3.4 — Nearest-infrastructure distances** [ ] ← **Should (after 3.1–3.2)**
+> Lite version of external “Logistical Viability Score.” Click a prospect →
+> distance to nearest road, transmission, and deep-water port. Full scored
+> model → §5.2.
+
+- [ ] Reuse / extend Phase 5 measure tooling where possible
+- [ ] Show distances in popup or side panel (km); no composite score for MVP
+
+### Phase 4 — Signals  [ ]
+> **4.1 geophysics is Must for MVP** (2026-07-12 product decision): prospectors
+> need subsurface structure under Labrador cover — surface polygons alone are
+> not enough. **4.2 geochemistry** stays post-MVP / Stage C depth.
+
+**4.1 — Geophysics** [ ] ← **Must (MVP)**
+- [ ] Inventory `GeoAtlas/Geophysics_Labrador` (aeromag / radiometric / gravity)
+- [ ] Ship MVP slice: regional **1VD / aeromag** + **gravity anomalies**
+      (external review Issue 2) — WMS/image bake path + opacity + legend
+- [ ] Per-product toggles in Signals group (default OFF; heavy rasters)
+- [ ] **Survey / assessment footprints** (Issue 4) when a usable outline layer
+      exists — blank map ≠ “no minerals”
+- [ ] Bake + registry cadence; do not block MVP on every sub-survey product
+
+**4.2 — Geochemistry** [ ] · **post-MVP**
 > **Note (added 2026-07-06, updated 2026-07-11):** this is the *quantitative*
 > complement to the qualitative MODS occurrence-density surfaces built in
 > Phase 1.1c/1.1d. MODS has no assay/grade/tonnage field — it can only say
@@ -846,37 +915,51 @@ reason about development feasibility.
 > occurrence-presence/status weight) rather than being folded into the MODS
 > surface. Don't conflate the two — label each surface honestly per its
 > underlying data (see the MODS legend note for the pattern to follow).
-- [ ] `GeoAtlas/Geochemistry_All` — lake sediment / till points
+- [ ] `GeoAtlas/Geochemistry_All` — lake sediment / till points (Issue 5)
 - [ ] CMiO ore geochemistry (CMMI WFS) — optional advanced layer
 - [ ] Style (graduated by element concentration), perf handling, legend
+- [ ] **Grade threshold / top-percentile filter** (Issue 6) — only after real
+      assay values exist; do not fake this on MODS
 - [ ] Concentration-surface interpolation (IDW/kriging) once points are wired
+- [ ] Ice-flow / glacial-transport vectors (Issue 5 companion) — see Optional
+      later striations/landforms; full “trace up-ice” engine → §5.2
 
-**Phase 4 exit criteria:** subsurface signal layers available for prospectivity work.
+**Phase 4.1 exit (MVP):** at least 1VD/aeromag + gravity usable with legend/
+opacity. **Phase 4.2 exit (post-MVP):** quantitative geochem surfaces.
 
 ### Phase 5 — Cross-cutting features & polish  [~]
-- [ ] **Data-source registry** — per-layer provenance, update cadence, license, last-checked date (drive an "About data" panel)
+> Soft-launch lite ✅ (2026-07-12): About data + GeoJSON export + legend
+> card collapse. Full provenance registry / shareable URL / measure remain.
+
+- [~] **Data-source registry** — Settings **About data** blurb done (lite);
+      full per-layer provenance panel still open
 - [~] **Layer search / filter** — commodity picker + legend checklist done (1.1b/d);
       status + free-text over live MODS done (1.1e). Still open: filter by NTS sheet alone;
       cross-layer search beyond MODS
 - [ ] **Attribution / license panel** — required by NL GeoAtlas / NRCan / SAC-ISC terms
+      (About data covers sources at a high level)
 - [~] **Feature search / geocode** — occurrence list + flyTo/select done (1.1e);
       still open: jump to claim / NTS sheet / place geocode
-- [ ] **Measure & draw tools** (distance/area) — exploration utility
+- [ ] **Measure & draw tools** (distance/area) — exploration utility; feeds 3.4
+      nearest-infra distances
 - [ ] **Shareable state** — URL encodes active layers + extent + filters
       (later: include Settings / KPI prefs)
 - [x] **Settings shell** — map + sidebar entry; collapsible sections; **KPI bar**
-      subcategory (default minimized; KPI-bar gear deep-links expanded);
-      `localStorage` via `UserPrefs`. Future sections (basemap defaults,
-      About data, etc.) plug into the same panel.
-- [ ] **Export** — visible features to GeoJSON/CSV
+      + **About data** + **Export** (2026-07-12)
+- [x] **Export** — visible / filtered MODS (+ claims if on) to **GeoJSON** ✅ soft-launch
+      (Shapefile / KMZ → §5.2)
+- [x] **Viewport status breakdown** — KPI `modsStatusBits` (default on; shortLabel
+      clarified 2026-07-12)
+- [x] **Desktop legend declutter** — new legend cards start collapsed when ≥2
+      already open; title toggles body (2026-07-12)
 - [ ] **Performance pass** — denser polygon layers (claims) may need further
       tiling/simplification beyond current bake + IndexedDB pattern
 - [x] **Mobile/responsive** — map-first ≤768px: off-canvas **Layers** drawer
       (closed by default), **Legend** toggle (collapsed by default), occurrence
       list collapsed, KPI compact; MapLibre `resize` on layout change
       (`MobileChrome.js`, 2026-07-11)
-- [~] **README** + contribution/data-adding guide — README updated for V3/Pages;
-      full contributor playbook still open (point at §6 playbook + §6.2 refresh)
+- [x] **README** — product overview, run scripts, status, links to BUILD/PRODUCT
+      plans (2026-07-12). Full contributor playbook still open (§6 + §6.2)
 - [x] **Public hosting** — GitHub Pages via Actions (2026-07-11)
 - [x] **Baked-data auto-refresh** — registry + monthly GHA → PR (§6.1 / §6.2)
 - [x] **Audit harden (2026-07-12)** — popup XSS + `PopupBuilder`; load-failure UX;
@@ -905,6 +988,61 @@ Checklist (mirror of table):
 - [x] §5.1.13 — Canonical Labrador extent + UI hint (bundled with 2.3)
 - [ ] §5.1.14 — Bedrock/surficial share bake libs; cadence from registry
 - [ ] §5.1.9 — SurfaceInterpolation Web Worker + computing UI state
+
+### §5.2 External review triage & post-MVP backlog  [ ]
+
+> Consolidated 2026-07-12 from an external “world-class prospecting tool”
+> critique. Mapped to our MVP purpose (*ground / found-claimed / constraints /
+> infrastructure*). Do **not** let this list dilute Phase 3 exit criteria.
+
+#### MVP triage (do / defer)
+
+| Priority | External issues | Build-plan home | MVP-scoped fix |
+|---|---|---|---|
+| **Must** | 11 Infrastructure isolation | Phase **3.1–3.2** | Roads, rail, ports, transmission |
+| **Must** | 2 Geophysics 1VD/gravity | Phase **4.1** | Public Labrador aeromag/1VD + gravity (+ footprints if available) |
+| **Must** | 9 Hidden environmental/rights toggles | Phase **2.4** | Hard exclusions: CPCAD + water supplies (not Indigenous lands) |
+| **Must** | 13 Misleading processing/refinery labels | Phase **1.1g** | Honest Labrador vs midstream labeling |
+| **Should** | 8 Claim expiration signals | Phase **2.1c** | Expiry bands on baked claims (not live API) |
+| **Should** | 1 Bedrock scale mismatch | Phase **1.4** | Mutual exclusion / zoom hint (not cross-fade) |
+| **Should** | 14 Sidebar text dump | Phase **5** viewport breakdown | Extend KPI / status counts (search already exists) |
+| **Should** | 15 Single-coded markers | Phase **5** symbology pass | Verify color×status dual coding + legend |
+| **Should** | 16 Cluttered UI overlaps | Phase **5** desktop chrome | Accordion + pinned mini-legend |
+| **Should** | 18 Data export | Phase **5** export | GeoJSON/CSV first |
+| **Should** | 12 Economic viability (lite) | Phase **3.4** | Nearest road/power/port distances only |
+| **Should** | 4 Survey / assessment outlines | Phase **4.1** (with Must geophysics) | Include when outlines exist; don’t block 1VD/gravity |
+| **Can wait** | 5 Till/lake + ice-flow engine | Phase **4.2** + optional glacial | After MVP |
+| **Can wait** | 6 Grade threshold slider | Phase **4.2** | Needs assay data; not MODS |
+| **Can wait** | 3 Drillholes + core-library API | Post-MVP below | New data integration |
+| **Can wait** | 7 Live Mineral Lands API | Post-MVP below | Conflicts with bake-first; 3-mo OK for MVP |
+| **Can wait** | 10 Caribou / salmon / SAR | Post-MVP below | ESG depth |
+| **Can wait** | 12 full viability score | Post-MVP below | Modeling product |
+| **Can wait** | 17 Spatial query engine | Post-MVP below | After measure/buffer |
+| **Can wait** | Full geology cross-fade; Shapefile/KMZ | Post-MVP below | Polish / formats |
+
+#### Post-MVP running list (consider after project MVP)
+
+Keep as a living idea backlog — promote into numbered phases only when
+prioritized:
+
+- [ ] **Historical drillholes + NL core-library / GEOFILE intercept links**
+      (Issue 3) — collar map + one-click logs
+- [ ] **Live claims registry API** (Issue 7) — vs shorter bake cadence; decide
+      architecture (bake-first vs live)
+- [ ] **Scale-dependent bedrock cross-fade** (Issue 1 full) — national ↔
+      provincial auto switch
+- [ ] **Ice-flow / glacial-transport tracing** (Issue 5 full) — vectorized
+      ice-flow + up-ice anomaly tracing
+- [ ] **ESG / permitting friction layers** (Issue 10) — caribou corridors,
+      salmon watersheds, species-at-risk habitats (confirm open sources)
+- [ ] **Logistical Viability Score** (Issue 12 full) — composite distance /
+      access model
+- [ ] **Proximity spatial query** (Issue 17) — e.g. “Cu showings within 20 km
+      outside protected areas”
+- [ ] **Export Shapefile / KMZ** (Issue 18 remainder) — after GeoJSON/CSV
+- [ ] **Assessment-work / geophysical flight-line gap map** if not covered in 4.1
+- [ ] Optional: 2.1b historical/cancelled claims + quarries; §5 Optional later
+      geology / LiDAR / EO
 
 ---
 
@@ -1025,7 +1163,14 @@ branch** with Actions enabled:
   Occurrences / Rights / Infrastructure / Signals / Base) with collapsible
   sidebar sections.
 - **Provincial vs national geology:** prefer GeoAtlas (provincial, hi-res) for
-  Labrador; keep NRCan WMS (baked PNG) as national fallback/context.
+  Labrador; keep NRCan WMS (baked PNG) as national fallback/context. Scale-clash
+  policy (mutual exclusion / zoom hint) tracked as Phase **1.4**; full
+  zoom-dependent cross-fade is post-MVP (§5.2).
+- **MVP gate (2026-07-12, close-out):** Must for pre–Phase 3 = **2.4** hard
+  exclusions ✅ + **1.1g** facilities honesty ✅. Should soft-launch = **2.1c**
+  expiry ✅ + **1.4** bedrock exclusion ✅ + Phase 5 lite (About / export /
+  legend collapse / KPI status bits) ✅. Remaining Must for product MVP =
+  Phase **3.1–3.2** infra + **4.1** geophysics.
 - **Performance:** MODS ~3k points — always-visible circles with zoom-scaled
   radius + commodity picker (no clustering/heatmap). Density surfaces are
   optional (legend toggle; **default off** so cold start skips Turf). Heavy
@@ -1071,6 +1216,36 @@ branch** with Actions enabled:
 
 ## 10. Changelog
 
+- **2026-07-12** — Docs: README rewritten as standalone product overview
+  (removed Enes / merger framing); BUILD_PLAN header + “Where we are”
+  reconciled; package description cleaned.
+- **2026-07-12** — **Pre–Phase 3 close-out:** **1.1g** facilities honesty
+  (processing/midstream + off-island popup); **1.4** provincial↔national
+  bedrock mutual exclusion; **2.1c** claim expiry bands + legend filters;
+  Settings **About data** + **Export** GeoJSON; legend cards collapse when
+  crowded; KPI status shortLabel clarified. **Next:** Phase 3.1 transport.
+- **2026-07-12** — Phase **2.4** refined: **Hard exclusions** (not province-wide
+  “restricted land”). Mask = CPCAD + public water supplies only. Nunatsiavut /
+  ATRIS = consultation hurdles (normal Rights toggles). Claims/tenure /
+  planning overlays stay out. UI label + Rights hint updated.
+- **2026-07-12** — Phase **2.4** complete: **Fatal flaw / restricted land**
+  preset in Rights sidebar. One click enables CPCAD + Nunatsiavut + ATRIS +
+  land-use with uniform dark-red mask (`#7f1d1d` @ 0.55); off clears mask and
+  hides those layers. Claims/tenure excluded. Paint overrides via
+  `setPaintProperty` / `clearPaintOverrides` (survive basemap switch). Rights
+  hint updated. **Next:** Phase 3.1 transport (+ 4.1 geophysics / 1.1g).
+- **2026-07-12** — **Phase 4.1 geophysics promoted to MVP Must** (1VD/aeromag +
+  gravity; survey footprints when available). 4.2 geochemistry remains
+  post-MVP. Recommended sequence, §5.2 triage, and MVP gate notes updated.
+  **Next:** Phase 3.1 transport, then 4.1 (or parallel once infra path is clear).
+- **2026-07-12** — External (Gemini) critique triaged into **Must / Should /
+  Post-MVP** and folded into the build sequence. New checklist homes: **1.1g**
+  facilities honesty (Must), **1.4** geology scale-clash policy (Should),
+  **2.1c** claim expiry bands (Should), **2.4** fatal-flaw preset (Must),
+  **3.4** nearest-infra distances (Should), Phase 4/5 annotations, and **§5.2**
+  triage table + post-MVP running list. Recommended next steps reordered:
+  Phase 3.1–3.2 → 2.4 → 1.1g → Should polish → Phase 4+. **Next:** Phase 3.1
+  transport (+ parallel Must 2.4 / 1.1g when convenient).
 - **2026-07-12** — §5.1.8 / 11 / 16 CI gate: `npm run validate:data` (registry
   contentHash / cacheVersion / feature floors); Vitest for `modsFilters` +
   `KpiEngine` (21 tests); LegendPanel ArcGIS labels via `textContent`;

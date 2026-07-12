@@ -87,6 +87,13 @@ export function buildPopupSection(layerId, feature) {
     const website = href
       ? `<div class="popup-row"><span class="popup-label">Website:</span> <span class="popup-value"><a href="${escapeHtml(href)}" target="_blank" rel="noopener">Visit site</a></span></div>`
       : '';
+    const coords = feature.geometry?.coordinates;
+    const lat = Array.isArray(coords) ? Number(coords[1]) : NaN;
+    // Mainland Labrador clip starts ~51.5°N; sites south are island NL midstream/context.
+    const offIsland = Number.isFinite(lat) && lat < 51.5;
+    const locationNote = offIsland
+      ? rowsHtml([['Location note', 'Off-island (Newfoundland) — not Labrador refining capacity']])
+      : '';
     return wrap(
       'Critical mineral facility',
       p.name || 'Facility',
@@ -94,9 +101,12 @@ export function buildPopupSection(layerId, feature) {
         ['Operator', p.OperatorOwnersEN],
         ['Commodities', p.CommoditiesEN],
         ['Province', p.ProvincesEN],
+        ['Group', p.OperationGroupEN],
         ['Stage', p.DevelopmentStageEN],
         ['Status', p.ActivityStatusEN]
-      ]) + website
+      ]) +
+        locationNote +
+        website
     );
   }
 

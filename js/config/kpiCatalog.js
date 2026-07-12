@@ -20,8 +20,8 @@ export const KPI_CATALOG = [
   {
     id: 'modsStatusBits',
     label: 'Occurrence status breakdown',
-    shortLabel: 'status',
-    description: 'Top MODS status buckets among points currently in view.',
+    shortLabel: 'by status',
+    description: 'Top MODS status buckets among points currently in the map view (e.g. Producer, Prospect).',
     layer: 'modsOccurrences'
   },
   {

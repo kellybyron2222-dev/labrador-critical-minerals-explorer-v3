@@ -116,11 +116,26 @@ export default class LegendPanel {
 
     const card = document.createElement('div');
     card.className = 'legend-card';
+    card.dataset.legendKey = key;
 
-    const heading = document.createElement('h4');
+    const openCount = Object.keys(this.cards).length;
+    // Light declutter: when several cards already open, start new ones collapsed.
+    const startCollapsed = openCount >= 2;
+    if (startCollapsed) card.classList.add('collapsed');
+
+    const heading = document.createElement('button');
+    heading.type = 'button';
     heading.className = 'legend-card-title';
+    heading.setAttribute('aria-expanded', String(!startCollapsed));
     heading.textContent = legendDef.title;
+    heading.addEventListener('click', () => {
+      const collapsed = card.classList.toggle('collapsed');
+      heading.setAttribute('aria-expanded', String(!collapsed));
+    });
     card.appendChild(heading);
+
+    const body = document.createElement('div');
+    body.className = 'legend-card-body';
 
     if (legendDef.surfaceToggle) {
       const toggleLabel = document.createElement('label');
@@ -131,7 +146,7 @@ export default class LegendPanel {
       checkbox.addEventListener('change', (e) => legendDef.surfaceToggle.onChange(e.target.checked));
       toggleLabel.appendChild(checkbox);
       toggleLabel.appendChild(document.createTextNode(legendDef.surfaceToggle.label));
-      card.appendChild(toggleLabel);
+      body.appendChild(toggleLabel);
     }
 
     if (legendDef.commodityToggles?.commodities?.length) {
@@ -152,7 +167,7 @@ export default class LegendPanel {
       allOff.addEventListener('click', onAllOff);
       bulk.appendChild(allOn);
       bulk.appendChild(allOff);
-      card.appendChild(bulk);
+      body.appendChild(bulk);
 
       const list = document.createElement('div');
       list.className = 'legend-commodity-list';
@@ -185,7 +200,7 @@ export default class LegendPanel {
         row.appendChild(textWrap);
         list.appendChild(row);
       });
-      card.appendChild(list);
+      body.appendChild(list);
     } else if (legendDef.items) {
       const list = this._buildItemsList(legendDef.items, legendDef.shape, false);
       const isLarge = legendDef.items.length > ITEMS_ENLARGE_THRESHOLD;
@@ -198,14 +213,14 @@ export default class LegendPanel {
         preview.addEventListener('click', () =>
           this.openEnlarged({ title: legendDef.title, items: legendDef.items, shape: legendDef.shape })
         );
-        card.appendChild(preview);
+        body.appendChild(preview);
 
         const expandHint = document.createElement('span');
         expandHint.className = 'legend-expand-hint';
         expandHint.textContent = `Click to enlarge (${legendDef.items.length} classes)`;
-        card.appendChild(expandHint);
+        body.appendChild(expandHint);
       } else {
-        card.appendChild(list);
+        body.appendChild(list);
       }
     } else if (legendDef.imageUrl) {
       const imgWrap = document.createElement('div');
@@ -220,21 +235,22 @@ export default class LegendPanel {
         this.openEnlarged({ title: legendDef.title, imageUrl: legendDef.imageUrl })
       );
       imgWrap.appendChild(img);
-      card.appendChild(imgWrap);
+      body.appendChild(imgWrap);
 
       const expandHint = document.createElement('span');
       expandHint.className = 'legend-expand-hint';
       expandHint.textContent = 'Click to enlarge';
-      card.appendChild(expandHint);
+      body.appendChild(expandHint);
     }
 
     if (legendDef.note) {
       const note = document.createElement('p');
       note.className = 'legend-note-text';
       note.textContent = legendDef.note;
-      card.appendChild(note);
+      body.appendChild(note);
     }
 
+    card.appendChild(body);
     this.container.appendChild(card);
     this.cards[key] = card;
   }

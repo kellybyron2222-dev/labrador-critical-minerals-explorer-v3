@@ -1,5 +1,5 @@
 /**
- * App Settings modal — expandable sections (KPI bar first; more later).
+ * App Settings modal — expandable sections (KPI, About data, Export).
  */
 
 import { KPI_CATALOG } from '../config/kpiCatalog.js';
@@ -8,13 +8,14 @@ import { escapeHtml } from './htmlEscape.js';
 
 export default class SettingsPanel {
   /**
-   * @param {{ onChange: () => void }} handlers
+   * @param {{ onChange: () => void, onExportVisible?: () => void }} handlers
    */
   constructor(handlers = {}) {
     this.onChange = handlers.onChange || (() => {});
+    this.onExportVisible = handlers.onExportVisible || (() => {});
     this.open = false;
     /** @type {Record<string, boolean>} section id → expanded */
-    this.sectionExpanded = { kpi: false };
+    this.sectionExpanded = { kpi: false, about: false, export: false };
     this._lastFocus = null;
 
     this.backdrop = document.createElement('div');
@@ -79,16 +80,15 @@ export default class SettingsPanel {
   }
 
   /**
-   * @param {{ section?: 'kpi', expandSection?: boolean }} [opts]
-   *   - Default open: KPI section stays minimized.
-   *   - From KPI bar gear: `{ section: 'kpi', expandSection: true }`.
+   * @param {{ section?: 'kpi'|'about'|'export', expandSection?: boolean }} [opts]
    */
   show(opts = {}) {
-    if (opts.section === 'kpi' && opts.expandSection) {
-      this.sectionExpanded.kpi = true;
+    if (opts.section && opts.expandSection) {
+      this.sectionExpanded[opts.section] = true;
     } else if (!opts.section) {
-      // General Settings entry: keep subcategories collapsed by default.
       this.sectionExpanded.kpi = false;
+      this.sectionExpanded.about = false;
+      this.sectionExpanded.export = false;
     }
 
     this._lastFocus = document.activeElement;
@@ -100,10 +100,10 @@ export default class SettingsPanel {
     this.panel.classList.add('open');
     this.setInertBackground(true);
 
-    if (opts.section === 'kpi') {
-      const kpiEl = this.panel.querySelector('#settings-section-kpi');
-      kpiEl?.scrollIntoView({ block: 'nearest' });
-      this.panel.querySelector('[data-section-toggle="kpi"]')?.focus();
+    if (opts.section) {
+      const el = this.panel.querySelector(`#settings-section-${opts.section}`);
+      el?.scrollIntoView({ block: 'nearest' });
+      this.panel.querySelector(`[data-section-toggle="${opts.section}"]`)?.focus();
     } else {
       this.panel.querySelector('.settings-close')?.focus();
     }
@@ -131,10 +131,26 @@ export default class SettingsPanel {
     this.sectionExpanded[id] = expanded;
   }
 
+  _sectionShell(id, title, meta, bodyHtml) {
+    const expanded = Boolean(this.sectionExpanded[id]);
+    return `
+      <section id="settings-section-${id}" class="settings-section${expanded ? ' expanded' : ''}" aria-labelledby="settings-${id}-heading">
+        <button type="button" class="settings-section-toggle" data-section-toggle="${id}" aria-expanded="${expanded}" aria-controls="settings-${id}-body">
+          <svg class="settings-section-chevron" viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="9 6 15 12 9 18"></polyline>
+          </svg>
+          <span id="settings-${id}-heading" class="settings-section-title">${escapeHtml(title)}</span>
+          ${meta ? `<span class="settings-section-meta">${escapeHtml(meta)}</span>` : ''}
+        </button>
+        <div id="settings-${id}-body" class="settings-section-body" ${expanded ? '' : 'hidden'}>
+          ${bodyHtml}
+        </div>
+      </section>`;
+  }
+
   render() {
     const enabled = getKpiEnabledIds();
     const enabledSet = new Set(enabled);
-    const kpiExpanded = Boolean(this.sectionExpanded.kpi);
 
     const ordered = [
       ...enabled.map((id) => KPI_CATALOG.find((m) => m.id === id)).filter(Boolean),
@@ -169,30 +185,40 @@ export default class SettingsPanel {
         <button type="button" class="settings-reset-btn" data-kpi-reset>Reset KPI defaults</button>
       </div>`;
 
+    const aboutBody = `
+      <p class="settings-note"><strong>Labrador Critical Minerals Explorer</strong> — free, open map integrating public Labrador geoscience, occurrences, rights, and (soon) infrastructure.</p>
+      <ul class="settings-about-list">
+        <li><strong>Focus:</strong> mainland Labrador (not a Canada-wide thin map).</li>
+        <li><strong>Load path:</strong> bake-first GeoJSON / WMS under <code>public/data/</code>, then IndexedDB, live ArcGIS only as fallback.</li>
+        <li><strong>Sources:</strong> NL GeoAtlas (MODS, bedrock, surficial, mineral lands, land use / CPCAD mirror), NRCan (facilities, prospectivity WMS, national geology), CIRNAC/ISC (Nunatsiavut, ATRIS).</li>
+        <li><strong>Hard exclusions:</strong> parks / conserved + public water supplies only — Indigenous lands are consultation context, not a total block.</li>
+        <li><strong>Honesty:</strong> processing/midstream icons may be off-island (e.g. Long Harbour); Labrador has primary production, not local critical-mineral refining.</li>
+      </ul>
+      <p class="settings-note">Living engineering checklist: see <code>BUILD_PLAN.md</code> in the project repo. Product arc: <code>PRODUCT_PLAN.md</code>.</p>`;
+
+    const exportBody = `
+      <p class="settings-note">Download currently filtered MODS points in the map view (and claims if that layer is on) as GeoJSON for GIS / field apps. Shapefile / KMZ come later.</p>
+      <div class="settings-actions">
+        <button type="button" class="settings-primary-btn" data-export-visible>Download visible GeoJSON</button>
+      </div>`;
+
     this.panel.innerHTML = `
       <button type="button" class="settings-close" aria-label="Close settings">×</button>
       <h2 id="settings-title" class="settings-title">Settings</h2>
-      <p class="settings-intro">App preferences. More sections will appear here over time.</p>
-
-      <section id="settings-section-kpi" class="settings-section${kpiExpanded ? ' expanded' : ''}" aria-labelledby="settings-kpi-heading">
-        <button type="button" class="settings-section-toggle" data-section-toggle="kpi" aria-expanded="${kpiExpanded}" aria-controls="settings-kpi-body">
-          <svg class="settings-section-chevron" viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <polyline points="9 6 15 12 9 18"></polyline>
-          </svg>
-          <span id="settings-kpi-heading" class="settings-section-title">KPI bar</span>
-          <span class="settings-section-meta">${enabled.length} on</span>
-        </button>
-        <div id="settings-kpi-body" class="settings-section-body" ${kpiExpanded ? '' : 'hidden'}>
-          ${kpiBody}
-        </div>
-      </section>
+      <p class="settings-intro">Preferences, data notes, and exports.</p>
+      ${this._sectionShell('kpi', 'KPI bar', `${enabled.length} on`, kpiBody)}
+      ${this._sectionShell('about', 'About data', '', aboutBody)}
+      ${this._sectionShell('export', 'Export', 'GeoJSON', exportBody)}
     `;
 
     this.panel.querySelector('.settings-close')?.addEventListener('click', () => this.close());
 
-    this.panel.querySelector('[data-section-toggle="kpi"]')?.addEventListener('click', () => {
-      this.sectionExpanded.kpi = !this.sectionExpanded.kpi;
-      this.render();
+    this.panel.querySelectorAll('[data-section-toggle]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-section-toggle');
+        this.sectionExpanded[id] = !this.sectionExpanded[id];
+        this.render();
+      });
     });
 
     this.panel.querySelectorAll('[data-kpi-toggle]').forEach((input) => {
@@ -246,6 +272,10 @@ export default class SettingsPanel {
       resetKpiPrefs();
       this.onChange();
       this.render();
+    });
+
+    this.panel.querySelector('[data-export-visible]')?.addEventListener('click', () => {
+      this.onExportVisible();
     });
   }
 }
