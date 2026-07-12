@@ -316,6 +316,20 @@ html, body {
   display: block;
 }
 
+.layer-subgroup-title {
+  margin: var(--space-2) 0 4px;
+  padding: 0 6px;
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--card-light-text-muted);
+}
+
+.layer-list:first-child .layer-subgroup-title {
+  margin-top: 0;
+}
+
 /* Layer List */
 .layer-list {
   display: flex;
@@ -1004,6 +1018,11 @@ html, body {
   border-radius: 2px;
 }
 
+.layer-indicator.geoatlasSurficial {
+  background: #ca8a04;
+  border-radius: 2px;
+}
+
 /* MapLibre Popup Styling */
 .maplibregl-popup {
   max-width: 280px !important;
@@ -1108,6 +1127,18 @@ html, body {
 
 .layer-indicator.wms-graphite {
   background: linear-gradient(135deg, #9ca3af 0%, #111827 100%);
+}
+
+.layer-indicator.wms-nickel {
+  background: linear-gradient(135deg, #86efac 0%, #166534 100%);
+}
+
+.layer-indicator.wms-zincCd {
+  background: linear-gradient(135deg, #fde047 0%, #a16207 100%);
+}
+
+.layer-indicator.wms-zincMvt {
+  background: linear-gradient(135deg, #fcd34d 0%, #854d0e 100%);
 }
 
 .layer-hint {

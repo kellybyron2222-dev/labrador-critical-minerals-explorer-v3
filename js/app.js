@@ -98,6 +98,35 @@ class MineralsMapApp {
     return map;
   }
 
+  /**
+   * Split a group's layers into ordered subgroups (from LAYER_GROUPS.subgroups).
+   * Layers without a matching subgroup id fall into an untitled trailing bucket.
+   */
+  partitionGroupLayers(layers, groupDef) {
+    const defs = groupDef.subgroups;
+    if (!defs?.length) {
+      return [{ id: null, title: null, layers }];
+    }
+
+    const buckets = new Map(defs.map((d) => [d.id, { id: d.id, title: d.title, layers: [] }]));
+    const ungrouped = [];
+
+    layers.forEach((entry) => {
+      const subgroupId = entry.config.subgroup;
+      if (subgroupId && buckets.has(subgroupId)) {
+        buckets.get(subgroupId).layers.push(entry);
+      } else {
+        ungrouped.push(entry);
+      }
+    });
+
+    const parts = [...buckets.values()].filter((b) => b.layers.length);
+    if (ungrouped.length) {
+      parts.push({ id: '_other', title: null, layers: ungrouped });
+    }
+    return parts;
+  }
+
   /** Builds collapsible thematic layer groups in the sidebar from layer config. */
   renderLayerSidebar() {
     const container = document.getElementById('layer-groups');
@@ -137,28 +166,42 @@ class MineralsMapApp {
       const body = document.createElement('div');
       body.className = 'layer-group-body';
 
-      const list = document.createElement('div');
-      list.className = `layer-list${layers.some((l) => l.type === 'wms') ? ' wms-layers' : ''}`;
+      const subgroups = this.partitionGroupLayers(layers, groupDef);
+      subgroups.forEach(({ title, layers: subgroupLayers }) => {
+        const list = document.createElement('div');
+        const hasWms = subgroupLayers.some((l) => l.type === 'wms');
+        list.className = `layer-list${hasWms ? ' wms-layers' : ''}`;
 
-      layers.forEach(({ type, name, config }) => {
-        const checkboxId = type === 'vector' ? `layer-${name}` : `wms-${name}`;
-        const label = type === 'vector' ? config.sidebarLabel : config.label;
-
-        const item = document.createElement('label');
-        item.className = 'layer-item';
-        item.innerHTML = `
-          <input type="checkbox" id="${checkboxId}"${config.visible ? ' checked' : ''}>
-          <span class="layer-indicator ${config.indicatorClass}"></span>
-          <span class="layer-label">${label}</span>
-        `;
-        list.appendChild(item);
-
-        if (type === 'vector' && config.commodityPicker) {
-          list.appendChild(this.buildCommodityPicker(name, config.commodityPicker));
+        if (title) {
+          const heading = document.createElement('div');
+          heading.className = 'layer-subgroup-title';
+          heading.textContent = title;
+          list.appendChild(heading);
         }
-      });
 
-      body.appendChild(list);
+        subgroupLayers.forEach(({ type, name, config }) => {
+          const checkboxId = type === 'vector' ? `layer-${name}` : `wms-${name}`;
+          const label =
+            type === 'vector'
+              ? config.sidebarLabel
+              : config.sidebarLabel || config.label;
+
+          const item = document.createElement('label');
+          item.className = 'layer-item';
+          item.innerHTML = `
+            <input type="checkbox" id="${checkboxId}"${config.visible ? ' checked' : ''}>
+            <span class="layer-indicator ${config.indicatorClass}"></span>
+            <span class="layer-label">${label}</span>
+          `;
+          list.appendChild(item);
+
+          if (type === 'vector' && config.commodityPicker) {
+            list.appendChild(this.buildCommodityPicker(name, config.commodityPicker));
+          }
+        });
+
+        body.appendChild(list);
+      });
 
       if (groupDef.hint) {
         const hint = document.createElement('p');
@@ -634,8 +677,9 @@ class MineralsMapApp {
 
     this.bindMODSInteractions();
     this.bindBedrockInteractions();
+    this.bindSurficialInteractions();
 
-    ['critical-minerals-layer', 'mods-layer', 'geoatlas-bedrock-fill'].forEach((layerId) => {
+    ['critical-minerals-layer', 'mods-layer', 'geoatlas-bedrock-fill', 'geoatlas-surficial-fill'].forEach((layerId) => {
       this.map.on('mouseenter', layerId, () => {
         this.map.getCanvas().style.cursor = 'pointer';
       });
@@ -671,6 +715,37 @@ class MineralsMapApp {
         .setHTML(`
           <div class="popup-content">
             <h3 class="popup-title">${p.name || p.LABEL || 'Bedrock unit'}</h3>
+            ${rows}
+          </div>
+        `)
+        .addTo(this.map);
+    });
+  }
+
+  bindSurficialInteractions() {
+    this.map.on('click', 'geoatlas-surficial-fill', (e) => {
+      if (!e.features?.length) return;
+      const p = e.features[0].properties || {};
+      const coordinates = e.lngLat;
+
+      const rows = [
+        ['Genetic unit (1:1M)', p.GENETIC1MA],
+        ['Genetic detail', p.GENETIC250],
+        ['Source', p.SOURCE],
+        ['Reference', p.REFERENCE]
+      ]
+        .filter(([, v]) => v && String(v).trim())
+        .map(
+          ([label, value]) =>
+            `<div class="popup-row"><span class="popup-label">${label}:</span> <span class="popup-value">${value}</span></div>`
+        )
+        .join('');
+
+      new maplibregl.Popup({ closeButton: true, closeOnClick: true })
+        .setLngLat(coordinates)
+        .setHTML(`
+          <div class="popup-content">
+            <h3 class="popup-title">${p.name || p.GENETIC1MA || p.GENETIC250 || 'Surficial unit'}</h3>
             ${rows}
           </div>
         `)

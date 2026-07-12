@@ -1,0 +1,15 @@
+{
+  "version": "2026-07-12",
+  "contentHash": "9db6ce561aef893b6c747b6d2c9a955eb4852f39327d662211a7f15980c70429",
+  "cadenceMonths": 6,
+  "generatedAt": "2026-07-12T13:51:51.937Z",
+  "nextDue": "2027-01-12",
+  "refresh": "GitHub Actions refresh-data.yml (monthly; skips until nextDue) or npm run refresh:data",
+  "featureCount": 15016,
+  "source": "https://dnrmaps.gov.nl.ca/arcgis/rest/services/GeoAtlas/Surficial_Geology_All/MapServer/12/query",
+  "layerId": 12,
+  "layerName": "Regional Surficial Geology",
+  "outSR": 4326,
+  "maxAllowableOffset": 0.002,
+  "outFields": "GENETIC1MA,GENETIC250,SOURCE,REFERENCE,RED,GREEN,BLUE"
+}

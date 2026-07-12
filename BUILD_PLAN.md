@@ -13,55 +13,58 @@
 > **Living document.** This is BOTH the master plan and the granular, step-by-step
 > checklist for the project. Review and update it as we move along — tick boxes,
 > flip status markers, and add notes in place.
-> Last updated: 2026-07-11 (EOD close-out) — plan reconciled to baked datasets,
-> monthly refresh registry, mobile map-first chrome; Phase 1.3 still next
+> Last updated: 2026-07-12 — Phase 1 complete (surficial + full NRCan
+> prospectivity set); endowment sidebar subgroups; next = Phase 2.1 claims
 
 **Status marker key:** `[x]` done · `[~]` in progress · `[ ]` not started · `[!]` blocked/needs decision
 Layer catalog status: `✅ done/in app` · `🟢 verified available` · `⬜ to confirm/wire` · `🔒 blocked`
 
 ---
 
-## Where we are (2026-07-11 EOD)
+## Where we are (2026-07-12)
 
-**Phase 0** ✅ complete · **Phase 1** [~] — MODS + occurrence UX + provincial
-bedrock done; all in-app layers bake-first with monthly refresh; mobile
-map-first chrome shipped; provincial surficial (**1.3**) still open ·
+**Phase 0** ✅ complete · **Phase 1** ✅ complete — MODS + occurrence UX +
+provincial bedrock + provincial regional surficial + all 6 national NRCan
+prospectivity models; endowment sidebar subgroups (Bedrock / Surficial /
+Prospectivity); bake-first + monthly refresh; mobile map-first chrome ·
 **Phases 2–4** not started · **Phase 5** partially pulled forward (occurrence
 browser UX + public host + mobile + data refresh).
 
 | Area | Status |
 |---|---|
 | Live MODS + critical preset (iron excluded) + surfaces (opt-in) | ✅ |
-| Facilities + 5 NRCan WMS | ✅ |
+| Facilities + 8 NRCan WMS (6 prospectivity + national bedrock/surficial) | ✅ |
 | Provincial bedrock (GeoAtlas 1:1M, baked + IndexedDB + 6-mo cadence) | ✅ (2026-07-11) |
-| MODS + facilities + 5 NRCan WMS baked (IndexedDB / static PNG; monthly GHA) | ✅ (2026-07-11) |
+| Provincial surficial (GeoAtlas regional /12, baked + IndexedDB + 6-mo) | ✅ (2026-07-12) |
+| Magmatic Ni + CD/MVT zinc prospectivity (baked WMS; 12-mo) | ✅ (2026-07-12) |
+| Endowment sidebar subgroups (Bedrock / Surficial / Prospectivity) | ✅ (2026-07-12) |
+| MODS + facilities baked (IndexedDB; monthly GHA) | ✅ (2026-07-11) |
 | Status filters, search, list/detail, bottom KPI | ✅ (2026-07-11) |
 | Light sidebar chrome; legends on map | ✅ |
 | Mobile map-first chrome (drawer Layers + collapsible Legend) | ✅ (2026-07-11) |
-| Bake registry + monthly auto-refresh → PR (§6.2) | ✅ (2026-07-11) |
+| Bake registry + monthly auto-refresh → PR (§6.2) | ✅ (12 registry entries) |
 | GitHub repo + Pages hosting | ✅ |
-| Provincial surficial (GeoAtlas) | [ ] Phase 1.3 ← **next** |
-| Mineral claims / tenure | [ ] Phase 2.1 |
+| Mineral claims / tenure | [ ] Phase 2.1 ← **next** |
 | Indigenous lands / protected areas | [ ] Phase 2.2 / 2.3 |
 | Infrastructure, geophysics, geochemistry | [ ] Phases 3–4 |
 | Provenance panel, shareable URL, export | [ ] Phase 5 remainder |
+| Optional later: detailed surficial, faults/contacts, LiDAR, aerial, EO | [ ] see §5 “Optional later” |
 
 **Public app:** https://kellybyron2222-dev.github.io/labrador-critical-minerals-explorer-v3/  
 **Repo:** https://github.com/kellybyron2222-dev/labrador-critical-minerals-explorer-v3
 
 ### Recommended next steps (build sequence)
 
-1. **Phase 1.3 — Provincial surficial geology** (`GeoAtlas/Surficial_Geology_All`)  
-   Same playbook as 1.2 **plus bake + registry cadence (steps 8–9)**; closes
-   Phase 1 exit criteria.
-2. **Phase 2.1 — Mineral claims & tenure** (`GeoAtlas/Mineral_Lands`)  
+1. **Phase 2.1 — Mineral claims & tenure** (`GeoAtlas/Mineral_Lands`)  
    Turns the viewer into a siting tool (claims polygons, holder, status).
-3. **Phase 2.2 — Indigenous lands** (Nunatsiavut / ATRIS)  
+   Highest-priority fundamental layer still missing.
+2. **Phase 2.2 — Indigenous lands** (Nunatsiavut / ATRIS)  
    High-priority permitting context; recommend default ON once styled as context.
-4. **Then** Phase 2.3 protected/land use → Phase 3 infrastructure → Phase 4 signals → remaining Phase 5 polish.
+3. **Then** Phase 2.3 protected/land use → Phase 3 infrastructure → Phase 4 signals → remaining Phase 5 polish.
 
-Optional follow-ups on bedrock: SE Labrador detailed polygons (MapServer/16), 1:1M
-faults/contacts (MapServer/1). Data refreshes: monthly GHA `refresh-data.yml`
+Optional follow-ups on geology / imagery: detailed surficial (MapServer/11),
+1:1M faults/contacts, SE Labrador bedrock, LiDAR / aerial / EO — see
+**§5 Optional later**. Data refreshes: monthly GHA `refresh-data.yml`
 skips until each dataset’s `nextDue` (3 / 6 / 12 mo); or
 `FORCE_REFRESH=1 npm run refresh:data` / Actions **workflow_dispatch**.
 
@@ -136,7 +139,8 @@ Canada-wide but cover Labrador; filter to Labrador where it helps focus.
 main.js                     app entry
 js/app.js                   orchestrator (wires modules, popups, legend, filters)
 js/config/mapConfig.js      map init constants (center, zoom, basemaps)
-js/config/layerConfig.js    layer + WMS definitions (dataUrl/imageUrl, cache, style)
+js/config/layerConfig.js    layer + WMS definitions (dataUrl/imageUrl, cache, style,
+                            group + optional subgroup for endowment categories)
 js/config/modsFilters.js    MODS status buckets + combined filter helpers (F4/F5)
 js/modules/MapBase.js       MapLibre init, controls, HUD, basemap switching
 js/modules/LayerManager.js  resolveLayerData (cache→bake→live), WMS imageUrl/live
@@ -147,7 +151,7 @@ js/modules/OccurrenceBrowser.js  KPI + search + status chips + list/detail
 js/modules/SurfaceInterpolation.js  per-mineral occurrence-density surfaces
 js/modules/wmsReprojection.js  equirectangular→Mercator (live WMS fallback)
 js/modules/facilityIcons.js    value-chain SVG icons (lazy via styleimagemissing)
-scripts/fetch-*.js          bake scripts (bedrock, mods, facilities, wms)
+scripts/fetch-*.js          bake scripts (bedrock, surficial, mods, facilities, wms)
 scripts/refresh-data.js     registry orchestrator (nextDue skip + cache bump)
 scripts/data-refresh-registry.json
 scripts/lib/bakeMeta.js, png.js
@@ -189,20 +193,26 @@ css/style.css               light sidebar + map overlay + mobile drawer
   checklist; occurrence-density surfaces **off by default** (opt-in via
   legend toggle — skips Turf on cold start). Occurrence browser ANDs status
   + search. Default ON. Refresh **3 mo**.
-- ✅ **Geoscience WMS** (NRCan): Lithium, REE, Graphite prospectivity; Bedrock
-  **(national)**; Surficial — baked `wms-*-nll.png` (Mercator-corrected NL&L
-  bbox). Default OFF, lazy. Refresh **12 mo**.
+- ✅ **Geoscience WMS** (NRCan): six national prospectivity models (Lithium,
+  Rare Earth Elements, Graphite, Magmatic nickel, CD zinc, MVT zinc) + Bedrock
+  **(national)** + Surficial **(national)** — baked `wms-*-nll.png`
+  (Mercator-corrected NL&L bbox). Default OFF, lazy. Refresh **12 mo**.
 - ✅ **Bedrock Geology (NL 1:1M)** — baked `geoatlas-bedrock-1m.geojson`
   (~3,510 polys, ~18 MB) + IndexedDB + lazy; RGB fills; ArcGIS legend;
   unit popups. Default OFF. Refresh **6 mo**.
+- ✅ **Surficial Geology (NL regional)** — baked
+  `geoatlas-surficial-regional.geojson` (~15,016 polys, ~9.5 MB) + IndexedDB
+  + lazy; genetic classes (`GENETIC1MA` / `GENETIC250`); RGB fills; ArcGIS
+  legend; unit popups. Default OFF. Refresh **6 mo**.
 
-**UX shell (2026-07-11)**
+**UX shell (2026-07-11 / 2026-07-12)**
 - ✅ Light left sidebar (layers + basemap + occurrence search/status/list)
+- ✅ Geological Endowment subgroups: Bedrock / Surficial / Prospectivity
 - ✅ Bottom KPI strip (filtered / scoped counts + status bits)
 - ✅ Legend cards on the map (top-left desktop; collapsible on phone)
 - ✅ Mobile: **Layers** drawer + **Legend** toggle (map fills viewport)
 - ✅ Deployed to GitHub Pages
-- ✅ Data refresh: registry (8 entries) + monthly GHA → PR (operator: §6.2)
+- ✅ Data refresh: registry (12 entries) + monthly GHA → PR (operator: §6.2)
 
 **Removed (2026-07-06) — were hand-authored demo/synthetic data:**
 - ❌ Mineral Deposits (demo) → replaced by MODS (✅ 2026-07-06, see Phase 1.1)
@@ -234,8 +244,9 @@ Occurrences/MODS), `Mineral_Lands` (claims/tenure/quarries), `Land_Use`,
 | Layer | Source | Endpoint / service | Status |
 |---|---|---|---|
 | Bedrock geology (provincial, 1:1M) | NL GeoAtlas | `GeoAtlas/Bedrock_Geology_All/MapServer/23` → baked `public/data/geoatlas-bedrock-1m.geojson` | ✅ in app (lazy; IndexedDB; refresh every 6 mo) |
-| Surficial geology (provincial) | NL GeoAtlas | `GeoAtlas/Surficial_Geology_All` | 🟢 verified |
-| Li / REE / graphite prospectivity | NRCan WMS | baked `public/data/wms-{lithium,ree,graphite}-nll.png` | ✅ in app (12-mo refresh) |
+| Surficial geology (provincial, regional) | NL GeoAtlas | `GeoAtlas/Surficial_Geology_All/MapServer/12` → baked `public/data/geoatlas-surficial-regional.geojson` | ✅ in app (lazy; IndexedDB; refresh every 6 mo) |
+| Surficial geology (provincial, detailed) | NL GeoAtlas | `GeoAtlas/Surficial_Geology_All/MapServer/11` (~97k polys; incomplete N Labrador) | ⬜ optional later |
+| Li / REE / graphite / magmatic Ni / CD+MVT zinc prospectivity | NRCan WMS | baked `public/data/wms-{lithium,ree,graphite,nickel,zincCd,zincMvt}-nll.png` | ✅ in app (12-mo refresh) |
 | Bedrock / surficial (national WMS) | NRCan WMS | baked `public/data/wms-{bedrock,surficial}-nll.png` | ✅ in app (context; 12-mo refresh) |
 
 ### 2. Has anyone found something here? — occurrences & activity
@@ -307,6 +318,7 @@ Occurrences/MODS), `Mineral_Lands` (claims/tenure/quarries), `Land_Use`,
       (`fetch:facilities`); live 4-sublayer merge = fallback
 - [x] 5 NRCan geoscience WMS layers (Li / REE / graphite / bedrock / surficial) —
       baked Mercator PNGs (`fetch:wms`); live GetMap = fallback
+      *(extended 2026-07-12 with magmatic Ni + CD/MVT zinc → 8 WMS bakes)*
 - [x] Popup + hover interactivity framework
 - [x] Remove demo data (deposits / infrastructure / tenures) + document TODO
 - [x] Reframe sidebar around the mineral value chain
@@ -315,7 +327,7 @@ Occurrences/MODS), `Mineral_Lands` (claims/tenure/quarries), `Land_Use`,
 - [x] Mobile map-first chrome — `MobileChrome.js` Layers drawer + Legend toggle
       (2026-07-11)
 
-### Phase 1 — Endowment & occurrences  [~]
+### Phase 1 — Endowment & occurrences  ✅ COMPLETE
 **1.0 — Layer-grouping refactor (do first; unblocks a growing sidebar)** ✅ COMPLETE
 - [x] Add `group` metadata to each `LAYER_CONFIG` / `WMS_CONFIG` entry
       (groups: Endowment, Occurrences, Rights, Infrastructure, Signals, Base)
@@ -595,18 +607,71 @@ A’s live MapLibre explorer **without** importing B datasets or group taxonomy.
         change (no auto-merge to `master`)
       - Meta fields: `cadenceMonths`, `nextDue`, `contentHash`
 
-**1.3 — Provincial surficial geology (GeoAtlas)**  ← **NEXT**
-- [ ] Repeat 1.2 steps for `GeoAtlas/Surficial_Geology_All`
-- [ ] Follow Add-a-Layer Playbook **including steps 8–9** (bake under
-      `public/data/`, registry entry, cadence, GHA already monthly/`nextDue`)
+**1.3 — Provincial surficial geology (GeoAtlas)** ✅ COMPLETE (2026-07-12)
+- [x] Inspect `GeoAtlas/Surficial_Geology_All` — chose layer **12**
+      "Regional Surficial Geology" (full NL&L ~15,016 polys; genetic
+      classes; SOURCE = GSNL + GSC). Layer **11** Detailed deferred
+      (partial N Labrador coverage to ~56.7°N; ~97k polys) — see Optional later.
+- [x] Render path: **vector fill** (lazy) — attribute popups; national NRCan
+      surficial WMS kept as context (relabeled **Surficial Geology (national)**)
+- [x] Config (`geoatlasSurficial`): lazy, RGB fills, Endowment group, draw
+      above bedrock / under MODS
+- [x] Legend via GeoAtlas ArcGIS legend JSON (layer 12) + enlarge panel
+- [x] Toggle + lazy load + popup (GENETIC1MA / GENETIC250 / SOURCE / REFERENCE)
+- [x] Bake + IndexedDB: `public/data/geoatlas-surficial-regional.geojson`
+      (~9.5 MB); `npm run fetch:surficial`; live Esri JSON fallback
+- [x] Registry entry cadence **6 mo**; monthly GHA already covers via `nextDue`
+- [x] Catalog + checklist updated; Phase 1 exit criteria met
+
+**1.3b — Remaining NRCan prospectivity + endowment subgroups** ✅ COMPLETE (2026-07-12)
+- [x] Magmatic nickel, CD zinc, MVT zinc — baked WMS PNGs + registry (12-mo)
+- [x] REE sidebar/legend renamed to **Rare Earth Elements**
+- [x] Endowment sidebar subgroups: Bedrock / Surficial / Prospectivity
+- [x] `fetch:wms` optional layer-key args for subset bakes
 
 **Phase 1 exit criteria:** MODS + provincial bedrock/surficial live; sidebar grouped;
-demo-deposit gap fully replaced by real endowment + occurrence data.
-*(MODS + grouping + occurrence UX + provincial bedrock + bake/refresh pipeline
-done; 1.3 remains for exit.)*
+demo-deposit gap fully replaced by real endowment + occurrence data. ✅
+*(Also: full published NRCan national prospectivity set of 6 models.)*
+
+### Optional later — higher-res geology & remote sensing  [ ]
+
+> Not required for Phase 1 exit. Revisit after Phase 2–3 core layers if the
+> product needs district-scale overburden detail or imagery basemaps.
+
+**Detailed / ancillary GeoAtlas surficial**
+- [ ] **Detailed Surficial Geology** (`Surficial_Geology_All/MapServer/11`) —
+      ~97k NTS polygons, finer LEGEND/DESCRIPTN/Geofile; **incomplete northern
+      Labrador** (extent ~to 56.7°N). Candidate zoom-in layer where sheets exist;
+      heavy bake — consider Labrador-clipped subset or tile strategy.
+- [ ] Aggregate Potential / Samples / Eskers (MapServer/8–10) — infrastructure /
+      borrow-source context
+- [ ] Striations, landforms, Carbon-14 age dates (MapServer/0–6) — glacial history
+- [ ] SE Labrador bedrock detail (`Bedrock_Geology_All/MapServer/16`); 1:1M
+      faults/contacts (MapServer/1)
+
+**LiDAR**
+- [ ] Provincial / NRCan bare-earth DEM or hillshade from LiDAR where available
+      for Labrador (camp/road siting, glacial landforms, drainage)
+- [ ] Canopy / first-return derivatives only if they add exploration or access value
+- [ ] Prefer static tiles or Contour/DEM already in GeoAtlas
+      (`TopographyGreyBase_DEM`) before wiring raw point clouds
+
+**Aerial flyover / orthophoto**
+- [ ] High-res aerial orthomosaics (provincial or federal flight programs) as an
+      optional imagery basemap or opacity overlay — useful for camp/access context
+- [ ] Confirm license, coverage gaps over Labrador, and whether XYZ/WMTS exists
+      (avoid shipping giant GeoTIFFs in-repo)
+
+**Earth observation (satellite)**
+- [ ] Optical: Sentinel-2 / Landsat true-color or false-color composites
+      (seasonal snow-off windows) as basemap alternatives or swipe overlays
+- [ ] Optional derived products later: snow cover, vegetation disturbance,
+      iron-oxide / clay indices — only with clear provenance labels
+- [ ] SAR (e.g. Sentinel-1) for all-weather structure/lineament context — Phase 4+
+      research track, not a default endowment layer
 
 ### Phase 2 — Rights & constraints (turns viewer into a siting tool)  [ ]
-**2.1 — Mineral claims & tenure**
+**2.1 — Mineral claims & tenure** ← **NEXT**
 - [ ] Inventory `GeoAtlas/Mineral_Lands` sublayers (map-staked claims, tenure, historical, notices gazetted, quarries)
 - [ ] Add active claims (polygons) — style by status; group=Rights
 - [ ] Popup: licence #, holder, issue/expiry, status, GEOFILE assessment link
@@ -746,13 +811,14 @@ Force all: Actions `workflow_dispatch` with force=true, or
 | Dataset | Load path | Cadence | nextDue (from meta) |
 |---|---|---|---|
 | **Bedrock Geology (NL 1:1M)** | ✅ Baked GeoJSON + IndexedDB + lazy | **6 mo** | see `geoatlas-bedrock-1m.meta.json` |
+| **Surficial Geology (NL regional)** | ✅ Baked GeoJSON + IndexedDB + lazy | **6 mo** | see `geoatlas-surficial-regional.meta.json` |
 | **Mineral Occurrences (MODS)** | ✅ Baked GeoJSON + IndexedDB (`fetch:mods`) | **3 mo** | see `mods-labrador.meta.json` |
 | **Critical Mineral Facilities** | ✅ Baked NL&L GeoJSON + IndexedDB (`fetch:facilities`) | **3 mo** | see `critical-minerals-nl.meta.json` |
-| **Li / REE / Graphite / national bedrock / surficial** | ✅ Baked Mercator PNG (`fetch:wms`) | **12 mo** | see `wms-*-nll.meta.json` |
+| **Li / REE / Graphite / Ni / CD+MVT Zn / national bedrock / surficial** | ✅ Baked Mercator PNG (`fetch:wms`) | **12 mo** | see `wms-*-nll.meta.json` |
 | **MODS density surface** | Client Turf from loaded MODS | n/a (derived) | — |
 
-Registry: `scripts/data-refresh-registry.json` (8 entries). Manual bakes:
-`npm run fetch:bedrock` · `fetch:mods` · `fetch:facilities` · `fetch:wms`.
+Registry: `scripts/data-refresh-registry.json` (12 entries). Manual bakes:
+`npm run fetch:bedrock` · `fetch:surficial` · `fetch:mods` · `fetch:facilities` · `fetch:wms`.
 
 **When adding a layer:** playbook steps 8–9 are mandatory (bake + registry +
 cadence). Prefer the same monthly GHA + `nextDue` skip over extra crons.
@@ -775,8 +841,8 @@ branch** with Actions enabled:
 | Cadence | Datasets | Typical next due after a bake |
 |---|---|---|
 | 3 months | MODS, Critical Mineral Facilities | +3 months from `generatedAt` |
-| 6 months | Bedrock Geology (NL 1:1M) | +6 months |
-| 12 months | Five NRCan WMS PNG bakes | +12 months |
+| 6 months | Bedrock Geology (NL 1:1M), Surficial Geology (NL regional) | +6 months |
+| 12 months | Eight NRCan WMS PNG bakes (6 prospectivity + national bedrock/surficial) | +12 months |
 
 **Optional / one-off**
 - Force every dataset now: Actions → **Refresh data sources** → Run workflow →
@@ -843,6 +909,22 @@ branch** with Actions enabled:
 
 ## 10. Changelog
 
+- **2026-07-12** — Session close-out: BUILD_PLAN reconciled for Phase 1
+  complete (surficial + all 6 NRCan prospectivity models + endowment
+  subgroups). Registry **12** entries. **Next:** Phase 2.1 mineral claims.
+- **2026-07-12** — Added remaining NRCan national prospectivity WMS bakes:
+  magmatic nickel, CD zinc, MVT zinc (`wms-{nickel,zincCd,zincMvt}-nll.png`,
+  12-mo registry). Renamed REE sidebar/legend labels to **Rare Earth Elements**.
+  `fetch:wms` accepts optional layer-key args to bake a subset.
+- **2026-07-12** — Phase 1.3 complete: provincial **Surficial Geology (NL
+  regional)** from GeoAtlas `Surficial_Geology_All/MapServer/12` (~15,016
+  polys). Bake-first `geoatlas-surficial-regional.geojson` (~9.5 MB) +
+  IndexedDB + lazy toggle; RGB fills; ArcGIS legend; genetic-unit popups;
+  registry cadence **6 mo** (`fetch:surficial`). National NRCan surficial
+  WMS relabeled **Surficial Geology (national)**. Phase 1 exit criteria met.
+  Added **§5 Optional later** for detailed surficial (/11), LiDAR, aerial
+  flyover/orthophoto, and earth-observation layers. **Next:** Phase 2.1
+  mineral claims & tenure.
 - **2026-07-11 (EOD)** — Build plan reconciled to end-of-day reality: bake-first
   data path + module layout (`layerCache`, `MobileChrome`, fetch/refresh
   scripts); §3 snapshot updated; Phase 0/5 mobile + refresh ticked; §7

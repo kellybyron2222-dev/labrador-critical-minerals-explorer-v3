@@ -15,6 +15,21 @@
     "cacheKey": "geoatlas-bedrock-1m"
   },
   {
+    "id": "geoatlas-surficial-regional",
+    "label": "Surficial Geology (NL regional)",
+    "cadenceMonths": 6,
+    "fetchScript": "fetch:surficial",
+    "kind": "geojson",
+    "outputs": [
+      "public/data/geoatlas-surficial-regional.geojson",
+      "public/data/geoatlas-surficial-regional.meta.json"
+    ],
+    "metaPath": "public/data/geoatlas-surficial-regional.meta.json",
+    "assetPath": "public/data/geoatlas-surficial-regional.geojson",
+    "cacheVersionPath": "js/config/layerConfig.js",
+    "cacheKey": "geoatlas-surficial-regional"
+  },
+  {
     "id": "mods-labrador",
     "label": "Mineral Occurrences (MODS)",
     "cadenceMonths": 3,
@@ -62,7 +77,7 @@
   },
   {
     "id": "wms-ree-nll",
-    "label": "REE Prospectivity (WMS bake)",
+    "label": "Rare Earth Elements Prospectivity (WMS bake)",
     "cadenceMonths": 12,
     "fetchScript": "fetch:wms",
     "fetchOncePerScript": true,
@@ -91,6 +106,54 @@
     "assetPath": "public/data/wms-graphite-nll.png",
     "cacheVersionPath": "js/config/layerConfig.js",
     "cacheKey": "wms-graphite-nll"
+  },
+  {
+    "id": "wms-nickel-nll",
+    "label": "Magmatic Nickel Prospectivity (WMS bake)",
+    "cadenceMonths": 12,
+    "fetchScript": "fetch:wms",
+    "fetchOncePerScript": true,
+    "kind": "image",
+    "outputs": [
+      "public/data/wms-nickel-nll.png",
+      "public/data/wms-nickel-nll.meta.json"
+    ],
+    "metaPath": "public/data/wms-nickel-nll.meta.json",
+    "assetPath": "public/data/wms-nickel-nll.png",
+    "cacheVersionPath": "js/config/layerConfig.js",
+    "cacheKey": "wms-nickel-nll"
+  },
+  {
+    "id": "wms-zincCd-nll",
+    "label": "CD Zinc Prospectivity (WMS bake)",
+    "cadenceMonths": 12,
+    "fetchScript": "fetch:wms",
+    "fetchOncePerScript": true,
+    "kind": "image",
+    "outputs": [
+      "public/data/wms-zincCd-nll.png",
+      "public/data/wms-zincCd-nll.meta.json"
+    ],
+    "metaPath": "public/data/wms-zincCd-nll.meta.json",
+    "assetPath": "public/data/wms-zincCd-nll.png",
+    "cacheVersionPath": "js/config/layerConfig.js",
+    "cacheKey": "wms-zincCd-nll"
+  },
+  {
+    "id": "wms-zincMvt-nll",
+    "label": "MVT Zinc Prospectivity (WMS bake)",
+    "cadenceMonths": 12,
+    "fetchScript": "fetch:wms",
+    "fetchOncePerScript": true,
+    "kind": "image",
+    "outputs": [
+      "public/data/wms-zincMvt-nll.png",
+      "public/data/wms-zincMvt-nll.meta.json"
+    ],
+    "metaPath": "public/data/wms-zincMvt-nll.meta.json",
+    "assetPath": "public/data/wms-zincMvt-nll.png",
+    "cacheVersionPath": "js/config/layerConfig.js",
+    "cacheKey": "wms-zincMvt-nll"
   },
   {
     "id": "wms-bedrock-nll",

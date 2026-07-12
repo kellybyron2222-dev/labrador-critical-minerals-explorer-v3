@@ -338,6 +338,21 @@ export default class LayerManager {
             ? `rgb(${Math.round(r)},${Math.round(g)},${Math.round(b)})`
             : props.fillColor || '#94a3b8';
       });
+    } else if (config.enrichment === 'surficialRgb') {
+      data.features.forEach((feature) => {
+        const props = feature.properties;
+        if (props.fillColor && props.name) return;
+        const genetic1m = props.GENETIC1MA?.trim();
+        const genetic250 = props.GENETIC250?.trim();
+        props.name = genetic1m || genetic250 || props.name || 'Unnamed unit';
+        const r = Number(props.RED);
+        const g = Number(props.GREEN);
+        const b = Number(props.BLUE);
+        props.fillColor =
+          Number.isFinite(r) && Number.isFinite(g) && Number.isFinite(b)
+            ? `rgb(${Math.round(r)},${Math.round(g)},${Math.round(b)})`
+            : props.fillColor || '#94a3b8';
+      });
     }
 
     this.loadedData[name] = data;

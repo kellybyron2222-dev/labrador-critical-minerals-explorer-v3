@@ -1,0 +1,22 @@
+{
+  "version": "2026-07-12",
+  "contentHash": "8ab0c0672ba37f81309e27386aae07a6eff6765e5eb9bb3292ec86ead49bcdd4",
+  "cadenceMonths": 12,
+  "generatedAt": "2026-07-12T14:01:09.445Z",
+  "nextDue": "2027-07-12",
+  "refresh": "GitHub Actions refresh-data.yml (monthly; skips until nextDue) or npm run refresh:data",
+  "featureCount": null,
+  "width": 900,
+  "height": 1438,
+  "channels": 4,
+  "bounds": [
+    -68,
+    46,
+    -52,
+    61
+  ],
+  "source": "https://maps-cartes.services.geo.ca/server_serveur/services/NRCan/2023_Prospectivity_Magmatic_Nickel_Preferred_EPSG3978_en/MapServer/WMSServer",
+  "service": "2023_Prospectivity_Magmatic_Nickel_Preferred_EPSG3978_en",
+  "layers": "0",
+  "imageWidthRequest": 900
+}

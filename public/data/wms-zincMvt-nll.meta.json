@@ -1,0 +1,22 @@
+{
+  "version": "2026-07-12",
+  "contentHash": "312348af4bc00ea88cb1e2bd679ca7915390ff5aeaa8bbbdaf4e3114344c87cc",
+  "cadenceMonths": 12,
+  "generatedAt": "2026-07-12T14:01:12.952Z",
+  "nextDue": "2027-07-12",
+  "refresh": "GitHub Actions refresh-data.yml (monthly; skips until nextDue) or npm run refresh:data",
+  "featureCount": null,
+  "width": 900,
+  "height": 1438,
+  "channels": 4,
+  "bounds": [
+    -68,
+    46,
+    -52,
+    61
+  ],
+  "source": "https://maps-cartes.services.geo.ca/server_serveur/services/NRCan/2023_Prospectivity_MVT_Zinc_Preferred_EPSG3978_en/MapServer/WMSServer",
+  "service": "2023_Prospectivity_MVT_Zinc_Preferred_EPSG3978_en",
+  "layers": "0",
+  "imageWidthRequest": 900
+}

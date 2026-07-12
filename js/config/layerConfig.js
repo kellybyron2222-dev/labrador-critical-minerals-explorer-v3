@@ -338,8 +338,14 @@ export const LAYER_GROUP_ORDER = [
 export const LAYER_GROUPS = {
   endowment: {
     title: 'Geological Endowment',
-    hint: 'Prospectivity and geology layers from NRCan (NL&L view)',
-    defaultExpanded: true
+    hint: 'Mapped geology and commodity prospectivity (provincial + national)',
+    defaultExpanded: true,
+    // Nested category headers inside this group (sidebar only).
+    subgroups: [
+      { id: 'bedrock', title: 'Bedrock' },
+      { id: 'surficial', title: 'Surficial' },
+      { id: 'prospectivity', title: 'Prospectivity' }
+    ]
   },
   occurrences: {
     title: 'Occurrences & Activity',
@@ -388,7 +394,8 @@ export const LAYER_GROUPS = {
 export const LAYER_CONFIG = {
   geoatlasBedrock: {
     group: 'endowment',
-    sidebarLabel: 'Bedrock Geology (NL 1:1M)',
+    subgroup: 'bedrock',
+    sidebarLabel: 'NL 1:1M (provincial)',
     indicatorClass: 'geoatlasBedrock',
     source: 'geoatlas-bedrock-source',
     layer: 'geoatlas-bedrock-fill',
@@ -402,8 +409,10 @@ export const LAYER_CONFIG = {
     cacheKey: 'geoatlas-bedrock-1m',
     // Bump when regenerating public/data/geoatlas-bedrock-1m.geojson
     cacheVersion: '2026-07-11',
-    // Insert below MODS / surfaces / facilities so endowment stays under points.
+    // Under surficial (when loaded) and under MODS / facilities.
     beforeLayerIds: [
+      'geoatlas-surficial-fill',
+      'geoatlas-surficial-outline',
       'mods-surface-fill',
       'mods-surface-outline',
       'mods-layer',
@@ -443,6 +452,57 @@ export const LAYER_CONFIG = {
     // Same ArcGIS legend JSON pattern as NRCan WMS — ~153 classification rows.
     legendJsonUrl: `${GEOATLAS_REST_BASE}/Bedrock_Geology_All/MapServer/legend?f=json`,
     legendLayerId: 23
+  },
+  geoatlasSurficial: {
+    group: 'endowment',
+    subgroup: 'surficial',
+    sidebarLabel: 'NL regional (provincial)',
+    indicatorClass: 'geoatlasSurficial',
+    source: 'geoatlas-surficial-source',
+    layer: 'geoatlas-surficial-fill',
+    outline: 'geoatlas-surficial-outline',
+    // ~15k regional polygons — lazy + bake-first (npm run fetch:surficial).
+    lazy: true,
+    visible: false,
+    enrichment: 'surficialRgb',
+    dataUrl: './data/geoatlas-surficial-regional.geojson',
+    cacheKey: 'geoatlas-surficial-regional',
+    cacheVersion: '2026-07-12',
+    // Surface cover draws above bedrock; still under MODS / facilities.
+    beforeLayerIds: [
+      'mods-surface-fill',
+      'mods-surface-outline',
+      'mods-layer',
+      'critical-minerals-layer'
+    ],
+    paginatedQuery: {
+      url: `${GEOATLAS_REST_BASE}/Surficial_Geology_All/MapServer/12/query`,
+      where: '1=1',
+      outFields: 'GENETIC1MA,GENETIC250,SOURCE,REFERENCE,RED,GREEN,BLUE',
+      outSR: 4326,
+      format: 'esrijson',
+      maxAllowableOffset: 0.002,
+      pageSize: 200,
+      concurrency: 4
+    },
+    paint: {
+      fill: {
+        'fill-color': ['get', 'fillColor'],
+        'fill-opacity': 0.5,
+        'fill-outline-color': 'rgba(30, 41, 59, 0.15)'
+      },
+      line: {
+        'line-color': 'rgba(30, 41, 59, 0.35)',
+        'line-width': 0.4,
+        'line-opacity': 0.7
+      }
+    },
+    legendTitle: 'Surficial Geology (NL regional)',
+    legendShape: 'icon',
+    legendNote:
+      'Provincial regional surficial units (NL GeoAtlas). Genetic classes; colors from source RGB. Complements national GSC surficial WMS.',
+    legendJsonUrl: `${GEOATLAS_REST_BASE}/Surficial_Geology_All/MapServer/legend?f=json`,
+    legendLayerId: 12
   },
   criticalMinerals: {
     group: 'occurrences',
@@ -617,7 +677,9 @@ export const NL_LABRADOR_BOUNDS = [-68, 46, -52, 61];
 export const WMS_CONFIG = {
   lithium: {
     group: 'endowment',
+    subgroup: 'prospectivity',
     indicatorClass: 'wms-lithium',
+    sidebarLabel: 'Lithium',
     label: 'Lithium Prospectivity',
     service: 'pegmatite_lithium_en',
     layers: '0',
@@ -634,8 +696,10 @@ export const WMS_CONFIG = {
   },
   ree: {
     group: 'endowment',
+    subgroup: 'prospectivity',
     indicatorClass: 'wms-ree',
-    label: 'REE Prospectivity',
+    sidebarLabel: 'Rare Earth Elements',
+    label: 'Rare Earth Elements Prospectivity',
     service: 'carbonatite_ree_en',
     layers: '0',
     bounds: NL_LABRADOR_BOUNDS,
@@ -650,7 +714,9 @@ export const WMS_CONFIG = {
   },
   graphite: {
     group: 'endowment',
+    subgroup: 'prospectivity',
     indicatorClass: 'wms-graphite',
+    sidebarLabel: 'Graphite',
     label: 'Graphite Prospectivity',
     service: 'graphite_prospectivity_en',
     layers: '0',
@@ -664,9 +730,65 @@ export const WMS_CONFIG = {
     legendJsonUrl: arcgisLegendJsonUrl('graphite_prospectivity_en'),
     legendLayerId: 0
   },
+  nickel: {
+    group: 'endowment',
+    subgroup: 'prospectivity',
+    indicatorClass: 'wms-nickel',
+    sidebarLabel: 'Magmatic nickel',
+    label: 'Magmatic Nickel Prospectivity',
+    service: '2023_Prospectivity_Magmatic_Nickel_Preferred_EPSG3978_en',
+    layers: '0',
+    bounds: NL_LABRADOR_BOUNDS,
+    opacity: 0.65,
+    visible: false,
+    imageUrl: './data/wms-nickel-nll.png',
+    cacheKey: 'wms-nickel-nll',
+    cacheVersion: '2026-07-12',
+    legendUrl: wmsLegendUrl('2023_Prospectivity_Magmatic_Nickel_Preferred_EPSG3978_en', '0'),
+    legendJsonUrl: arcgisLegendJsonUrl('2023_Prospectivity_Magmatic_Nickel_Preferred_EPSG3978_en'),
+    legendLayerId: 0
+  },
+  zincCd: {
+    group: 'endowment',
+    subgroup: 'prospectivity',
+    indicatorClass: 'wms-zincCd',
+    sidebarLabel: 'Zinc (CD)',
+    label: 'CD Zinc Prospectivity',
+    service: '2023_Prospectivity_CD_Zinc_Preferred_EPSG3978_en',
+    layers: '0',
+    bounds: NL_LABRADOR_BOUNDS,
+    opacity: 0.65,
+    visible: false,
+    imageUrl: './data/wms-zincCd-nll.png',
+    cacheKey: 'wms-zincCd-nll',
+    cacheVersion: '2026-07-12',
+    legendUrl: wmsLegendUrl('2023_Prospectivity_CD_Zinc_Preferred_EPSG3978_en', '0'),
+    legendJsonUrl: arcgisLegendJsonUrl('2023_Prospectivity_CD_Zinc_Preferred_EPSG3978_en'),
+    legendLayerId: 0
+  },
+  zincMvt: {
+    group: 'endowment',
+    subgroup: 'prospectivity',
+    indicatorClass: 'wms-zincMvt',
+    sidebarLabel: 'Zinc (MVT)',
+    label: 'MVT Zinc Prospectivity',
+    service: '2023_Prospectivity_MVT_Zinc_Preferred_EPSG3978_en',
+    layers: '0',
+    bounds: NL_LABRADOR_BOUNDS,
+    opacity: 0.65,
+    visible: false,
+    imageUrl: './data/wms-zincMvt-nll.png',
+    cacheKey: 'wms-zincMvt-nll',
+    cacheVersion: '2026-07-12',
+    legendUrl: wmsLegendUrl('2023_Prospectivity_MVT_Zinc_Preferred_EPSG3978_en', '0'),
+    legendJsonUrl: arcgisLegendJsonUrl('2023_Prospectivity_MVT_Zinc_Preferred_EPSG3978_en'),
+    legendLayerId: 0
+  },
   bedrock: {
     group: 'endowment',
+    subgroup: 'bedrock',
     indicatorClass: 'wms-bedrock',
+    sidebarLabel: 'National (GSC)',
     label: 'Bedrock Geology (national)',
     service: 'gsc_bedrock_geology_en',
     layers: '0',
@@ -684,8 +806,10 @@ export const WMS_CONFIG = {
   },
   surficial: {
     group: 'endowment',
+    subgroup: 'surficial',
     indicatorClass: 'wms-surficial',
-    label: 'Surficial Geology',
+    sidebarLabel: 'National (GSC)',
+    label: 'Surficial Geology (national)',
     service: 'gsc_surficial_geology_en',
     layers: '1',
     bounds: NL_LABRADOR_BOUNDS,

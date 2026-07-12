@@ -25,6 +25,21 @@ const WMS_LAYERS = [
   { key: 'lithium', service: 'pegmatite_lithium_en', layers: '0' },
   { key: 'ree', service: 'carbonatite_ree_en', layers: '0' },
   { key: 'graphite', service: 'graphite_prospectivity_en', layers: '0' },
+  {
+    key: 'nickel',
+    service: '2023_Prospectivity_Magmatic_Nickel_Preferred_EPSG3978_en',
+    layers: '0'
+  },
+  {
+    key: 'zincCd',
+    service: '2023_Prospectivity_CD_Zinc_Preferred_EPSG3978_en',
+    layers: '0'
+  },
+  {
+    key: 'zincMvt',
+    service: '2023_Prospectivity_MVT_Zinc_Preferred_EPSG3978_en',
+    layers: '0'
+  },
   { key: 'bedrock', service: 'gsc_bedrock_geology_en', layers: '0' },
   { key: 'surficial', service: 'gsc_surficial_geology_en', layers: '1' }
 ];
@@ -137,8 +152,17 @@ async function bakeLayer({ key, service, layers }) {
 
 async function main() {
   const started = Date.now();
+  const only = process.argv.slice(2).filter((a) => !a.startsWith('-'));
+  const layers = only.length
+    ? WMS_LAYERS.filter((l) => only.includes(l.key))
+    : WMS_LAYERS;
+  if (!layers.length) {
+    throw new Error(
+      `No matching WMS layers for: ${only.join(', ') || '(none)'}. Known: ${WMS_LAYERS.map((l) => l.key).join(', ')}`
+    );
+  }
   const results = [];
-  for (const layer of WMS_LAYERS) {
+  for (const layer of layers) {
     results.push(await bakeLayer(layer));
   }
   console.log(

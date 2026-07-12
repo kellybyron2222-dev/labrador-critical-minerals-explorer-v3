@@ -7,7 +7,7 @@
  *   2. DBSCAN into local spatial clusters
  *   3. Build a non-normalized inverse-distance density grid (peaks at
  *      clusters, falls off beyond MAX_INFLUENCE_KM) weighted by STATUS
- *   4. Slice into isobands + soft edges with turf.polygonSmooth
+ *   4. Slice into isobands + soft edges with polygonSmooth
  *
  * IMPORTANT — this is NOT a concentration/grade/prospectivity surface. MODS
  * has no assay/tonnage fields (see BUILD_PLAN.md "Quantitative data" note);
@@ -17,7 +17,13 @@
  * `GeoAtlas/Geochemistry_All` (lake/till sediment ppm data) - future work.
  */
 
-import * as turf from '@turf/turf';
+import { point, featureCollection } from '@turf/helpers';
+import bbox from '@turf/bbox';
+import distance from '@turf/distance';
+import clustersDbscan from '@turf/clusters-dbscan';
+import pointGrid from '@turf/point-grid';
+import isobands from '@turf/isobands';
+import polygonSmooth from '@turf/polygon-smooth';
 
 // Economic-maturity weight for IDW input values - a Producer cluster should
 // pull the surface "up" more than a cluster of unconfirmed Indications, even
@@ -75,23 +81,23 @@ function buildWeightedPoints(features) {
   const points = features.map((feature) => {
     const [lon, lat] = feature.geometry.coordinates;
     const weight = STATUS_WEIGHTS[feature.properties.STATUS] ?? DEFAULT_STATUS_WEIGHT;
-    return turf.point([lon, lat], { val: weight });
+    return point([lon, lat], { val: weight });
   });
-  return turf.featureCollection(points);
+  return featureCollection(points);
 }
 
 /** Padded bounding box around a point set, in [west, south, east, north]. */
 function paddedBbox(pointsFC) {
-  const [west, south, east, north] = turf.bbox(pointsFC);
+  const [west, south, east, north] = bbox(pointsFC);
   const padDeg = BBOX_PADDING_KM / 111; // ~111km per degree latitude, close enough for padding
   return [west - padDeg, south - padDeg, east + padDeg, north + padDeg];
 }
 
 /** Picks a cellSize (km) so the grid has roughly TARGET_GRID_CELLS cells along its longer side. */
-function chooseCellSize(bbox) {
-  const [west, south, east, north] = bbox;
-  const widthKm = turf.distance([west, south], [east, south], { units: 'kilometers' });
-  const heightKm = turf.distance([west, south], [west, north], { units: 'kilometers' });
+function chooseCellSize(bboxCoords) {
+  const [west, south, east, north] = bboxCoords;
+  const widthKm = distance([west, south], [east, south], { units: 'kilometers' });
+  const heightKm = distance([west, south], [west, north], { units: 'kilometers' });
   const longerSide = Math.max(widthKm, heightKm);
   const raw = longerSide / TARGET_GRID_CELLS;
   return Math.min(MAX_CELL_SIZE_KM, Math.max(MIN_CELL_SIZE_KM, raw));
@@ -138,7 +144,7 @@ function clusterOccurrencePoints(pointsFC) {
 
   let clustered;
   try {
-    clustered = turf.clustersDbscan(pointsFC, CLUSTER_MAX_DISTANCE_KM, {
+    clustered = clustersDbscan(pointsFC, CLUSTER_MAX_DISTANCE_KM, {
       minPoints: CLUSTER_MIN_POINTS,
       units: 'kilometers'
     });
@@ -169,16 +175,16 @@ function clusterOccurrencePoints(pointsFC) {
  * still produce peaks at clusters and fall to zero away from points, which
  * is what "occurrence density" needs.
  */
-function buildDensityGrid(pointsFC, bbox, cellSize) {
-  const grid = turf.pointGrid(bbox, cellSize, { units: 'kilometers' });
+function buildDensityGrid(pointsFC, bboxCoords, cellSize) {
+  const grid = pointGrid(bboxCoords, cellSize, { units: 'kilometers' });
   const eps = 1e-6;
 
   for (const cell of grid.features) {
     let sum = 0;
-    for (const point of pointsFC.features) {
-      const d = turf.distance(cell, point, { units: 'kilometers' });
+    for (const pt of pointsFC.features) {
+      const d = distance(cell, pt, { units: 'kilometers' });
       if (d > MAX_INFLUENCE_KM) continue;
-      const w = point.properties.val ?? DEFAULT_STATUS_WEIGHT;
+      const w = pt.properties.val ?? DEFAULT_STATUS_WEIGHT;
       sum += w / (d ** IDW_POWER + eps);
     }
     cell.properties.val = sum;
@@ -198,13 +204,13 @@ function computeClusterSurface(clusterFeatures, options) {
   const tierCount = options.tierCount || TIER_COUNT;
   if (!clusterFeatures || clusterFeatures.length < MIN_INTERPOLATION_POINTS) return [];
 
-  const pointsFC = turf.featureCollection(clusterFeatures);
-  const bbox = paddedBbox(pointsFC);
-  const cellSize = chooseCellSize(bbox);
+  const pointsFC = featureCollection(clusterFeatures);
+  const bboxCoords = paddedBbox(pointsFC);
+  const cellSize = chooseCellSize(bboxCoords);
 
   let grid;
   try {
-    grid = buildDensityGrid(pointsFC, bbox, cellSize);
+    grid = buildDensityGrid(pointsFC, bboxCoords, cellSize);
   } catch (error) {
     console.error('Occurrence surface density grid failed:', error);
     return [];
@@ -230,7 +236,7 @@ function computeClusterSurface(clusterFeatures, options) {
 
   let bands;
   try {
-    bands = turf.isobands(grid, breaks, {
+    bands = isobands(grid, breaks, {
       zProperty: 'val',
       breaksProperties: breaks.slice(0, -1).map((_, tier) => ({
         tier,
@@ -261,7 +267,7 @@ function computeClusterSurface(clusterFeatures, options) {
 function smoothFeatureSafely(feature) {
   if (!hasDrawablePolygon(feature)) return feature;
   try {
-    const smoothed = turf.polygonSmooth(turf.featureCollection([feature]), {
+    const smoothed = polygonSmooth(featureCollection([feature]), {
       iterations: SMOOTH_ITERATIONS
     });
     const result = smoothed?.features?.[0];
@@ -300,7 +306,7 @@ function hasDrawablePolygon(feature) {
  * @returns {GeoJSON.FeatureCollection} may be empty if too few points / no clusters
  */
 export function computeCommoditySurface(features, commodity, options = {}) {
-  const empty = turf.featureCollection([]);
+  const empty = featureCollection([]);
   if (!features?.length || !commodity) return empty;
 
   const pointsFC = buildWeightedPoints(features);
@@ -317,7 +323,7 @@ export function computeCommoditySurface(features, commodity, options = {}) {
     );
   }
 
-  return turf.featureCollection(out);
+  return featureCollection(out);
 }
 
 /**
@@ -330,7 +336,7 @@ export function computeCommoditySurface(features, commodity, options = {}) {
  * @returns {GeoJSON.FeatureCollection}
  */
 export function computeOccurrenceSurfaces(features, commodities, options = {}) {
-  const empty = turf.featureCollection([]);
+  const empty = featureCollection([]);
   if (!features?.length || !commodities?.length) return empty;
 
   const groups = groupFeaturesByCommodity(features);
@@ -343,7 +349,7 @@ export function computeOccurrenceSurfaces(features, commodities, options = {}) {
     out.push(...surface.features);
   }
 
-  return turf.featureCollection(out);
+  return featureCollection(out);
 }
 
 /**
