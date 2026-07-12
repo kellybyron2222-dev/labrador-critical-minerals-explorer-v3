@@ -1,0 +1,25 @@
+{
+  "version": "43ed1b9b19b2",
+  "contentHash": "43ed1b9b19b2eebbe4efccef2abc098c988b9e3dbb94476457033038adcb3fd9",
+  "cadenceMonths": 3,
+  "generatedAt": "2026-07-12T14:10:50.814Z",
+  "nextDue": "2026-10-12",
+  "refresh": "GitHub Actions refresh-data.yml (monthly; skips until nextDue) or npm run refresh:data",
+  "featureCount": 975,
+  "source": "https://dnrmaps.gov.nl.ca/arcgis/rest/services/GeoAtlas/Mineral_Lands/MapServer/0/query",
+  "layerId": 0,
+  "layerName": "Map Staked Claims",
+  "outSR": 4326,
+  "maxAllowableOffset": 0.002,
+  "outFields": "LICENSE_NBR,FILENUM,CLIENT_NAME,LOCATION,NUMCLAIMS,STATUS,STAKEDATE,ISSDATE,EXPIRYDATE,RPTDUE,MAPSHEETS,TOTAL_EXP",
+  "clip": "Labrador bbox (south of Strait of Belle Isle)",
+  "clipBbox": {
+    "xmin": -67.8,
+    "ymin": 51.5,
+    "xmax": -55.5,
+    "ymax": 60.6,
+    "spatialReference": {
+      "wkid": 4326
+    }
+  }
+}

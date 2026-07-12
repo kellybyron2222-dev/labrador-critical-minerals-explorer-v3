@@ -1,0 +1,25 @@
+{
+  "version": "4247b98e8d94",
+  "contentHash": "4247b98e8d94b29400423fcec391fce74e1630d7be9204ad9897a6bfed4baba7",
+  "cadenceMonths": 12,
+  "generatedAt": "2026-07-12T15:36:42.343Z",
+  "nextDue": "2027-07-12",
+  "refresh": "GitHub Actions refresh-data.yml (monthly; skips until nextDue) or npm run refresh:data",
+  "featureCount": 12,
+  "source": "https://dnrmaps.gov.nl.ca/arcgis/rest/services/GeoAtlas/Land_Use/MapServer/4/query",
+  "layerId": 4,
+  "layerName": "Canadian Protected Conserved Areas",
+  "outSR": 4326,
+  "maxAllowableOffset": 0.002,
+  "outFields": "NAME_E,NAME_F,TYPE_E,BIOME,PA_OECM_DF,IUCN_CAT,STATUS,ESTYEAR,MECH_E,OWNER_E,MGMT_E,O_AREA_HA,LOC",
+  "clip": "Labrador bbox (south of Strait of Belle Isle)",
+  "clipBbox": {
+    "xmin": -67.8,
+    "ymin": 51.5,
+    "xmax": -55.5,
+    "ymax": 60.6,
+    "spatialReference": {
+      "wkid": 4326
+    }
+  }
+}

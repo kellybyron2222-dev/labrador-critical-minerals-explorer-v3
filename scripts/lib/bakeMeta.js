@@ -16,6 +16,11 @@ export function versionFromDate(date = new Date()) {
   return date.toISOString().slice(0, 10);
 }
 
+/** Client IndexedDB / HTTP cache key — content-derived so same-day re-bakes invalidate. */
+export function cacheVersionFromHash(contentHash) {
+  return String(contentHash || '').slice(0, 12);
+}
+
 export function nextDueFrom(date, cadenceMonths) {
   const next = new Date(date);
   next.setUTCMonth(next.getUTCMonth() + cadenceMonths);
@@ -39,9 +44,10 @@ export async function writeBakeOutputs({
   refreshNote = 'GitHub Actions refresh-data.yml (monthly; skips until nextDue) or npm run refresh:data'
 }) {
   const generatedAt = new Date();
-  const version = versionFromDate(generatedAt);
-  const nextDue = nextDueFrom(generatedAt, cadenceMonths);
   const contentHash = sha256(assetBody);
+  // `version` is the cache key (hash prefix), not a calendar date — dates live in generatedAt/nextDue.
+  const version = cacheVersionFromHash(contentHash);
+  const nextDue = nextDueFrom(generatedAt, cadenceMonths);
   const bytes = Buffer.byteLength(assetBody);
 
   await mkdir(path.dirname(assetPath), { recursive: true });

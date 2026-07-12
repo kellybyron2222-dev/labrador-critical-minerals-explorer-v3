@@ -1,11 +1,34 @@
 /** Module 2: GeoJSON and WMS layer configuration */
 
 import { facilityIconDataUri } from '../modules/facilityIcons.js';
+import {
+  CLAIMS_OUT_FIELDS,
+  MINERAL_LANDS_QUERY_BASE,
+  TENURE_OUT_FIELDS,
+  TENURE_WHERE,
+  buildClaimsLegendFromFeatures,
+  buildTenureLegendFromFeatures,
+  labradorGeometryQueryParams
+} from './mineralLands.js';
+import {
+  ATRIS_CLAIMS_QUERY,
+  ATRIS_OUT_FIELDS,
+  ATRIS_WHERE,
+  INUIT_REGIONS_QUERY,
+  NUNATSIAVUT_LEGEND_ITEMS,
+  NUNATSIAVUT_OUT_FIELDS,
+  NUNATSIAVUT_WHERE
+} from './indigenousLands.js';
+import {
+  buildCpcadLegendFromFeatures,
+  buildCpcadPaginatedQuery,
+  buildLandUsePaginatedQueries
+} from './protectedAreas.js';
 
 // This project is Labrador/NL-scoped, so national feeds are visually clipped
 // to this region (the underlying data/query is untouched - only what's
 // requested/rendered on screen is limited). See BUILD_PLAN.md.
-const NL_LABRADOR_PROVINCE_NAME = 'Newfoundland and Labrador';
+export const NL_LABRADOR_PROVINCE_NAME = 'Newfoundland and Labrador';
 
 const NRCAN_REST_BASE = 'https://maps-cartes.services.geo.ca/server_serveur/rest/services/NRCan';
 const CRITICAL_MINERALS_FIELDS =
@@ -354,7 +377,8 @@ export const LAYER_GROUPS = {
   },
   rights: {
     title: 'Rights & Constraints',
-    hint: 'Mineral tenure, Indigenous lands, protected areas',
+    hint:
+      'Mineral tenure, Indigenous lands, protected areas & land use (Labrador mainland clip; off by default)',
     defaultExpanded: false
   },
   infrastructure: {
@@ -375,21 +399,11 @@ export const LAYER_GROUPS = {
 };
 
 /*
- * TODO (real data): the original `deposits`, `infrastructure`, and `tenures`
- * layers were hand-authored demo/synthetic GeoJSON (perfectly rectangular
- * claim polygons, round-number coordinates, real deposit names plotted in the
- * wrong places, e.g. Schaft Creek). They were removed on 2026-07-06.
- * `deposits` has since been replaced by the real MODS occurrences layer below
- * (Phase 1.1, 2026-07-06). Still to replace with authoritative sources:
- *   - Mining tenures     -> GeoAtlas/Mineral_Lands (map-staked claims, tenure)
- *                          (Phase 2.1).
- *   - Infrastructure     -> NRCan/StatCan transmission, rail, road & port
- *                          open-data layers (Phase 3).
+ * Demo deposits/tenures/infrastructure were removed 2026-07-06.
+ * MODS (1.1) and Mineral Lands claims/tenure (2.1) replace deposits/tenures.
+ * Still pending: Infrastructure → NRCan/StatCan (Phase 3).
  *
- * The map is organized around the mineral value chain: geological endowment
- * (prospectivity/geology WMS feeds) -> occurrences (MODS) -> human activity
- * (the live NRCan critical-minerals facilities layer), encoded by
- * development maturity.
+ * Value chain: endowment → occurrences → rights → infrastructure.
  */
 export const LAYER_CONFIG = {
   geoatlasBedrock: {
@@ -408,11 +422,19 @@ export const LAYER_CONFIG = {
     dataUrl: './data/geoatlas-bedrock-1m.geojson',
     cacheKey: 'geoatlas-bedrock-1m',
     // Bump when regenerating public/data/geoatlas-bedrock-1m.geojson
-    cacheVersion: '2026-07-11',
-    // Under surficial (when loaded) and under MODS / facilities.
+    cacheVersion: '7112640d3e8b',
+    // Under surficial / rights (when loaded) and under MODS / facilities.
     beforeLayerIds: [
       'geoatlas-surficial-fill',
       'geoatlas-surficial-outline',
+      'atris-claims-fill',
+      'atris-claims-outline',
+      'inuit-nunatsiavut-fill',
+      'inuit-nunatsiavut-outline',
+      'geoatlas-tenure-fill',
+      'geoatlas-tenure-outline',
+      'geoatlas-claims-fill',
+      'geoatlas-claims-outline',
       'mods-surface-fill',
       'mods-surface-outline',
       'mods-layer',
@@ -467,9 +489,17 @@ export const LAYER_CONFIG = {
     enrichment: 'surficialRgb',
     dataUrl: './data/geoatlas-surficial-regional.geojson',
     cacheKey: 'geoatlas-surficial-regional',
-    cacheVersion: '2026-07-12',
-    // Surface cover draws above bedrock; still under MODS / facilities.
+    cacheVersion: '9db6ce561aef',
+    // Surface cover draws above bedrock; under rights + MODS / facilities.
     beforeLayerIds: [
+      'atris-claims-fill',
+      'atris-claims-outline',
+      'inuit-nunatsiavut-fill',
+      'inuit-nunatsiavut-outline',
+      'geoatlas-tenure-fill',
+      'geoatlas-tenure-outline',
+      'geoatlas-claims-fill',
+      'geoatlas-claims-outline',
       'mods-surface-fill',
       'mods-surface-outline',
       'mods-layer',
@@ -504,6 +534,313 @@ export const LAYER_CONFIG = {
     legendJsonUrl: `${GEOATLAS_REST_BASE}/Surficial_Geology_All/MapServer/legend?f=json`,
     legendLayerId: 12
   },
+  geoatlasCpcad: {
+    group: 'rights',
+    sidebarLabel: 'Protected & conserved areas',
+    indicatorClass: 'geoatlasCpcad',
+    source: 'geoatlas-cpcad-source',
+    layer: 'geoatlas-cpcad-fill',
+    outline: 'geoatlas-cpcad-outline',
+    lazy: true,
+    visible: false,
+    enrichment: 'cpcadType',
+    dataUrl: './data/geoatlas-cpcad-labrador.geojson',
+    cacheKey: 'geoatlas-cpcad-labrador',
+    cacheVersion: '4247b98e8d94',
+    // Under Indigenous / mineral rights so parks read as context.
+    beforeLayerIds: [
+      'atris-claims-fill',
+      'atris-claims-outline',
+      'inuit-nunatsiavut-fill',
+      'inuit-nunatsiavut-outline',
+      'geoatlas-tenure-fill',
+      'geoatlas-tenure-outline',
+      'geoatlas-claims-fill',
+      'geoatlas-claims-outline',
+      'mods-surface-fill',
+      'mods-surface-outline',
+      'mods-layer',
+      'critical-minerals-layer'
+    ],
+    paginatedQuery: buildCpcadPaginatedQuery(),
+    paint: {
+      fill: {
+        'fill-color': ['get', 'fillColor'],
+        'fill-opacity': 0.35,
+        'fill-outline-color': 'rgba(21, 128, 61, 0.55)'
+      },
+      line: {
+        'line-color': 'rgba(21, 128, 61, 0.9)',
+        'line-width': 1.4,
+        'line-opacity': 0.95
+      }
+    },
+    legendTitle: 'Protected & Conserved Areas',
+    legendShape: 'fill',
+    legend: buildCpcadLegendFromFeatures([]),
+    legendNote:
+      'CPCAD via NL GeoAtlas Land_Use. Parks, reserves, and marine protected areas in the Labrador clip. Styled by TYPE_E.'
+  },
+  geoatlasLandUse: {
+    group: 'rights',
+    sidebarLabel: 'Land use constraints',
+    indicatorClass: 'geoatlasLandUse',
+    source: 'geoatlas-landuse-source',
+    layer: 'geoatlas-landuse-fill',
+    outline: 'geoatlas-landuse-outline',
+    lazy: true,
+    visible: false,
+    enrichment: 'landUseKind',
+    dataUrl: './data/geoatlas-landuse-labrador.geojson',
+    cacheKey: 'geoatlas-landuse-labrador',
+    cacheVersion: 'b55674763937',
+    // Bottom of Rights stack (under CPCAD / Indigenous / mineral rights).
+    beforeLayerIds: [
+      'geoatlas-cpcad-fill',
+      'geoatlas-cpcad-outline',
+      'atris-claims-fill',
+      'atris-claims-outline',
+      'inuit-nunatsiavut-fill',
+      'inuit-nunatsiavut-outline',
+      'geoatlas-tenure-fill',
+      'geoatlas-tenure-outline',
+      'geoatlas-claims-fill',
+      'geoatlas-claims-outline',
+      'mods-surface-fill',
+      'mods-surface-outline',
+      'mods-layer',
+      'critical-minerals-layer'
+    ],
+    paginatedQueries: buildLandUsePaginatedQueries(),
+    paint: {
+      fill: {
+        'fill-color': ['get', 'fillColor'],
+        'fill-opacity': 0.28,
+        'fill-outline-color': 'rgba(100, 116, 139, 0.45)'
+      },
+      line: {
+        'line-color': 'rgba(71, 85, 105, 0.85)',
+        'line-width': 1.1,
+        'line-opacity': 0.9,
+        'line-dasharray': [2, 1.5]
+      }
+    },
+    legendTitle: 'Land Use Constraints',
+    legendShape: 'fill',
+    legend: null,
+    legendNote:
+      'NL GeoAtlas Land_Use (plan 2020, specified materials, water supplies, planning areas). Toggle kinds when they overlap.'
+  },
+  atrisLandClaims: {
+    group: 'rights',
+    sidebarLabel: 'ATRIS land claims',
+    indicatorClass: 'atrisLandClaims',
+    source: 'atris-claims-source',
+    layer: 'atris-claims-fill',
+    outline: 'atris-claims-outline',
+    lazy: true,
+    visible: false,
+    enrichment: 'atrisClaim',
+    dataUrl: './data/atris-claims-labrador.geojson',
+    cacheKey: 'atris-claims-labrador',
+    cacheVersion: '32025395a7b9',
+    // Context under Nunatsiavut / tenure / mineral claims.
+    beforeLayerIds: [
+      'inuit-nunatsiavut-fill',
+      'inuit-nunatsiavut-outline',
+      'geoatlas-tenure-fill',
+      'geoatlas-tenure-outline',
+      'geoatlas-claims-fill',
+      'geoatlas-claims-outline',
+      'mods-surface-fill',
+      'mods-surface-outline',
+      'mods-layer',
+      'critical-minerals-layer'
+    ],
+    paginatedQuery: {
+      url: ATRIS_CLAIMS_QUERY,
+      where: ATRIS_WHERE,
+      outFields: ATRIS_OUT_FIELDS,
+      outSR: 4326,
+      format: 'esrijson',
+      maxAllowableOffset: 0.002,
+      pageSize: 200,
+      concurrency: 1
+    },
+    paint: {
+      fill: {
+        'fill-color': ['get', 'fillColor'],
+        'fill-opacity': 0.18,
+        'fill-outline-color': 'rgba(126, 34, 206, 0.45)'
+      },
+      line: {
+        'line-color': 'rgba(126, 34, 206, 0.85)',
+        'line-width': 1.5,
+        'line-opacity': 0.9,
+        'line-dasharray': [2, 2]
+      }
+    },
+    legendTitle: 'ATRIS Land Claims',
+    legendShape: 'fill',
+    // Checklist built in app.updateVectorLegend from loaded TAG_IDs.
+    legend: null,
+    legendNote:
+      'Federal comprehensive land-claim areas (CIRNAC/ISC ATRIS) — not mineral licences. Toggle claims individually when they overlap.'
+  },
+  inuitNunatsiavut: {
+    group: 'rights',
+    sidebarLabel: 'Nunatsiavut (LISA)',
+    indicatorClass: 'inuitNunatsiavut',
+    source: 'inuit-nunatsiavut-source',
+    layer: 'inuit-nunatsiavut-fill',
+    outline: 'inuit-nunatsiavut-outline',
+    lazy: true,
+    visible: false,
+    enrichment: 'nunatsiavut',
+    dataUrl: './data/inuit-nunatsiavut.geojson',
+    cacheKey: 'inuit-nunatsiavut',
+    cacheVersion: 'bfe5a22c4275',
+    beforeLayerIds: [
+      'geoatlas-tenure-fill',
+      'geoatlas-tenure-outline',
+      'geoatlas-claims-fill',
+      'geoatlas-claims-outline',
+      'mods-surface-fill',
+      'mods-surface-outline',
+      'mods-layer',
+      'critical-minerals-layer'
+    ],
+    paginatedQuery: {
+      url: INUIT_REGIONS_QUERY,
+      where: NUNATSIAVUT_WHERE,
+      outFields: NUNATSIAVUT_OUT_FIELDS,
+      outSR: 4326,
+      format: 'esrijson',
+      maxAllowableOffset: 0.002,
+      pageSize: 200,
+      concurrency: 1
+    },
+    paint: {
+      fill: {
+        'fill-color': ['get', 'fillColor'],
+        'fill-opacity': 0.2,
+        'fill-outline-color': 'rgba(13, 148, 136, 0.5)'
+      },
+      line: {
+        'line-color': 'rgba(13, 148, 136, 0.95)',
+        'line-width': 1.8,
+        'line-opacity': 0.95,
+        'line-dasharray': [2.5, 2]
+      }
+    },
+    legendTitle: 'Nunatsiavut',
+    legendShape: 'fill',
+    legend: NUNATSIAVUT_LEGEND_ITEMS,
+    legendNote:
+      'Labrador Inuit Settlement Area (Inuit Nunangat). CIRNAC/ISC; boundaries approximate.'
+  },
+  geoatlasClaims: {
+    group: 'rights',
+    sidebarLabel: 'Map-staked claims',
+    indicatorClass: 'geoatlasClaims',
+    source: 'geoatlas-claims-source',
+    layer: 'geoatlas-claims-fill',
+    outline: 'geoatlas-claims-outline',
+    lazy: true,
+    visible: false,
+    enrichment: 'claimsStatus',
+    dataUrl: './data/geoatlas-claims-labrador.geojson',
+    cacheKey: 'geoatlas-claims-labrador',
+    cacheVersion: '43ed1b9b19b2',
+    // Above geology/tenure; under MODS points for siting readability.
+    beforeLayerIds: [
+      'mods-surface-fill',
+      'mods-surface-outline',
+      'mods-layer',
+      'critical-minerals-layer'
+    ],
+    paginatedQuery: {
+      url: `${MINERAL_LANDS_QUERY_BASE}/0/query`,
+      where: '1=1',
+      outFields: CLAIMS_OUT_FIELDS,
+      outSR: 4326,
+      format: 'esrijson',
+      maxAllowableOffset: 0.002,
+      pageSize: 200,
+      concurrency: 4,
+      ...labradorGeometryQueryParams()
+    },
+    paint: {
+      fill: {
+        'fill-color': ['get', 'fillColor'],
+        'fill-opacity': 0.5,
+        'fill-outline-color': 'rgba(120, 53, 15, 0.55)'
+      },
+      line: {
+        'line-color': 'rgba(120, 53, 15, 0.8)',
+        'line-width': 1.2,
+        'line-opacity': 0.9
+      }
+    },
+    legendTitle: 'Map-staked Claims',
+    legendShape: 'fill',
+    // Built from loaded STATUS values in app.updateVectorLegend.
+    legend: buildClaimsLegendFromFeatures([]),
+    legendNote:
+      'Active map-staked mineral claims in Labrador (NL GeoAtlas Mineral Lands). Styled by STATUS.'
+  },
+  geoatlasTenure: {
+    group: 'rights',
+    sidebarLabel: 'Mineral tenure',
+    indicatorClass: 'geoatlasTenure',
+    source: 'geoatlas-tenure-source',
+    layer: 'geoatlas-tenure-fill',
+    outline: 'geoatlas-tenure-outline',
+    lazy: true,
+    visible: false,
+    enrichment: 'tenureType',
+    dataUrl: './data/geoatlas-tenure-labrador.geojson',
+    cacheKey: 'geoatlas-tenure-labrador',
+    cacheVersion: '7720fa7df5e6',
+    // Under map-staked claims and MODS / facilities.
+    beforeLayerIds: [
+      'geoatlas-claims-fill',
+      'geoatlas-claims-outline',
+      'mods-surface-fill',
+      'mods-surface-outline',
+      'mods-layer',
+      'critical-minerals-layer'
+    ],
+    paginatedQuery: {
+      url: `${MINERAL_LANDS_QUERY_BASE}/5/query`,
+      where: TENURE_WHERE,
+      outFields: TENURE_OUT_FIELDS,
+      outSR: 4326,
+      format: 'esrijson',
+      maxAllowableOffset: 0.002,
+      pageSize: 200,
+      concurrency: 4,
+      ...labradorGeometryQueryParams()
+    },
+    paint: {
+      fill: {
+        'fill-color': ['get', 'fillColor'],
+        'fill-opacity': 0.55,
+        'fill-outline-color': 'rgba(30, 41, 59, 0.35)'
+      },
+      line: {
+        'line-color': 'rgba(30, 41, 59, 0.65)',
+        'line-width': 1,
+        'line-opacity': 0.85
+      }
+    },
+    legendTitle: 'Mineral Tenure',
+    legendShape: 'fill',
+    // Built from TYPEDESC values present in the Labrador bake (app.updateVectorLegend).
+    legend: buildTenureLegendFromFeatures([]),
+    legendNote:
+      'Labrador mineral rights (leases, exempt mineral land, etc.). Parks & protected areas are on Protected & conserved — not duplicated here.'
+  },
   criticalMinerals: {
     group: 'occurrences',
     sidebarLabel: 'Critical Mineral Facilities',
@@ -515,7 +852,7 @@ export const LAYER_CONFIG = {
     // Baked NL&L subset (npm run fetch:facilities). Live `sources` = fallback.
     dataUrl: './data/critical-minerals-nl.geojson',
     cacheKey: 'critical-minerals-nl',
-    cacheVersion: '2026-07-11',
+    cacheVersion: '0aac8ae0b666',
     sources: CRITICAL_MINERALS_SOURCES,
     visible: true,
     // Data stays national on live fallback - only what's drawn is
@@ -568,7 +905,7 @@ export const LAYER_CONFIG = {
     // live paginatedQuery is fallback only.
     dataUrl: './data/mods-labrador.geojson',
     cacheKey: 'mods-labrador',
-    cacheVersion: '2026-07-11',
+    cacheVersion: '73a3565e6582',
     // ~3,173 Labrador points, always rendered as commodity-colored circles at
     // every zoom (no heatmap, no clustering - see BUILD_PLAN.md Phase 1.1b).
     // `commodityPicker` drives a sidebar dropdown (app.js) that sets a
@@ -689,7 +1026,7 @@ export const WMS_CONFIG = {
     // Baked Mercator-corrected NL&L image (npm run fetch:wms). Live GetMap = fallback.
     imageUrl: './data/wms-lithium-nll.png',
     cacheKey: 'wms-lithium-nll',
-    cacheVersion: '2026-07-11',
+    cacheVersion: 'c43d57b541bc',
     legendUrl: wmsLegendUrl('pegmatite_lithium_en', '0'),
     legendJsonUrl: arcgisLegendJsonUrl('pegmatite_lithium_en'),
     legendLayerId: 0
@@ -707,7 +1044,7 @@ export const WMS_CONFIG = {
     visible: false,
     imageUrl: './data/wms-ree-nll.png',
     cacheKey: 'wms-ree-nll',
-    cacheVersion: '2026-07-11',
+    cacheVersion: 'ee577b00bc0b',
     legendUrl: wmsLegendUrl('carbonatite_ree_en', '0'),
     legendJsonUrl: arcgisLegendJsonUrl('carbonatite_ree_en'),
     legendLayerId: 0
@@ -725,7 +1062,7 @@ export const WMS_CONFIG = {
     visible: false,
     imageUrl: './data/wms-graphite-nll.png',
     cacheKey: 'wms-graphite-nll',
-    cacheVersion: '2026-07-11',
+    cacheVersion: '0ae99450961a',
     legendUrl: wmsLegendUrl('graphite_prospectivity_en', '0'),
     legendJsonUrl: arcgisLegendJsonUrl('graphite_prospectivity_en'),
     legendLayerId: 0
@@ -743,7 +1080,7 @@ export const WMS_CONFIG = {
     visible: false,
     imageUrl: './data/wms-nickel-nll.png',
     cacheKey: 'wms-nickel-nll',
-    cacheVersion: '2026-07-12',
+    cacheVersion: '8ab0c0672ba3',
     legendUrl: wmsLegendUrl('2023_Prospectivity_Magmatic_Nickel_Preferred_EPSG3978_en', '0'),
     legendJsonUrl: arcgisLegendJsonUrl('2023_Prospectivity_Magmatic_Nickel_Preferred_EPSG3978_en'),
     legendLayerId: 0
@@ -761,7 +1098,7 @@ export const WMS_CONFIG = {
     visible: false,
     imageUrl: './data/wms-zincCd-nll.png',
     cacheKey: 'wms-zincCd-nll',
-    cacheVersion: '2026-07-12',
+    cacheVersion: '924e3d25ee9a',
     legendUrl: wmsLegendUrl('2023_Prospectivity_CD_Zinc_Preferred_EPSG3978_en', '0'),
     legendJsonUrl: arcgisLegendJsonUrl('2023_Prospectivity_CD_Zinc_Preferred_EPSG3978_en'),
     legendLayerId: 0
@@ -779,7 +1116,7 @@ export const WMS_CONFIG = {
     visible: false,
     imageUrl: './data/wms-zincMvt-nll.png',
     cacheKey: 'wms-zincMvt-nll',
-    cacheVersion: '2026-07-12',
+    cacheVersion: '312348af4bc0',
     legendUrl: wmsLegendUrl('2023_Prospectivity_MVT_Zinc_Preferred_EPSG3978_en', '0'),
     legendJsonUrl: arcgisLegendJsonUrl('2023_Prospectivity_MVT_Zinc_Preferred_EPSG3978_en'),
     legendLayerId: 0
@@ -797,7 +1134,7 @@ export const WMS_CONFIG = {
     visible: false,
     imageUrl: './data/wms-bedrock-nll.png',
     cacheKey: 'wms-bedrock-nll',
-    cacheVersion: '2026-07-11',
+    cacheVersion: '156ab88567b8',
     legendUrl: wmsLegendUrl('gsc_bedrock_geology_en', '0'),
     legendJsonUrl: arcgisLegendJsonUrl('gsc_bedrock_geology_en'),
     // REST sub-layer 1 = "Bedrock geology" (the 149-class thematic layer);
@@ -817,7 +1154,7 @@ export const WMS_CONFIG = {
     visible: false,
     imageUrl: './data/wms-surficial-nll.png',
     cacheKey: 'wms-surficial-nll',
-    cacheVersion: '2026-07-11',
+    cacheVersion: '97224627e46a',
     legendUrl: wmsLegendUrl('gsc_surficial_geology_en', '1'),
     legendJsonUrl: arcgisLegendJsonUrl('gsc_surficial_geology_en'),
     // REST sub-layer 3 = "Surficial geology category" (the thematic classes);

@@ -1,4 +1,4 @@
-/** IndexedDB cache for baked GeoJSON layers (bedrock, MODS, facilities, …). */
+/** IndexedDB cache for live-fallback GeoJSON (not static bake files — those use HTTP ?v=). */
 
 const DB_NAME = 'explorer-v3-layer-cache';
 const DB_VERSION = 1;
@@ -36,10 +36,25 @@ export async function getCachedGeoJSON(id, version) {
       req.onsuccess = () => resolve(req.result || null);
       req.onerror = () => reject(req.error);
     });
-    db.close();
-    if (!record || record.version !== version || !record.data?.features?.length) {
+
+    if (!record || !record.data?.features?.length) {
+      db.close();
       return null;
     }
+
+    if (record.version !== version) {
+      // Evict stale version so quota isn't held by obsolete payloads.
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE, 'readwrite');
+        tx.objectStore(STORE).delete(id);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+      db.close();
+      return null;
+    }
+
+    db.close();
     return record.data;
   } catch (error) {
     console.warn('Layer cache read failed:', error);
@@ -69,5 +84,21 @@ export async function setCachedGeoJSON(id, version, data) {
     db.close();
   } catch (error) {
     console.warn('Layer cache write failed:', error);
+  }
+}
+
+/** Remove a cached layer (e.g. after intentional invalidation). */
+export async function deleteCachedGeoJSON(id) {
+  try {
+    const db = await openDb();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE, 'readwrite');
+      tx.objectStore(STORE).delete(id);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+    db.close();
+  } catch (error) {
+    console.warn('Layer cache delete failed:', error);
   }
 }

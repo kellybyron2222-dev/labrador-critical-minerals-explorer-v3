@@ -153,15 +153,14 @@ async function main() {
 
   const features = pages.flat();
   const collection = { type: 'FeatureCollection', features };
-  const generatedAt = new Date();
-  const version = generatedAt.toISOString().slice(0, 10);
+  const geojsonBody = JSON.stringify(collection);
+  const contentHash = createHash('sha256').update(geojsonBody).digest('hex');
+  const version = contentHash.slice(0, 12);
   const cadenceMonths = 6;
+  const generatedAt = new Date();
   const nextDueDate = new Date(generatedAt);
   nextDueDate.setUTCMonth(nextDueDate.getUTCMonth() + cadenceMonths);
   const nextDue = nextDueDate.toISOString().slice(0, 10);
-
-  const geojsonBody = JSON.stringify(collection);
-  const contentHash = createHash('sha256').update(geojsonBody).digest('hex');
 
   await mkdir(path.dirname(OUT_GEOJSON), { recursive: true });
   await writeFile(OUT_GEOJSON, geojsonBody);
@@ -178,7 +177,7 @@ async function main() {
         cadenceMonths,
         generatedAt: generatedAt.toISOString(),
         nextDue,
-        refresh: 'GitHub Actions refresh-data.yml (1 Jan & 1 Jul UTC) or npm run refresh:data'
+        refresh: 'GitHub Actions refresh-data.yml (monthly; skips until nextDue) or npm run refresh:data'
       },
       null,
       2

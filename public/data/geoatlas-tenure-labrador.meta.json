@@ -1,0 +1,32 @@
+{
+  "version": "7720fa7df5e6",
+  "contentHash": "7720fa7df5e62599a5c438a18f28c4b98e862b0a3ade338e30b939467fb06133",
+  "cadenceMonths": 3,
+  "generatedAt": "2026-07-12T15:42:11.740Z",
+  "nextDue": "2026-10-12",
+  "refresh": "GitHub Actions refresh-data.yml (monthly; skips until nextDue) or npm run refresh:data",
+  "featureCount": 69,
+  "source": "https://dnrmaps.gov.nl.ca/arcgis/rest/services/GeoAtlas/Mineral_Lands/MapServer/5/query",
+  "layerId": 5,
+  "layerName": "Mineral Tenure",
+  "outSR": 4326,
+  "maxAllowableOffset": 0.002,
+  "outFields": "TYPECODE,TYPEDESC,FEATURENAME,COMMENTS,COMPANY_NAME,NTSMAP",
+  "where": "TYPEDESC NOT IN ('National Park','Provincial Park','Ecological Reserve','National Historic Park')",
+  "excludedParkTypes": [
+    "National Park",
+    "Provincial Park",
+    "Ecological Reserve",
+    "National Historic Park"
+  ],
+  "clip": "Labrador bbox (south of Strait of Belle Isle)",
+  "clipBbox": {
+    "xmin": -67.8,
+    "ymin": 51.5,
+    "xmax": -55.5,
+    "ymax": 60.6,
+    "spatialReference": {
+      "wkid": 4326
+    }
+  }
+}

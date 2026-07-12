@@ -1,0 +1,20 @@
+{
+  "version": "32025395a7b9",
+  "contentHash": "32025395a7b93a5f8b684df32cd435bf34a459050288967163de5a9653868b79",
+  "cadenceMonths": 12,
+  "generatedAt": "2026-07-12T14:46:31.245Z",
+  "nextDue": "2027-07-12",
+  "refresh": "GitHub Actions refresh-data.yml (monthly; skips until nextDue) or npm run refresh:data",
+  "featureCount": 4,
+  "source": "https://geo.sac-isc.gc.ca/geomatics/rest/services/ATRIS_PRD/ATRIS_E_PC/MapServer/2/query",
+  "where": "TAG_ID IN ('CL7705m','CL9105f','CL7603e','CL9501a')",
+  "tagIds": [
+    "CL7705m",
+    "CL9105f",
+    "CL7603e",
+    "CL9501a"
+  ],
+  "outSR": 4326,
+  "maxAllowableOffset": 0.002,
+  "attribution": "CIRNAC / ISC — ATRIS comprehensive land claims; approximate boundaries"
+}

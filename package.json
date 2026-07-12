@@ -10,10 +10,18 @@
     "preview": "vite preview",
     "fetch:bedrock": "node scripts/fetch-bedrock.js",
     "fetch:surficial": "node scripts/fetch-surficial.js",
+    "fetch:claims": "node scripts/fetch-claims.js",
+    "fetch:tenure": "node scripts/fetch-tenure.js",
+    "fetch:nunatsiavut": "node scripts/fetch-nunatsiavut.js",
+    "fetch:atris": "node scripts/fetch-atris.js",
+    "fetch:cpcad": "node scripts/fetch-cpcad.js",
+    "fetch:landuse": "node scripts/fetch-landuse.js",
     "fetch:mods": "node scripts/fetch-mods.js",
     "fetch:facilities": "node scripts/fetch-facilities.js",
     "fetch:wms": "node scripts/fetch-wms.js",
-    "refresh:data": "node scripts/refresh-data.js"
+    "refresh:data": "node scripts/refresh-data.js",
+    "validate:data": "node scripts/validate-data.js",
+    "test": "vitest run"
   },
   "dependencies": {
     "@turf/bbox": "^7.3.5",
@@ -26,6 +34,7 @@
     "maplibre-gl": "^4.7.1"
   },
   "devDependencies": {
-    "vite": "^5.4.2"
+    "vite": "^5.4.2",
+    "vitest": "^3.2.7"
   }
 }

@@ -1,0 +1,43 @@
+{
+  "version": "b55674763937",
+  "contentHash": "b55674763937899995ec4c743e976a1c135ee0fe93638ba8abb49e5ef343eef3",
+  "cadenceMonths": 12,
+  "generatedAt": "2026-07-12T15:36:45.024Z",
+  "nextDue": "2027-07-12",
+  "refresh": "GitHub Actions refresh-data.yml (monthly; skips until nextDue) or npm run refresh:data",
+  "featureCount": 131,
+  "perSource": {
+    "protectedAreasPlan": 2,
+    "specifiedMaterialLands": 64,
+    "publicWaterSupplies": 43,
+    "planningAreas": 22,
+    "windEnergyReserve": 0
+  },
+  "source": "https://dnrmaps.gov.nl.ca/arcgis/rest/services/GeoAtlas/Land_Use/MapServer",
+  "layerIds": [
+    0,
+    1,
+    5,
+    7,
+    8
+  ],
+  "layerKinds": [
+    "protectedAreasPlan",
+    "specifiedMaterialLands",
+    "publicWaterSupplies",
+    "planningAreas",
+    "windEnergyReserve"
+  ],
+  "outSR": 4326,
+  "maxAllowableOffset": 0.002,
+  "clip": "Labrador bbox (south of Strait of Belle Isle)",
+  "clipBbox": {
+    "xmin": -67.8,
+    "ymin": 51.5,
+    "xmax": -55.5,
+    "ymax": 60.6,
+    "spatialReference": {
+      "wkid": 4326
+    }
+  }
+}

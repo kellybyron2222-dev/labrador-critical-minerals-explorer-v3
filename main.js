@@ -9,4 +9,6 @@ import MineralsMapApp from './js/app.js';
 
 const app = new MineralsMapApp();
 
-window.app = app;
+if (import.meta.env.DEV) {
+  window.app = app;
+}

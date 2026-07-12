@@ -1,0 +1,14 @@
+{
+  "version": "bfe5a22c4275",
+  "contentHash": "bfe5a22c4275a0a26a60af7307dea9debcdf709bc0c66062678e3c77d4c0e050",
+  "cadenceMonths": 12,
+  "generatedAt": "2026-07-12T14:46:28.610Z",
+  "nextDue": "2027-07-12",
+  "refresh": "GitHub Actions refresh-data.yml (monthly; skips until nextDue) or npm run refresh:data",
+  "featureCount": 1,
+  "source": "https://geo.sac-isc.gc.ca/geomatics/rest/services/Donnees_Ouvertes-Open_Data/Region_inuite_Inuit_Region/MapServer/0/query",
+  "where": "REGION='Nunatsiavut'",
+  "outSR": 4326,
+  "maxAllowableOffset": 0.002,
+  "attribution": "CIRNAC / ISC — Inuit Regions (Inuit Nunangat); approximate boundaries"
+}

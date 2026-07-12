@@ -1,6 +1,6 @@
 /**
- * Light occurrence browser: KPI strip, status filters, search, list + detail.
- * Cherry-pick F1–F5 from B — live MODS fields only, no featured/group UX.
+ * Light occurrence browser: status filters, search, list + detail.
+ * KPI strip lives in KpiBar (map-wide, multi-layer).
  */
 
 import {
@@ -8,6 +8,7 @@ import {
   OCCURRENCE_LIST_CAP,
   countByStatusBucket
 } from '../config/modsFilters.js';
+import { escapeHtml, escapeAttr } from './htmlEscape.js';
 
 export default class OccurrenceBrowser {
   /**
@@ -25,9 +26,9 @@ export default class OccurrenceBrowser {
     this.selectedId = null;
     this.filtered = [];
     this.commodityScoped = [];
+    this.inViewCount = null;
 
     this.els = {
-      kpi: document.getElementById('occ-kpi'),
       search: document.getElementById('occ-search'),
       status: document.getElementById('occ-status-filters'),
       list: document.getElementById('occ-list'),
@@ -59,7 +60,6 @@ export default class OccurrenceBrowser {
     this.els.listToggle = document.getElementById('occ-list-toggle');
     this.els.listWrap = document.getElementById('occ-list-wrap');
     this.els.listToggleLabel = document.getElementById('occ-list-toggle-label');
-    // Collapse the long list by default on narrow screens (map-first).
     this.listExpanded = !window.matchMedia('(max-width: 768px)').matches;
 
     this.els.listToggle?.addEventListener('click', () => {
@@ -116,41 +116,18 @@ export default class OccurrenceBrowser {
   }
 
   /**
-   * @param {object[]} commodityScoped - features after commodity picker/legend
-   * @param {object[]} filtered - after status + search too
+   * @param {object[]} commodityScoped
+   * @param {object[]} filtered
+   * @param {{ inViewCount?: number|null }} [extra]
    */
-  update(commodityScoped, filtered) {
+  update(commodityScoped, filtered, extra = {}) {
     this.commodityScoped = commodityScoped;
     this.filtered = filtered;
+    this.inViewCount = extra.inViewCount ?? null;
 
-    // Status chip counts from commodity-scoped set (before status filter)
     const counts = countByStatusBucket(commodityScoped);
     this.renderStatusToggles(counts);
-    this.renderKpi();
     this.renderList();
-  }
-
-  renderKpi() {
-    const el = this.els.kpi;
-    if (!el) return;
-
-    const visible = this.filtered.length;
-    const total = this.commodityScoped.length;
-    const byStatus = countByStatusBucket(this.filtered);
-
-    const statusBits = MODS_STATUS_BUCKETS.filter((b) => byStatus.get(b))
-      .slice(0, 4)
-      .map((b) => `<span class="occ-kpi-bit"><em>${byStatus.get(b)}</em> ${shortStatus(b)}</span>`)
-      .join('');
-
-    el.innerHTML = `
-      <span class="occ-kpi-main">
-        <strong>${visible.toLocaleString()}</strong>
-        ${visible !== total ? `<span class="occ-kpi-muted">/ ${total.toLocaleString()}</span>` : ''}
-        <span class="occ-kpi-label">occurrences</span>
-      </span>
-      ${statusBits}
-    `;
   }
 
   renderList() {
@@ -158,7 +135,11 @@ export default class OccurrenceBrowser {
     if (!el) return;
 
     if (this.els.count) {
-      this.els.count.textContent = this.filtered.length.toLocaleString();
+      const base = this.filtered.length.toLocaleString();
+      this.els.count.textContent =
+        this.inViewCount != null
+          ? `${base} (${this.inViewCount.toLocaleString()} in view)`
+          : base;
     }
 
     const selected = this.selectedId
@@ -257,28 +238,4 @@ export default class OccurrenceBrowser {
     }
     this.renderList();
   }
-}
-
-function shortStatus(bucket) {
-  const map = {
-    Producer: 'producing',
-    'Past Producer': 'past',
-    'Developed Prospect': 'developed',
-    Prospect: 'prospect',
-    Showing: 'showing',
-    Indication: 'indication'
-  };
-  return map[bucket] || bucket;
-}
-
-function escapeHtml(s) {
-  return String(s)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
-function escapeAttr(s) {
-  return escapeHtml(s).replace(/'/g, '&#39;');
 }

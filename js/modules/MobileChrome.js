@@ -75,6 +75,9 @@ export default class MobileChrome {
     document.addEventListener('keydown', this._onKeyDown);
     this.openBtn?.setAttribute('aria-expanded', 'true');
     this.sidebar?.setAttribute('aria-hidden', 'false');
+    this.sidebar?.removeAttribute('inert');
+    // Keep map chrome from receiving focus while drawer is open.
+    document.querySelector('.map-container')?.setAttribute('inert', '');
     this.notifyLayout();
   }
 
@@ -83,10 +86,13 @@ export default class MobileChrome {
     this.backdrop?.setAttribute('aria-hidden', 'true');
     document.removeEventListener('keydown', this._onKeyDown);
     this.openBtn?.setAttribute('aria-expanded', 'false');
+    document.querySelector('.map-container')?.removeAttribute('inert');
     if (this.isDrawerMode) {
       this.sidebar?.setAttribute('aria-hidden', 'true');
+      this.sidebar?.setAttribute('inert', '');
     } else {
       this.sidebar?.removeAttribute('aria-hidden');
+      this.sidebar?.removeAttribute('inert');
     }
     if (!silent) this.openBtn?.focus?.();
     this.notifyLayout();
@@ -124,12 +130,18 @@ export default class MobileChrome {
       this.openBtn?.classList.remove('hidden');
       this.closeBtn?.classList.remove('hidden');
       this.legendToggle?.classList.remove('hidden');
-      if (!this.isOpen) this.sidebar?.setAttribute('aria-hidden', 'true');
+      if (!this.isOpen) {
+        this.sidebar?.setAttribute('aria-hidden', 'true');
+        this.sidebar?.setAttribute('inert', '');
+        document.querySelector('.map-container')?.removeAttribute('inert');
+      }
     } else {
       this.openBtn?.classList.add('hidden');
       this.closeBtn?.classList.add('hidden');
       this.legendToggle?.classList.add('hidden');
       this.sidebar?.removeAttribute('aria-hidden');
+      this.sidebar?.removeAttribute('inert');
+      document.querySelector('.map-container')?.removeAttribute('inert');
       this.root?.classList.add('legend-expanded');
     }
   }

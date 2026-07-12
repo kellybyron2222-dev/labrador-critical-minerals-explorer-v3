@@ -30,6 +30,96 @@
     "cacheKey": "geoatlas-surficial-regional"
   },
   {
+    "id": "geoatlas-claims-labrador",
+    "label": "Map-staked Claims (Labrador)",
+    "cadenceMonths": 3,
+    "fetchScript": "fetch:claims",
+    "kind": "geojson",
+    "outputs": [
+      "public/data/geoatlas-claims-labrador.geojson",
+      "public/data/geoatlas-claims-labrador.meta.json"
+    ],
+    "metaPath": "public/data/geoatlas-claims-labrador.meta.json",
+    "assetPath": "public/data/geoatlas-claims-labrador.geojson",
+    "cacheVersionPath": "js/config/layerConfig.js",
+    "cacheKey": "geoatlas-claims-labrador"
+  },
+  {
+    "id": "geoatlas-tenure-labrador",
+    "label": "Mineral Tenure (Labrador)",
+    "cadenceMonths": 3,
+    "fetchScript": "fetch:tenure",
+    "kind": "geojson",
+    "outputs": [
+      "public/data/geoatlas-tenure-labrador.geojson",
+      "public/data/geoatlas-tenure-labrador.meta.json"
+    ],
+    "metaPath": "public/data/geoatlas-tenure-labrador.meta.json",
+    "assetPath": "public/data/geoatlas-tenure-labrador.geojson",
+    "cacheVersionPath": "js/config/layerConfig.js",
+    "cacheKey": "geoatlas-tenure-labrador"
+  },
+  {
+    "id": "inuit-nunatsiavut",
+    "label": "Nunatsiavut (Inuit Settlement Area)",
+    "cadenceMonths": 12,
+    "fetchScript": "fetch:nunatsiavut",
+    "kind": "geojson",
+    "outputs": [
+      "public/data/inuit-nunatsiavut.geojson",
+      "public/data/inuit-nunatsiavut.meta.json"
+    ],
+    "metaPath": "public/data/inuit-nunatsiavut.meta.json",
+    "assetPath": "public/data/inuit-nunatsiavut.geojson",
+    "cacheVersionPath": "js/config/layerConfig.js",
+    "cacheKey": "inuit-nunatsiavut"
+  },
+  {
+    "id": "atris-claims-labrador",
+    "label": "ATRIS Land Claims (Labrador)",
+    "cadenceMonths": 12,
+    "fetchScript": "fetch:atris",
+    "kind": "geojson",
+    "outputs": [
+      "public/data/atris-claims-labrador.geojson",
+      "public/data/atris-claims-labrador.meta.json"
+    ],
+    "metaPath": "public/data/atris-claims-labrador.meta.json",
+    "assetPath": "public/data/atris-claims-labrador.geojson",
+    "cacheVersionPath": "js/config/layerConfig.js",
+    "cacheKey": "atris-claims-labrador"
+  },
+  {
+    "id": "geoatlas-cpcad-labrador",
+    "label": "Protected & Conserved Areas (CPCAD / GeoAtlas)",
+    "cadenceMonths": 12,
+    "fetchScript": "fetch:cpcad",
+    "kind": "geojson",
+    "outputs": [
+      "public/data/geoatlas-cpcad-labrador.geojson",
+      "public/data/geoatlas-cpcad-labrador.meta.json"
+    ],
+    "metaPath": "public/data/geoatlas-cpcad-labrador.meta.json",
+    "assetPath": "public/data/geoatlas-cpcad-labrador.geojson",
+    "cacheVersionPath": "js/config/layerConfig.js",
+    "cacheKey": "geoatlas-cpcad-labrador"
+  },
+  {
+    "id": "geoatlas-landuse-labrador",
+    "label": "Land Use Constraints (Labrador)",
+    "cadenceMonths": 12,
+    "fetchScript": "fetch:landuse",
+    "kind": "geojson",
+    "outputs": [
+      "public/data/geoatlas-landuse-labrador.geojson",
+      "public/data/geoatlas-landuse-labrador.meta.json"
+    ],
+    "metaPath": "public/data/geoatlas-landuse-labrador.meta.json",
+    "assetPath": "public/data/geoatlas-landuse-labrador.geojson",
+    "cacheVersionPath": "js/config/layerConfig.js",
+    "cacheKey": "geoatlas-landuse-labrador"
+  },
+  {
     "id": "mods-labrador",
     "label": "Mineral Occurrences (MODS)",
     "cadenceMonths": 3,

@@ -1,6 +1,26 @@
 /**
  * Lightweight MODS filter helpers for V3 cherry-pick (F4/F5).
  * Status buckets mirror live MODS STATUS labels — not B’s group taxonomy.
+ *
+ * ============================================================================
+ * Commodity visibility matrix (primary vs secondary)
+ * ============================================================================
+ *
+ * ~33% of Labrador MODS records list secondary commodities in COMMODS that
+ * differ from primary COMNAME. Surfaces and map *colors* are primary-only so
+ * one coordinate maps to one mineral visual. Sidebar search can still find
+ * secondary mentions.
+ *
+ * | Surface                         | Match field                         | Notes |
+ * |---------------------------------|-------------------------------------|-------|
+ * | Map circles (multi / preset)    | `primaryCommodity` ∈ enabled set    | Legend checklist |
+ * | Map circles (single mineral)    | `commodityList` includes mineral    | Broader research |
+ * | Density surfaces                | `primaryCommodity` only             | Always |
+ * | Occurrence list / KPI / search  | Same as map circles for commodity; status + query AND | |
+ * | Popup                           | Shows Primary + Also reported       | Informational |
+ *
+ * `modsUsesPrimaryOnlyFilter(resolvedPickerCommodities)` encodes the picker
+ * rule: null/"All"/preset/multi → primaryOnly true; single commodity → false.
  */
 
 export const MODS_STATUS_BUCKETS = [
@@ -11,6 +31,15 @@ export const MODS_STATUS_BUCKETS = [
   'Showing',
   'Indication'
 ];
+
+/**
+ * Whether legend/map commodity filtering should use primaryCommodity only.
+ * @param {string[]|null} resolvedPickerCommodities from resolveMODSCommodities()
+ *   null = All commodities; length>1 = preset/multi; length===1 = single pick.
+ */
+export function modsUsesPrimaryOnlyFilter(resolvedPickerCommodities) {
+  return !resolvedPickerCommodities || resolvedPickerCommodities.length > 1;
+}
 
 /** Collapse Past Producer (Dormant|Exhausted) → Past Producer; pass through known buckets. */
 export function normalizeMODSStatus(raw) {

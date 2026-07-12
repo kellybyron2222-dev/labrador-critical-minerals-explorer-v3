@@ -23,9 +23,41 @@ import {
   featureBelongsToCommodity,
   MODS_SURFACE_DEFAULT_COUNT
 } from './config/layerConfig.js';
-import { combineMODSFilters, filterMODSFeatures, featureMatchesBrowserFilters } from './config/modsFilters.js';
+import { combineMODSFilters, filterMODSFeatures, featureMatchesBrowserFilters, modsUsesPrimaryOnlyFilter } from './config/modsFilters.js';
+import {
+  buildClaimsLegendFromFeatures,
+  buildTenureLegendFromFeatures
+} from './config/mineralLands.js';
+import {
+  NUNATSIAVUT_LEGEND_ITEMS,
+  buildAtrisClaimTogglesFromFeatures,
+  buildAtrisEnabledFilter
+} from './config/indigenousLands.js';
+import {
+  buildCpcadLegendFromFeatures,
+  buildLandUseKindTogglesFromFeatures,
+  buildLandUseEnabledFilter
+} from './config/protectedAreas.js';
 import { computeCommoditySurface } from './modules/SurfaceInterpolation.js';
 import MobileChrome from './modules/MobileChrome.js';
+import KpiBar from './modules/KpiBar.js';
+import SettingsPanel from './modules/SettingsPanel.js';
+import { getKpiEnabledIds } from './modules/UserPrefs.js';
+import { computeKpiMetrics, featureIntersectsBounds } from './modules/KpiEngine.js';
+import { buildPopupSection, buildModsPopupSection } from './modules/PopupBuilder.js';
+
+const POPUP_LAYER_IDS = [
+  'mods-layer',
+  'critical-minerals-layer',
+  'geoatlas-claims-fill',
+  'geoatlas-tenure-fill',
+  'inuit-nunatsiavut-fill',
+  'atris-claims-fill',
+  'geoatlas-cpcad-fill',
+  'geoatlas-landuse-fill',
+  'geoatlas-bedrock-fill',
+  'geoatlas-surficial-fill'
+];
 
 class MineralsMapApp {
   constructor() {
@@ -45,8 +77,16 @@ class MineralsMapApp {
     // Per-mineral legend checkboxes control both circle visibility and which
     // surfaces are eligible (master surface toggle still gates shading).
     this.enabledCommodities = [];
+    /** null = not yet initialized; [] = all claims hidden via legend. */
+    this.enabledAtrisClaims = null;
+    /** null = not yet initialized; [] = all land-use kinds hidden via legend. */
+    this.enabledLandUseKinds = null;
     this.modsSurfaceCache = new Map();
     this.currentMODSPickerValue = null;
+    this._modsFilteredCache = [];
+    this._kpiTimer = null;
+    this.kpiBar = null;
+    this.settingsPanel = null;
     this.init();
   }
 
@@ -59,11 +99,32 @@ class MineralsMapApp {
       this.applyMODSCommodityVisibility();
     };
 
-    await this.layerManager.loadAllLayers();
+    await this.layerManager.loadAllLayers().then((result) => {
+      if (result?.failed?.length) {
+        this.setDataStatus(
+          `Failed to load: ${result.failed.join(', ')}. Check network or try refreshing.`,
+          'error'
+        );
+      }
+    });
 
     this.occurrenceBrowser = new OccurrenceBrowser({
       onChange: () => this.applyMODSCommodityVisibility(),
       onSelect: (feature) => this.onOccurrenceSelect(feature)
+    });
+
+    this.kpiBar = new KpiBar({
+      onOpenSettings: (opts) => this.settingsPanel?.show(opts)
+    });
+    this.settingsPanel = new SettingsPanel({
+      onChange: () => this.refreshKpiBar()
+    });
+    document.getElementById('settings-open')?.addEventListener('click', () => {
+      this.settingsPanel?.show();
+    });
+    document.getElementById('settings-open-sidebar')?.addEventListener('click', () => {
+      this.mobileChrome?.close({ silent: true });
+      this.settingsPanel?.show();
     });
 
     this.mobileChrome.init();
@@ -75,7 +136,20 @@ class MineralsMapApp {
     // immediately gets replaced.
     this.bindMODSCommodityPicker();
     this.bindInteractions();
+    this.bindKpiMapEvents();
     this.syncInitialLegends();
+    this.refreshKpiBar();
+  }
+
+  /** Sidebar footer status (default copy or load errors). */
+  setDataStatus(message, kind = 'info') {
+    const el = document.querySelector('.data-status');
+    if (!el) return;
+    if (!this._defaultDataStatus) {
+      this._defaultDataStatus = el.textContent;
+    }
+    el.textContent = message || this._defaultDataStatus;
+    el.classList.toggle('data-status-error', kind === 'error');
   }
 
   /** Groups vector + WMS layer configs by their `group` id for sidebar rendering. */
@@ -285,7 +359,7 @@ class MineralsMapApp {
   applyMODSCommodityVisibility() {
     const value = this.currentMODSPickerValue;
     const resolved = resolveMODSCommodities(value);
-    const primaryOnly = !resolved || resolved.length > 1;
+    const primaryOnly = modsUsesPrimaryOnlyFilter(resolved);
     const browser = this.occurrenceBrowser?.getFilterState() || { statuses: new Set(), query: '' };
 
     const commodityFilter = buildMODSEnabledCommodityFilter(value, this.enabledCommodities, {
@@ -317,14 +391,14 @@ class MineralsMapApp {
     this.syncOccurrenceBrowser();
   }
 
-  /** Keep KPI / list in sync with the same filtered feature set as the map. */
+  /** Keep list + KPI in sync with MODS filters; KPI also listens to map move. */
   syncOccurrenceBrowser() {
     if (!this.occurrenceBrowser) return;
 
     const all = this.layerManager.getLoadedFeatures('modsOccurrences');
     const value = this.currentMODSPickerValue;
     const resolved = resolveMODSCommodities(value);
-    const primaryOnly = !resolved || resolved.length > 1;
+    const primaryOnly = modsUsesPrimaryOnlyFilter(resolved);
     const browser = this.occurrenceBrowser.getFilterState();
 
     const commodityScoped = filterMODSFeatures(all, {
@@ -335,7 +409,6 @@ class MineralsMapApp {
       query: ''
     });
 
-    // Status/search only — avoid a second full commodity pass over `all`.
     const filtered = commodityScoped.filter((f) =>
       featureMatchesBrowserFilters(f, {
         statuses: browser.statuses,
@@ -343,7 +416,102 @@ class MineralsMapApp {
       })
     );
 
-    this.occurrenceBrowser.update(commodityScoped, filtered);
+    this._modsFilteredCache = filtered;
+
+    let inViewCount = null;
+    if (this.map && this.isLayerOn('modsOccurrences')) {
+      const b = this.map.getBounds();
+      const bounds = {
+        west: b.getWest(),
+        south: b.getSouth(),
+        east: b.getEast(),
+        north: b.getNorth()
+      };
+      inViewCount = filtered.filter((f) => featureIntersectsBounds(f, bounds)).length;
+    }
+
+    this.occurrenceBrowser.update(commodityScoped, filtered, { inViewCount });
+    this.refreshKpiBar();
+  }
+
+  bindKpiMapEvents() {
+    if (!this.map) return;
+    const schedule = () => this.scheduleKpiRefresh();
+    this.map.on('moveend', schedule);
+    this.map.on('zoomend', schedule);
+  }
+
+  scheduleKpiRefresh() {
+    clearTimeout(this._kpiTimer);
+    this._kpiTimer = setTimeout(() => this.refreshKpiBar(true), 120);
+  }
+
+  isLayerOn(name) {
+    const state = this.layerManager?.layers?.[name];
+    if (state && typeof state.visible === 'boolean') return state.visible;
+    const cb = document.getElementById(`layer-${name}`);
+    if (cb) return cb.checked;
+    return Boolean(LAYER_CONFIG[name]?.visible);
+  }
+
+  isWmsOn(name) {
+    const key = `wms-${name}`;
+    const state = this.layerManager?.layers?.[key];
+    if (state && typeof state.visible === 'boolean') return state.visible;
+    const cb = document.getElementById(`wms-${name}`);
+    if (cb) return cb.checked;
+    return Boolean(WMS_CONFIG[name]?.visible);
+  }
+
+  countLayersOn() {
+    let n = 0;
+    Object.keys(LAYER_CONFIG).forEach((name) => {
+      if (this.isLayerOn(name)) n += 1;
+    });
+    Object.keys(WMS_CONFIG).forEach((name) => {
+      if (this.isWmsOn(name)) n += 1;
+    });
+    return n;
+  }
+
+  /**
+   * @param {boolean} [fromMapMove] when true, also refresh occurrence list in-view hint
+   */
+  refreshKpiBar(fromMapMove = false) {
+    if (!this.kpiBar) return;
+
+    if (fromMapMove && this.occurrenceBrowser && this._modsFilteredCache) {
+      let inViewCount = null;
+      if (this.map && this.isLayerOn('modsOccurrences')) {
+        const b = this.map.getBounds();
+        const bounds = {
+          west: b.getWest(),
+          south: b.getSouth(),
+          east: b.getEast(),
+          north: b.getNorth()
+        };
+        inViewCount = this._modsFilteredCache.filter((f) =>
+          featureIntersectsBounds(f, bounds)
+        ).length;
+      }
+      this.occurrenceBrowser.update(
+        this.occurrenceBrowser.commodityScoped,
+        this.occurrenceBrowser.filtered,
+        { inViewCount }
+      );
+    }
+
+    const metrics = computeKpiMetrics({
+      map: this.map,
+      enabledIds: getKpiEnabledIds(),
+      isLayerOn: (name) => this.isLayerOn(name),
+      getFeatures: (name) => this.layerManager.getLoadedFeatures(name),
+      modsFiltered: this._modsFilteredCache || [],
+      atrisEnabledTagIds: this.enabledAtrisClaims,
+      landUseEnabledKinds: this.enabledLandUseKinds,
+      layersOnCount: this.countLayersOn()
+    });
+    this.kpiBar.render(metrics);
   }
 
   onOccurrenceSelect(feature) {
@@ -358,42 +526,9 @@ class MineralsMapApp {
     const [lon, lat] = feature.geometry.coordinates;
     this.map.flyTo({ center: [lon, lat], zoom: Math.max(this.map.getZoom(), 9) });
 
-    const p = feature.properties;
-    const primary = p.primaryCommodity || p.COMNAME;
-    const secondaries = p.secondaryCommodities || [];
-    const commodityRows = [['Primary commodity', primary]];
-    if (secondaries.length) {
-      commodityRows.push(['Also reported', secondaries.join(', ')]);
-    }
-    const rows = [
-      ...commodityRows,
-      ['Status', p.STATUS],
-      ['Deposit type', p.DEPDESC],
-      ['Ore minerals', p.OREMIN],
-      ['Work history', p.WORKING],
-      ['NTS sheet', p.NTS]
-    ]
-      .filter(([, v]) => v && String(v).trim())
-      .map(
-        ([label, value]) =>
-          `<div class="popup-row"><span class="popup-label">${label}:</span> <span class="popup-value">${value}</span></div>`
-      )
-      .join('');
-
-    const recordUrl = this.modsRecordUrl(p.NMINO);
-    const linkRow = recordUrl
-      ? `<div class="popup-row"><span class="popup-label">MODS record:</span> <span class="popup-value"><a href="${recordUrl}" target="_blank" rel="noopener">${p.NMINO}</a></span></div>`
-      : '';
-
     this.selectedPopup = new maplibregl.Popup({ closeButton: true, closeOnClick: true })
       .setLngLat([lon, lat])
-      .setHTML(`
-        <div class="popup-content">
-          <h3 class="popup-title">${p.name || 'Unnamed occurrence'}</h3>
-          ${rows}
-          ${linkRow}
-        </div>
-      `)
+      .setHTML(buildModsPopupSection(feature, { standalone: true }))
       .addTo(this.map);
   }
 
@@ -482,46 +617,48 @@ class MineralsMapApp {
     this.updateMODSLegend(value);
   }
 
-  /** Rebuilds the MODS legend card for the current commodity selection - mutates the shared config object so `updateVectorLegend`/`syncInitialLegends` stay generic. */
+  /** Rebuilds the MODS legend card for the current commodity selection (runtime legend def — does not mutate LAYER_CONFIG). */
   updateMODSLegend(value) {
     const config = LAYER_CONFIG.modsOccurrences;
-    config.legendTitle = `MODS — ${modsCommodityPickerLabel(value)}`;
-    config.surfaceToggle = {
-      label: 'Show occurrence density surfaces',
-      checked: this.showMODSSurface,
-      onChange: (checked) => {
-        this.showMODSSurface = checked;
-        if (checked) this.scheduleMODSSurfaceUpdate();
-        else this.layerManager.setSurfaceVisibility('modsOccurrences', false);
-      }
-    };
-
     const legendCommodities = resolveMODSLegendCommodities(value);
     const isMulti = legendCommodities.length > 1;
 
-    if (isMulti) {
-      config.legend = null;
-      config.commodityToggles = {
-        commodities: legendCommodities.map((c) => ({
-          value: c,
-          label: c,
-          color: resolveMODSCommodityColor(c)
-        })),
-        enabled: [...this.enabledCommodities],
-        onChange: (commodity, checked) => this.setMODSCommodityEnabled(commodity, checked),
-        onAllOn: () => this.setAllMODSCommoditiesEnabled(true),
-        onAllOff: () => this.setAllMODSCommoditiesEnabled(false)
-      };
-    } else {
-      config.commodityToggles = null;
-      config.legend = buildMODSLegendItems(value);
-    }
+    const legendDef = {
+      title: `MODS — ${modsCommodityPickerLabel(value)}`,
+      shape: config.legendShape,
+      note: config.legendNote,
+      surfaceToggle: {
+        label: 'Show occurrence density surfaces',
+        checked: this.showMODSSurface,
+        onChange: (checked) => {
+          this.showMODSSurface = checked;
+          if (checked) this.scheduleMODSSurfaceUpdate();
+          else this.layerManager.setSurfaceVisibility('modsOccurrences', false);
+        }
+      },
+      items: isMulti ? null : buildMODSLegendItems(value),
+      commodityToggles: isMulti
+        ? {
+            commodities: legendCommodities.map((c) => ({
+              value: c,
+              label: c,
+              color: resolveMODSCommodityColor(c)
+            })),
+            enabled: [...this.enabledCommodities],
+            onChange: (commodity, checked) => this.setMODSCommodityEnabled(commodity, checked),
+            onAllOn: () => this.setAllMODSCommoditiesEnabled(true),
+            onAllOff: () => this.setAllMODSCommoditiesEnabled(false)
+          }
+        : null
+    };
 
     const checkbox = document.getElementById('layer-modsOccurrences');
     const visible = checkbox ? checkbox.checked : config.visible;
 
     this.legendPanel.hideLegend('layer-modsOccurrences');
-    this.updateVectorLegend('modsOccurrences', visible);
+    if (visible) {
+      this.legendPanel.setLayerLegend('layer-modsOccurrences', true, legendDef);
+    }
   }
 
   /** Shows legends for any layers that are checked/visible by default on page load. */
@@ -534,6 +671,7 @@ class MineralsMapApp {
   updateVectorLegend(name, visible) {
     const config = LAYER_CONFIG[name];
     if (!config) return;
+    const key = `layer-${name}`;
 
     // ArcGIS classification legends (e.g. GeoAtlas bedrock) — fetch async like WMS.
     if (config.legendJsonUrl) {
@@ -541,14 +679,181 @@ class MineralsMapApp {
       return;
     }
 
-    this.legendPanel.setLayerLegend(`layer-${name}`, visible, {
+    if (name === 'modsOccurrences') {
+      this.updateMODSLegend(this.currentMODSPickerValue);
+      return;
+    }
+
+    // Claims / tenure: color swatches for types actually present in loaded data.
+    let items = config.legend;
+    let note = config.legendNote;
+    let commodityToggles = null;
+
+    if (name === 'geoatlasClaims') {
+      items = buildClaimsLegendFromFeatures(this.layerManager.getLoadedFeatures(name));
+      note = 'STATUS values present in the loaded Labrador claims.';
+    } else if (name === 'geoatlasTenure') {
+      items = buildTenureLegendFromFeatures(this.layerManager.getLoadedFeatures(name));
+      note =
+        'Mineral-rights types only. Parks & protected areas are on Protected & conserved (not duplicated here).';
+    } else if (name === 'geoatlasCpcad') {
+      items = buildCpcadLegendFromFeatures(this.layerManager.getLoadedFeatures(name));
+      note = 'Protected-area types present in the Labrador CPCAD bake (GeoAtlas Land_Use/4).';
+    } else if (name === 'geoatlasLandUse') {
+      this.updateLandUseLegend(visible);
+      return;
+    } else if (name === 'atrisLandClaims') {
+      this.updateAtrisLegend(visible);
+      return;
+    } else if (name === 'inuitNunatsiavut') {
+      items = NUNATSIAVUT_LEGEND_ITEMS;
+      note = 'Labrador Inuit Settlement Area (Inuit Nunangat). CIRNAC/ISC; boundaries approximate.';
+    }
+
+    // Allow rebuild when lazy data arrives after first toggle.
+    this.legendPanel.hideLegend(key);
+    this.legendPanel.setLayerLegend(key, visible, {
       title: config.legendTitle,
-      items: config.legend,
-      shape: config.legendShape,
-      note: config.legendNote,
-      surfaceToggle: config.surfaceToggle,
-      commodityToggles: config.commodityToggles
+      items,
+      shape: config.legendShape === 'icon' && !items?.[0]?.icon ? 'fill' : config.legendShape,
+      note,
+      surfaceToggle: null,
+      commodityToggles
     });
+  }
+
+  /** ATRIS legend: per-claim checklist so overlapping polygons can be toggled independently. */
+  updateAtrisLegend(visible) {
+    const name = 'atrisLandClaims';
+    const config = LAYER_CONFIG[name];
+    const key = `layer-${name}`;
+    if (!visible) {
+      this.legendPanel.hideLegend(key);
+      return;
+    }
+
+    const features = this.layerManager.getLoadedFeatures(name);
+    const claims = buildAtrisClaimTogglesFromFeatures(features);
+    const available = new Set(claims.map((c) => c.value));
+
+    if (this.enabledAtrisClaims == null) {
+      this.enabledAtrisClaims = claims.map((c) => c.value);
+    } else {
+      this.enabledAtrisClaims = this.enabledAtrisClaims.filter((id) => available.has(id));
+    }
+
+    this.applyAtrisClaimVisibility();
+
+    const commodityToggles = {
+      commodities: claims,
+      enabled: [...this.enabledAtrisClaims],
+      onChange: (tagId, checked) => this.setAtrisClaimEnabled(tagId, checked),
+      onAllOn: () => this.setAllAtrisClaimsEnabled(true),
+      onAllOff: () => this.setAllAtrisClaimsEnabled(false)
+    };
+
+    this.legendPanel.hideLegend(key);
+    this.legendPanel.setLayerLegend(key, true, {
+      title: config.legendTitle,
+      items: null,
+      shape: 'fill',
+      note: config.legendNote,
+      commodityToggles
+    });
+  }
+
+  applyAtrisClaimVisibility() {
+    const enabled = this.enabledAtrisClaims || [];
+    this.layerManager.setLayerFilter('atrisLandClaims', buildAtrisEnabledFilter(enabled));
+    this.refreshKpiBar();
+  }
+
+  setAtrisClaimEnabled(tagId, checked) {
+    const current = this.enabledAtrisClaims || [];
+    if (checked) {
+      if (!current.includes(tagId)) {
+        this.enabledAtrisClaims = [...current, tagId];
+      }
+    } else {
+      this.enabledAtrisClaims = current.filter((id) => id !== tagId);
+    }
+    this.applyAtrisClaimVisibility();
+  }
+
+  setAllAtrisClaimsEnabled(enabled) {
+    const claims = buildAtrisClaimTogglesFromFeatures(
+      this.layerManager.getLoadedFeatures('atrisLandClaims')
+    );
+    this.enabledAtrisClaims = enabled ? claims.map((c) => c.value) : [];
+    this.applyAtrisClaimVisibility();
+    this.updateAtrisLegend(true);
+  }
+
+  /** Land-use legend: per-kind checklist so overlapping constraint types can be toggled. */
+  updateLandUseLegend(visible) {
+    const name = 'geoatlasLandUse';
+    const config = LAYER_CONFIG[name];
+    const key = `layer-${name}`;
+    if (!visible) {
+      this.legendPanel.hideLegend(key);
+      return;
+    }
+
+    const features = this.layerManager.getLoadedFeatures(name);
+    const kinds = buildLandUseKindTogglesFromFeatures(features);
+    const available = new Set(kinds.map((k) => k.value));
+
+    if (this.enabledLandUseKinds == null) {
+      this.enabledLandUseKinds = kinds.map((k) => k.value);
+    } else {
+      this.enabledLandUseKinds = this.enabledLandUseKinds.filter((id) => available.has(id));
+    }
+
+    this.applyLandUseKindVisibility();
+
+    const commodityToggles = {
+      commodities: kinds,
+      enabled: [...this.enabledLandUseKinds],
+      onChange: (kind, checked) => this.setLandUseKindEnabled(kind, checked),
+      onAllOn: () => this.setAllLandUseKindsEnabled(true),
+      onAllOff: () => this.setAllLandUseKindsEnabled(false)
+    };
+
+    this.legendPanel.hideLegend(key);
+    this.legendPanel.setLayerLegend(key, true, {
+      title: config.legendTitle,
+      items: null,
+      shape: 'fill',
+      note: config.legendNote,
+      commodityToggles
+    });
+  }
+
+  applyLandUseKindVisibility() {
+    const enabled = this.enabledLandUseKinds || [];
+    this.layerManager.setLayerFilter('geoatlasLandUse', buildLandUseEnabledFilter(enabled));
+    this.refreshKpiBar();
+  }
+
+  setLandUseKindEnabled(kind, checked) {
+    const current = this.enabledLandUseKinds || [];
+    if (checked) {
+      if (!current.includes(kind)) {
+        this.enabledLandUseKinds = [...current, kind];
+      }
+    } else {
+      this.enabledLandUseKinds = current.filter((id) => id !== kind);
+    }
+    this.applyLandUseKindVisibility();
+  }
+
+  setAllLandUseKindsEnabled(enabled) {
+    const kinds = buildLandUseKindTogglesFromFeatures(
+      this.layerManager.getLoadedFeatures('geoatlasLandUse')
+    );
+    this.enabledLandUseKinds = enabled ? kinds.map((k) => k.value) : [];
+    this.applyLandUseKindVisibility();
+    this.updateLandUseLegend(true);
   }
 
   async updateVectorArcGISLegend(name, visible) {
@@ -602,13 +907,19 @@ class MineralsMapApp {
             const ok = await this.layerManager.loadLayerOnDemand(name);
             if (!ok) {
               checkbox.checked = false;
+              this.setDataStatus(
+                `Could not load ${config.sidebarLabel || name}. Try again or check your connection.`,
+                'error'
+              );
               return;
             }
+            this.setDataStatus(null);
             this.layerManager.setLayerVisibility(name, true);
             if (this.layerManager.layers[name]) {
               this.layerManager.layers[name].visible = true;
             }
             await this.updateVectorLegend(name, true);
+            this.refreshKpiBar();
           } finally {
             checkbox.disabled = false;
             item?.classList.remove('loading');
@@ -618,6 +929,7 @@ class MineralsMapApp {
 
         this.layerManager.setLayerVisibility(name, checked);
         await this.updateVectorLegend(name, checked);
+        this.refreshKpiBar();
       });
     });
 
@@ -632,8 +944,20 @@ class MineralsMapApp {
         checkbox.disabled = true;
         item?.classList.add('loading');
         try {
-          await this.layerManager.setWMSLayerVisibility(name, checked);
-          await this.updateWMSLegend(name, checked);
+          const ok = await this.layerManager.setWMSLayerVisibility(name, checked);
+          if (checked && !ok) {
+            checkbox.checked = false;
+            this.setDataStatus(
+              `Could not load ${WMS_CONFIG[name]?.sidebarLabel || name}. Try again or check your connection.`,
+              'error'
+            );
+            await this.updateWMSLegend(name, false);
+            this.refreshKpiBar();
+            return;
+          }
+          if (checked) this.setDataStatus(null);
+          await this.updateWMSLegend(name, checkbox.checked);
+          this.refreshKpiBar();
         } finally {
           checkbox.disabled = false;
           item?.classList.remove('loading');
@@ -643,43 +967,9 @@ class MineralsMapApp {
   }
 
   bindInteractions() {
-    this.map.on('click', 'critical-minerals-layer', (e) => {
-      const coordinates = e.features[0].geometry.coordinates.slice();
-      const {
-        name,
-        OperatorOwnersEN: operator,
-        CommoditiesEN: commodities,
-        ProvincesEN: province,
-        DevelopmentStageEN: stage,
-        ActivityStatusEN: status,
-        Website: website
-      } = e.features[0].properties;
+    this.map.on('click', (e) => this.openCombinedPopup(e));
 
-      const websiteRow = website && website !== 'N/A'
-        ? `<div class="popup-row"><span class="popup-label">Website:</span> <span class="popup-value"><a href="${website}" target="_blank" rel="noopener">Visit site</a></span></div>`
-        : '';
-
-      new maplibregl.Popup({ closeButton: true, closeOnClick: true })
-        .setLngLat(coordinates)
-        .setHTML(`
-          <div class="popup-content">
-            <h3 class="popup-title">${name}</h3>
-            <div class="popup-row"><span class="popup-label">Operator:</span> <span class="popup-value">${operator}</span></div>
-            <div class="popup-row"><span class="popup-label">Commodities:</span> <span class="popup-value">${commodities}</span></div>
-            <div class="popup-row"><span class="popup-label">Province:</span> <span class="popup-value">${province}</span></div>
-            <div class="popup-row"><span class="popup-label">Stage:</span> <span class="popup-value">${stage}</span></div>
-            <div class="popup-row"><span class="popup-label">Status:</span> <span class="popup-value">${status}</span></div>
-            ${websiteRow}
-          </div>
-        `)
-        .addTo(this.map);
-    });
-
-    this.bindMODSInteractions();
-    this.bindBedrockInteractions();
-    this.bindSurficialInteractions();
-
-    ['critical-minerals-layer', 'mods-layer', 'geoatlas-bedrock-fill', 'geoatlas-surficial-fill'].forEach((layerId) => {
+    POPUP_LAYER_IDS.forEach((layerId) => {
       this.map.on('mouseenter', layerId, () => {
         this.map.getCanvas().style.cursor = 'pointer';
       });
@@ -689,158 +979,51 @@ class MineralsMapApp {
     });
   }
 
-  bindBedrockInteractions() {
-    this.map.on('click', 'geoatlas-bedrock-fill', (e) => {
-      if (!e.features?.length) return;
-      const feature = e.features[0];
-      const p = feature.properties || {};
-      const coordinates = e.lngLat;
+  /** One popup for everything under the click (points + polygons), not one card per layer. */
+  openCombinedPopup(e) {
+    const layers = POPUP_LAYER_IDS.filter((id) => this.map.getLayer(id));
+    if (!layers.length) return;
 
-      const rows = [
-        ['Unit label', p.LABEL || p.name],
-        ['Lithology', p.LITHOLOGY],
-        ['Age', p.AGE],
-        ['Tectonic setting', p.TECTONIC],
-        ['Reference', p.REFERENCE]
-      ]
-        .filter(([, v]) => v && String(v).trim())
-        .map(
-          ([label, value]) =>
-            `<div class="popup-row"><span class="popup-label">${label}:</span> <span class="popup-value">${value}</span></div>`
-        )
-        .join('');
+    const hits = this.map.queryRenderedFeatures(e.point, { layers });
+    if (!hits.length) return;
 
-      new maplibregl.Popup({ closeButton: true, closeOnClick: true })
-        .setLngLat(coordinates)
-        .setHTML(`
-          <div class="popup-content">
-            <h3 class="popup-title">${p.name || p.LABEL || 'Bedrock unit'}</h3>
-            ${rows}
-          </div>
-        `)
-        .addTo(this.map);
-    });
-  }
+    // One feature per layer id (topmost), preserve priority order in POPUP_LAYER_IDS.
+    const byLayer = new Map();
+    for (const feature of hits) {
+      const layerId = feature.layer?.id;
+      if (!layerId || byLayer.has(layerId)) continue;
+      byLayer.set(layerId, feature);
+    }
 
-  bindSurficialInteractions() {
-    this.map.on('click', 'geoatlas-surficial-fill', (e) => {
-      if (!e.features?.length) return;
-      const p = e.features[0].properties || {};
-      const coordinates = e.lngLat;
+    const sections = [];
+    for (const layerId of POPUP_LAYER_IDS) {
+      const feature = byLayer.get(layerId);
+      if (!feature) continue;
+      const html = buildPopupSection(layerId, feature);
+      if (html) sections.push(html);
+    }
+    if (!sections.length) return;
 
-      const rows = [
-        ['Genetic unit (1:1M)', p.GENETIC1MA],
-        ['Genetic detail', p.GENETIC250],
-        ['Source', p.SOURCE],
-        ['Reference', p.REFERENCE]
-      ]
-        .filter(([, v]) => v && String(v).trim())
-        .map(
-          ([label, value]) =>
-            `<div class="popup-row"><span class="popup-label">${label}:</span> <span class="popup-value">${value}</span></div>`
-        )
-        .join('');
+    const modsFeature = byLayer.get('mods-layer');
+    if (modsFeature?.properties?.NMINO && this.occurrenceBrowser) {
+      this.occurrenceBrowser.selectByNmino(modsFeature.properties.NMINO);
+    }
 
-      new maplibregl.Popup({ closeButton: true, closeOnClick: true })
-        .setLngLat(coordinates)
-        .setHTML(`
-          <div class="popup-content">
-            <h3 class="popup-title">${p.name || p.GENETIC1MA || p.GENETIC250 || 'Surficial unit'}</h3>
-            ${rows}
-          </div>
-        `)
-        .addTo(this.map);
-    });
-  }
+    const body =
+      sections.length === 1
+        ? sections[0]
+        : `<div class="popup-stacked">${sections.join('')}</div>`;
 
-  /** MODS deep-link: NMINO (e.g. "023G/09/Ni 002") plugs straight into the province's occurrence-report lookup. */
-  modsRecordUrl(nmino) {
-    if (!nmino) return null;
-    return `https://gis.geosurv.gov.nl.ca/mods/ModsCard.asp?NMINOString=${encodeURIComponent(nmino).replace(/%20/g, '+')}`;
-  }
-
-  bindMODSInteractions() {
-    // Single circle layer, visible/clickable at every zoom (see
-    // `commodityPicker`/`paint.circle` in layerConfig.js) - no separate
-    // cluster/heatmap layer to bind here.
-    this.map.on('click', 'mods-layer', (e) => {
-      const coordinates = e.features[0].geometry.coordinates.slice();
-      const props = e.features[0].properties;
-      const {
-        name,
-        primaryCommodity,
-        COMNAME: commodity,
-        secondaryCommodities,
-        commodityList,
-        STATUS: status,
-        DEPDESC: depositType,
-        OREMIN: oreMinerals,
-        WORKING: workHistory,
-        NTS: nts,
-        NMINO: nmino
-      } = props;
-
-      const parseMaybeArray = (v) => {
-        if (Array.isArray(v)) return v;
-        if (typeof v === 'string' && v.startsWith('[')) {
-          try {
-            return JSON.parse(v);
-          } catch {
-            return [];
-          }
-        }
-        return [];
-      };
-
-      const list = parseMaybeArray(commodityList);
-      const secondaries = Array.isArray(secondaryCommodities)
-        ? secondaryCommodities
-        : parseMaybeArray(secondaryCommodities).length
-          ? parseMaybeArray(secondaryCommodities)
-          : list.filter((c) => c !== (primaryCommodity || commodity));
-
-      if (this.occurrenceBrowser) {
-        this.occurrenceBrowser.selectByNmino(nmino);
-      }
-
-      const primary = primaryCommodity || commodity;
-      const commodityRows = [['Primary commodity', primary]];
-      if (secondaries.length) {
-        commodityRows.push(['Also reported', secondaries.join(', ')]);
-      }
-
-      const rows = [
-        ...commodityRows,
-        ['Status', status],
-        ['Deposit type', depositType],
-        ['Ore minerals', oreMinerals],
-        ['Work history', workHistory],
-        ['NTS sheet', nts]
-      ]
-        .filter(([, value]) => value && String(value).trim())
-        .map(
-          ([label, value]) =>
-            `<div class="popup-row"><span class="popup-label">${label}:</span> <span class="popup-value">${value}</span></div>`
-        )
-        .join('');
-
-      const recordUrl = this.modsRecordUrl(nmino);
-      const linkRow = recordUrl
-        ? `<div class="popup-row"><span class="popup-label">MODS record:</span> <span class="popup-value"><a href="${recordUrl}" target="_blank" rel="noopener">${nmino}</a></span></div>`
-        : '';
-
-      this.selectedPopup?.remove();
-      this.selectedPopup = new maplibregl.Popup({ closeButton: true, closeOnClick: true })
-        .setLngLat(coordinates)
-        .setHTML(`
-          <div class="popup-content">
-            <h3 class="popup-title">${name}</h3>
-            ${rows}
-            ${linkRow}
-          </div>
-        `)
-        .addTo(this.map);
-    });
+    this.selectedPopup?.remove();
+    this.selectedPopup = new maplibregl.Popup({
+      closeButton: true,
+      closeOnClick: true,
+      maxWidth: sections.length > 1 ? '360px' : '300px',
+      className: sections.length > 1 ? 'popup-multi' : ''
+    })
+      .setLngLat(e.lngLat)
+      .setHTML(`<div class="popup-content">${body}</div>`)
+      .addTo(this.map);
   }
 }
 

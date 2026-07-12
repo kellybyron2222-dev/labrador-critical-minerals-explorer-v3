@@ -124,8 +124,12 @@ export default class MapBase {
       btn.addEventListener('click', (e) => {
         const style = e.currentTarget.dataset.style;
         this.switchBasemap(style);
-        buttons.forEach((b) => b.classList.remove('active'));
+        buttons.forEach((b) => {
+          b.classList.remove('active');
+          b.setAttribute('aria-pressed', 'false');
+        });
         e.currentTarget.classList.add('active');
+        e.currentTarget.setAttribute('aria-pressed', 'true');
       });
     });
   }

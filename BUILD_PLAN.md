@@ -13,8 +13,8 @@
 > **Living document.** This is BOTH the master plan and the granular, step-by-step
 > checklist for the project. Review and update it as we move along — tick boxes,
 > flip status markers, and add notes in place.
-> Last updated: 2026-07-12 — Phase 1 complete (surficial + full NRCan
-> prospectivity set); endowment sidebar subgroups; next = Phase 2.1 claims
+> Last updated: 2026-07-12 — §5.1.8 CI gate (validate:data + Vitest + legend
+> escape + DEV window.app); next = Phase 3.1 transport
 
 **Status marker key:** `[x]` done · `[~]` in progress · `[ ]` not started · `[!]` blocked/needs decision
 Layer catalog status: `✅ done/in app` · `🟢 verified available` · `⬜ to confirm/wire` · `🔒 blocked`
@@ -27,8 +27,16 @@ Layer catalog status: `✅ done/in app` · `🟢 verified available` · `⬜ to 
 provincial bedrock + provincial regional surficial + all 6 national NRCan
 prospectivity models; endowment sidebar subgroups (Bedrock / Surficial /
 Prospectivity); bake-first + monthly refresh; mobile map-first chrome ·
-**Phases 2–4** not started · **Phase 5** partially pulled forward (occurrence
-browser UX + public host + mobile + data refresh).
+**Phase 2** ✅ complete — 2.1 claims/tenure · 2.2 Nunatsiavut/ATRIS · 2.3
+CPCAD + Land_Use · tenure parks de-overlapped onto CPCAD (69 mineral-rights
+polys) · §5.1.13 extents ·
+**Audit harden (2026-07-12)** ✅ — popup escaping + `PopupBuilder`; layer-load
+error UX; content-hash `cacheVersion` + GeoJSON `?v=`; KPI filter/geometry
+fidelity; no `LAYER_CONFIG` legend mutation; skip IndexedDB for static bakes;
+MODS primary/secondary matrix documented; Settings focus trap + drawer `inert`
++ reduced-motion · **§5.1.8/11/16 CI gate** ✅ · **Phases 3–4** not started ·
+**Phase 5** partially pulled forward (occurrence browser UX + Settings shell +
+public host + mobile + data refresh).
 
 | Area | Status |
 |---|---|
@@ -38,29 +46,38 @@ browser UX + public host + mobile + data refresh).
 | Provincial surficial (GeoAtlas regional /12, baked + IndexedDB + 6-mo) | ✅ (2026-07-12) |
 | Magmatic Ni + CD/MVT zinc prospectivity (baked WMS; 12-mo) | ✅ (2026-07-12) |
 | Endowment sidebar subgroups (Bedrock / Surficial / Prospectivity) | ✅ (2026-07-12) |
+| Map-staked claims + mineral tenure (Labrador; Rights; parks → CPCAD) | ✅ (2026-07-12) |
+| Nunatsiavut + ATRIS land claims (Rights; default OFF) | ✅ (2026-07-12) |
+| Protected & conserved (CPCAD) + land use constraints (Rights; default OFF) | ✅ (2026-07-12) |
+| Tenure↔CPCAD de-overlap (parks only on CPCAD; tenure 69 rights polys) | ✅ (2026-07-12) |
 | MODS + facilities baked (IndexedDB; monthly GHA) | ✅ (2026-07-11) |
 | Status filters, search, list/detail, bottom KPI | ✅ (2026-07-11) |
+| Customizable multi-layer KPI bar + Settings shell | ✅ (2026-07-12) |
+| Audit harden (XSS / cache / KPI / a11y / load errors) | ✅ (2026-07-12) |
 | Light sidebar chrome; legends on map | ✅ |
 | Mobile map-first chrome (drawer Layers + collapsible Legend) | ✅ (2026-07-11) |
-| Bake registry + monthly auto-refresh → PR (§6.2) | ✅ (12 registry entries) |
+| Bake registry + monthly auto-refresh → PR (§6.2) | ✅ (18 registry entries) |
 | GitHub repo + Pages hosting | ✅ |
-| Mineral claims / tenure | [ ] Phase 2.1 ← **next** |
-| Indigenous lands / protected areas | [ ] Phase 2.2 / 2.3 |
-| Infrastructure, geophysics, geochemistry | [ ] Phases 3–4 |
+| Phase 2 Rights & constraints (exit criteria) | ✅ complete |
+| CI bake validation + Vitest (§5.1.8 / 11 / 16) | ✅ (2026-07-12) |
+| Infrastructure (roads, power, communities) | [ ] Phase 3 ← **next** |
+| Geophysics / geochemistry | [ ] Phase 4 |
 | Provenance panel, shareable URL, export | [ ] Phase 5 remainder |
 | Optional later: detailed surficial, faults/contacts, LiDAR, aerial, EO | [ ] see §5 “Optional later” |
+| Optional later: historical claims, quarries, cancelled rights | [ ] Phase 2.1b |
 
 **Public app:** https://kellybyron2222-dev.github.io/labrador-critical-minerals-explorer-v3/  
 **Repo:** https://github.com/kellybyron2222-dev/labrador-critical-minerals-explorer-v3
 
 ### Recommended next steps (build sequence)
 
-1. **Phase 2.1 — Mineral claims & tenure** (`GeoAtlas/Mineral_Lands`)  
-   Turns the viewer into a siting tool (claims polygons, holder, status).
-   Highest-priority fundamental layer still missing.
-2. **Phase 2.2 — Indigenous lands** (Nunatsiavut / ATRIS)  
-   High-priority permitting context; recommend default ON once styled as context.
-3. **Then** Phase 2.3 protected/land use → Phase 3 infrastructure → Phase 4 signals → remaining Phase 5 polish.
+1. **Phase 3.1 — Transport** — roads (Trans-Labrador + forest access) from
+   GeoAtlas; then rail / ports / airstrips (CanVec) as follow-ons in 3.1.
+2. **Phase 3.2–3.3** — power (Nalcor/transmission) → communities / settlements.
+3. **Phase 4** — geophysics / geochemistry (quantitative surfaces, not MODS).
+4. **Phase 5 remainder** — provenance/About data, shareable URL, export.
+5. **Optional / deferred** — 2.1b historical claims; §5.1.9 surface worker;
+   §5.1.14 bedrock/surficial bake-lib unify; detailed surficial / LiDAR / EO.
 
 Optional follow-ups on geology / imagery: detailed surficial (MapServer/11),
 1:1M faults/contacts, SE Labrador bedrock, LiDAR / aerial / EO — see
@@ -147,14 +164,26 @@ js/modules/LayerManager.js  resolveLayerData (cache→bake→live), WMS imageUrl
 js/modules/layerCache.js    IndexedDB cache for baked GeoJSON (cacheKey/version)
 js/modules/LegendPanel.js   dynamic per-layer legend cards (map overlay)
 js/modules/MobileChrome.js  ≤768px: Layers drawer + collapsed Legend toggle
-js/modules/OccurrenceBrowser.js  KPI + search + status chips + list/detail
+js/modules/OccurrenceBrowser.js  status chips + search + list/detail
+js/modules/KpiBar.js            bottom multi-layer KPI HUD
+js/modules/KpiEngine.js         viewport metric compute
+js/modules/UserPrefs.js         localStorage preferences
+js/modules/SettingsPanel.js     Settings modal (collapsible sections; KPI first)
+js/config/kpiCatalog.js         KPI metric catalog + defaults
 js/modules/SurfaceInterpolation.js  per-mineral occurrence-density surfaces
 js/modules/wmsReprojection.js  equirectangular→Mercator (live WMS fallback)
 js/modules/facilityIcons.js    value-chain SVG icons (lazy via styleimagemissing)
-scripts/fetch-*.js          bake scripts (bedrock, surficial, mods, facilities, wms)
-scripts/refresh-data.js     registry orchestrator (nextDue skip + cache bump)
+scripts/fetch-*.js          bake scripts (bedrock, surficial, claims, tenure,
+                            nunatsiavut, atris, cpcad, landuse, mods, facilities, wms)
+scripts/refresh-data.js     registry orchestrator (nextDue skip + hash cacheVersion bump)
+scripts/validate-data.js    CI bake integrity (contentHash / cacheVersion / floors)
 scripts/data-refresh-registry.json
-scripts/lib/bakeMeta.js, png.js
+scripts/lib/bakeMeta.js, png.js, esriPolygons.js
+js/modules/PopupBuilder.js  safe popup HTML builders
+js/modules/htmlEscape.js    shared HTML/URL escaping
+js/config/mineralLands.js   Labrador clip + claims/tenure palettes (shared bake/app)
+js/config/indigenousLands.js Nunatsiavut + ATRIS constants / legend helpers
+js/config/protectedAreas.js CPCAD + Land_Use kinds / legend helpers (Phase 2.3)
 public/data/*               baked GeoJSON + WMS PNGs + *.meta.json
 css/style.css               light sidebar + map overlay + mobile drawer
 .github/workflows/deploy-pages.yml   GitHub Pages CI deploy
@@ -172,7 +201,8 @@ css/style.css               light sidebar + map overlay + mobile drawer
 - Data-driven collapsible sidebar layer groups (`LAYER_GROUPS` + `group` metadata)
 - **Light** sidebar chrome; **mobile map-first** (`MobileChrome`: off-canvas
   Layers drawer closed by default; Legend collapsed by default)
-- Occurrence browser (F1–F5): bottom KPI; status chips; search; list/detail;
+- Occurrence browser (F1–F5): status chips; search; list/detail; bottom KPI
+  is a separate multi-layer HUD (`KpiBar`)
   list collapsed by default on narrow screens
 - Value-chain icon system with maturity draw-ordering (`symbol-sort-key`)
 - Popups + hover interactivity
@@ -204,20 +234,49 @@ css/style.css               light sidebar + map overlay + mobile drawer
   `geoatlas-surficial-regional.geojson` (~15,016 polys, ~9.5 MB) + IndexedDB
   + lazy; genetic classes (`GENETIC1MA` / `GENETIC250`); RGB fills; ArcGIS
   legend; unit popups. Default OFF. Refresh **6 mo**.
+- ✅ **Map-staked Claims (Labrador)** — baked
+  `geoatlas-claims-labrador.geojson` (~975 polys, ~0.6 MB) + IndexedDB + lazy;
+  STATUS fill colors; Rights group. Default OFF. Refresh **3 mo**.
+- ✅ **Mineral Tenure (Labrador)** — baked
+  `geoatlas-tenure-labrador.geojson` (~69 polys, mineral-rights types only;
+  parks excluded → CPCAD) + IndexedDB + lazy; TYPEDESC fill colors; Rights
+  group. Default OFF. Refresh **3 mo**.
+- ✅ **Nunatsiavut (LISA)** — baked `inuit-nunatsiavut.geojson` (1 poly) +
+  IndexedDB + lazy; dashed teal context outline; Rights. Default OFF.
+  Refresh **12 mo**.
+- ✅ **ATRIS land claims (Labrador)** — baked `atris-claims-labrador.geojson`
+  (4 polys: Innu, NunatuKavut, LIA Quebec claim, Naskapi) + IndexedDB + lazy;
+  dashed purple context outlines; Rights. Default OFF. Refresh **12 mo**.
+  Legend: per-claim checklist (All on/off) + plain-language descriptions so
+  overlapping assertions can be toggled independently.
+- ✅ **Protected & conserved areas (CPCAD)** — baked
+  `geoatlas-cpcad-labrador.geojson` (12 polys: Torngat, Mealy Mtns, provincial
+  parks, ecological reserves, Gilbert Bay MPA) from GeoAtlas `Land_Use/4` +
+  IndexedDB + lazy; TYPE_E fills; Rights. Default OFF. Refresh **12 mo**.
+- ✅ **Land use constraints** — baked `geoatlas-landuse-labrador.geojson`
+  (131 polys: Plan 2020, specified materials, water supplies, planning areas;
+  wind reserve empty in Labrador clip) from GeoAtlas `Land_Use` 0/1/5/7/8 +
+  IndexedDB + lazy; per-kind legend checklist; Rights. Default OFF.
+  Refresh **12 mo**. Skipped LIL/LISA (2.2) and municipal (Phase 3).
 
 **UX shell (2026-07-11 / 2026-07-12)**
 - ✅ Light left sidebar (layers + basemap + occurrence search/status/list)
 - ✅ Geological Endowment subgroups: Bedrock / Surficial / Prospectivity
-- ✅ Bottom KPI strip (filtered / scoped counts + status bits)
+- ✅ Rights & Constraints group (claims, tenure, Nunatsiavut, ATRIS, CPCAD,
+  land use)
+- ✅ Bottom KPI strip (viewport-aware; multi-layer; Settings-customizable)
+- ✅ Settings shell (map gear + sidebar): collapsible **KPI bar** subcategory
+  (default minimized); KPI-bar gear deep-links with section expanded;
+  localStorage prefs; ready for more Settings sections later
 - ✅ Legend cards on the map (top-left desktop; collapsible on phone)
 - ✅ Mobile: **Layers** drawer + **Legend** toggle (map fills viewport)
 - ✅ Deployed to GitHub Pages
-- ✅ Data refresh: registry (12 entries) + monthly GHA → PR (operator: §6.2)
+- ✅ Data refresh: registry (18 entries) + monthly GHA → PR (operator: §6.2)
 
 **Removed (2026-07-06) — were hand-authored demo/synthetic data:**
 - ❌ Mineral Deposits (demo) → replaced by MODS (✅ 2026-07-06, see Phase 1.1)
 - ❌ Infrastructure (demo) → replace with NRCan/GeoAtlas transport & power
-- ❌ Mining Tenures (demo) → replace with GeoAtlas Mineral Lands
+- ❌ Mining Tenures (demo) → replaced by GeoAtlas Mineral Lands (✅ 2026-07-12, Phase 2.1)
 - See `TODO (real data)` note in `js/config/layerConfig.js`.
 
 **Explicitly not in V3 (revised merger guide):** featured-deposits JSON, B
@@ -267,17 +326,18 @@ Occurrences/MODS), `Mineral_Lands` (claims/tenure/quarries), `Land_Use`,
 ### 4. Can I legally work here? — mineral rights
 | Layer | Source | Endpoint / service | Status |
 |---|---|---|---|
-| Map-staked claims (real-time), tenure, historical claims, notices gazetted | NL GeoAtlas | `GeoAtlas/Mineral_Lands` | 🟢 verified |
-| Quarry permits / leases | NL GeoAtlas | `GeoAtlas/Mineral_Lands` | 🟢 verified |
+| Map-staked claims (Labrador) | NL GeoAtlas | `Mineral_Lands/MapServer/0` → baked `geoatlas-claims-labrador.geojson` | ✅ in app (lazy; IndexedDB; refresh every 3 mo) |
+| Mineral tenure (Labrador) | NL GeoAtlas | `Mineral_Lands/MapServer/5` → baked `geoatlas-tenure-labrador.geojson` (69 mineral-rights polys; parks excluded → CPCAD) | ✅ in app (lazy; IndexedDB; refresh every 3 mo) |
+| Historical claims / cancelled / notices / quarries | NL GeoAtlas | `GeoAtlas/Mineral_Lands` (layers 2–4, 6–11) | ⬜ optional later (2.1b) |
 
 ### 5. Who else has rights / what's constrained? — permitting reality
 | Layer | Source | Endpoint / service | Status |
 |---|---|---|---|
-| Labrador Inuit Settlement Area (Nunatsiavut) | SAC-ISC / open.canada.ca | `geo.sac-isc.gc.ca/.../Region_inuite_Inuit_Region/MapServer/0` | 🟢 verified (GeoJSON) |
-| Comprehensive land claims (incl. Innu of Labrador) | ATRIS | `geo.sac-isc.gc.ca/.../ATRIS_PRD/ATRIS_E_PC/MapServer/2` | 🟢 verified (GeoJSON) |
-| Labrador Inuit / Innu settlement area shapefiles + park boundaries | labradorgeolab.ca | dataset ZIPs (Torngat, Mealy Mtns) | 🟢 verified (download) |
-| Land use / Crown land zoning | NL GeoAtlas | `GeoAtlas/Land_Use` | 🟢 verified |
-| Protected & conserved areas (national) | CPCAD (ECCC) | open.canada.ca | ⬜ to add |
+| Nunatsiavut (Labrador Inuit Settlement Area) | SAC-ISC Inuit Regions | `Donnees_Ouvertes-Open_Data/Region_inuite_Inuit_Region/MapServer/0` → baked `inuit-nunatsiavut.geojson` | ✅ in app (lazy; default OFF; 12-mo) |
+| ATRIS comprehensive land claims (Labrador subset) | ATRIS | `ATRIS_E_PC/MapServer/2` → baked `atris-claims-labrador.geojson` | ✅ in app (lazy; default OFF; 12-mo) |
+| Labrador Inuit / Innu settlement area shapefiles + park boundaries | labradorgeolab.ca | dataset ZIPs (Torngat, Mealy Mtns) | 🟢 verified (download; parks covered via CPCAD bake — ZIPs unused) |
+| Land use / Crown land zoning | NL GeoAtlas | `GeoAtlas/Land_Use` → baked `geoatlas-landuse-labrador.geojson` (layers 0/1/5/7/8) | ✅ in app (lazy; default OFF; 12-mo) |
+| Protected & conserved areas (national) | CPCAD via GeoAtlas | `Land_Use/MapServer/4` → baked `geoatlas-cpcad-labrador.geojson` | ✅ in app (lazy; default OFF; 12-mo) |
 | Caribou habitat / wildlife (permitting driver) | NL / ECCC | TBD | ⬜ later |
 
 ### 6. Can I physically develop it? — infrastructure
@@ -566,7 +626,12 @@ A’s live MapLibre explorer **without** importing B datasets or group taxonomy.
 - [x] Sidebar occurrence list (cap 300) + detail card (live MODS fields +
       MODS record link); click syncs map flyTo + popup; map click selects list
 - [x] Minimizable list body (search + status chips stay visible)
-- [x] Bottom KPI strip: filtered / commodity-scoped totals + status bits
+- [x] Bottom KPI strip: viewport-aware multi-layer HUD (Settings-customizable;
+      defaults: MODS in view + status bits + claims + tenure)
+- [x] **Settings shell** (`SettingsPanel` + `UserPrefs`) — expandable
+      subcategories; **KPI bar** section default **collapsed**; map/sidebar
+      Settings opens shell minimized; KPI-bar gear opens Settings → KPI
+      **expanded**; gear icons; prefs persist in `localStorage`
 - [x] Light sidebar restyle to match clean white panel chrome; legends moved
       top-left; KPI bottom-center
 - [x] GitHub repo + Pages deploy workflow (`deploy-pages.yml`)
@@ -670,33 +735,85 @@ demo-deposit gap fully replaced by real endowment + occurrence data. ✅
 - [ ] SAR (e.g. Sentinel-1) for all-weather structure/lineament context — Phase 4+
       research track, not a default endowment layer
 
-### Phase 2 — Rights & constraints (turns viewer into a siting tool)  [ ]
-**2.1 — Mineral claims & tenure** ← **NEXT**
-- [ ] Inventory `GeoAtlas/Mineral_Lands` sublayers (map-staked claims, tenure, historical, notices gazetted, quarries)
-- [ ] Add active claims (polygons) — style by status; group=Rights
-- [ ] Popup: licence #, holder, issue/expiry, status, GEOFILE assessment link
-- [ ] Optional: historical claims + notices-gazetted as separate toggles
-- [ ] Legend + wiring + test + status
+### Phase 2 — Rights & constraints (turns viewer into a siting tool)  ✅ COMPLETE
+**2.1 — Mineral claims & tenure** ✅ COMPLETE (2026-07-12)
+- [x] Inventory `GeoAtlas/Mineral_Lands` sublayers
+      → 12 layers. MVP: **0** Map Staked Claims (province ~4,617; Labrador
+      clip **975**) + **5** Mineral Tenure (province ~388; Labrador clip
+      originally **177**, then **69** after excluding parks → CPCAD).
+      Deferred: Historical Claims (2, ~42k), Cancelled (3), Original
+      Boundaries (1 polyline), Quarries (6–11 points). Notices Gazetted (4)
+      empty (0). Labrador clip bbox
+      `[-67.8, 51.5]–[-55.5, 60.6]` (south of Strait of Belle Isle — not the
+      island-inclusive `NL_LABRADOR_BOUNDS`). `outSR=4326` + `f=json` works
+      (Esri rings → GeoJSON). Claims STATUS (Labrador): Issued 956, Recorded
+      15, other rare. Tenure TYPEDESC includes Mining Lease, Exempt Mineral
+      Land, parks/reserves, Federal Land, LIL, etc. `FILENUM` = registry file
+      # — no public deep-link found; popup shows value + GeoFiles search link.
+- [x] Active claims (polygons) — style by STATUS; group=Rights
+      (`geoatlasClaims`); bake `fetch:claims`; cadence **3 mo**
+- [x] Mineral tenure — style by TYPEDESC; group=Rights (`geoatlasTenure`);
+      bake `fetch:tenure`; cadence **3 mo**. Parks / protected TYPEDESC
+      values excluded (live on CPCAD) so Torngat/Mealy/etc. are not duplicated
+      (bake **69** mineral-rights polys after filter).
+- [x] Popup: licence #, holder, issue/expiry, status, FILENUM + GeoFiles link
+- [ ] Optional later (2.1b): historical claims + cancelled + quarries
+- [x] Legend + wiring + test + status
+      Shared palette/constants: `js/config/mineralLands.js`. LayerManager
+      gains geometry envelope on `paginatedQuery` + `claimsStatus` /
+      `tenureType` enrichment for live fallback.
+- [x] **Load / cache / refresh (playbook §6 steps 8–9)** — verified 2026-07-12:
+      - Baked `public/data/geoatlas-{claims,tenure}-labrador.geojson` +
+        `*.meta.json` (`generatedAt`, `nextDue`, `cadenceMonths=3`,
+        `contentHash`, feature counts 975 / 69 (tenure parks → CPCAD))
+      - `LAYER_CONFIG`: `dataUrl` + `cacheKey` / `cacheVersion` (IndexedDB) +
+        `lazy: true` + Labrador-clipped `paginatedQuery` live fallback
+      - Registry entries → `fetch:claims` / `fetch:tenure`; monthly GHA skips
+        until `nextDue` (2026-10-12); `refresh:data` bumps `cacheVersion` on
+        content change
+      - Broader inventory: **all 16** registry datasets match baked assets ↔
+        meta ↔ `cacheKey`/`cacheVersion` ↔ npm fetch scripts (zero gaps)
 
-**2.2 — Indigenous lands (high priority context)**
-- [ ] Nunatsiavut / Labrador Inuit Settlement Area (SAC-ISC Inuit Regions REST → geojson)
-- [ ] Innu / comprehensive land claims (ATRIS layer 2), filtered to Labrador
-- [ ] Style: distinct hatch/outline, subdued fill; ensure it reads as context not data
-- [ ] Popup: name, agreement/year
-- [ ] Decide default visibility (recommend ON as permitting context)
-- [ ] Legend + wiring + test + status
+**2.2 — Indigenous lands (high priority context)** ✅ COMPLETE (2026-07-12)
+- [x] Nunatsiavut / Labrador Inuit Settlement Area
+      → SAC-ISC `Donnees_Ouvertes-Open_Data/Region_inuite_Inuit_Region/0`
+      (hyphen path). Filter `REGION='Nunatsiavut'` → 1 poly. Bake
+      `fetch:nunatsiavut` → `inuit-nunatsiavut.geojson` (~0.17 MB). Cadence
+      **12 mo**. Default **OFF**.
+- [x] Innu / comprehensive land claims (ATRIS layer 2), Labrador subset
+      → curated TAG_IDs: Innu of Labrador, NunatuKavut, Labrador Inuit Assn
+      (Quebec claim), Naskapi Labrador claim. Bake `fetch:atris` →
+      `atris-claims-labrador.geojson` (4 polys). Default **OFF**.
+- [x] Style: low-opacity fill + dashed outline (context, not data)
+- [x] Popup: name / agreement fields; combined with mineral claims popup
+- [x] Default visibility OFF (user request)
+- [x] Legend + wiring + test + status (`js/config/indigenousLands.js`)
+- [x] ATRIS legend: per-claim on/off + descriptions (overlapping polygons);
+      MapLibre filter on fill + outline by `TAG_ID`
+- [x] Load / cache / refresh: same gold standard as 2.1 (IndexedDB → bake →
+      live; registry 12-mo; meta `nextDue` 2027-07-12) — included in 16/16
+      audit
 
-**2.3 — Protected areas & land use**
-- [ ] Parks: Torngat & Mealy Mtns (labradorgeolab ZIPs → convert to GeoJSON, or CPCAD REST)
-- [ ] CPCAD national protected/conserved areas (filter to Labrador)
-- [ ] `GeoAtlas/Land_Use` zoning
-- [ ] Style + legend + toggles + test + status
+**2.3 — Protected areas & land use** ✅ COMPLETE (2026-07-12)
+- [x] Parks: Torngat & Mealy Mtns via GeoAtlas `Land_Use/4` CPCAD mirror
+      (labradorgeolab ZIPs / federal CPCAD REST not used — GeoAtlas hosts CPCAD)
+- [x] CPCAD national protected/conserved areas filtered to Labrador clip
+      → bake `fetch:cpcad` → `geoatlas-cpcad-labrador.geojson` (12 polys).
+      Cadence **12 mo**. Default **OFF**.
+- [x] `GeoAtlas/Land_Use` zoning — merged bake of layers **0,1,5,7,8**
+      (Plan 2020, specified materials, water supplies, planning areas, wind
+      reserve). Skip 2/3 LIL/LISA (Phase 2.2) and 6 municipal (Phase 3).
+      → `fetch:landuse` → `geoatlas-landuse-labrador.geojson` (131 polys).
+      Cadence **12 mo**. Default **OFF**.
+- [x] Style + legend + toggles + test + status (`js/config/protectedAreas.js`);
+      land-use per-kind checklist; CPCAD by TYPE_E; popups; KPI opt-in metrics
+- [x] §5.1.13 Labrador extents documented (`mineralLands.js` + Rights hint)
 
 **Phase 2 exit criteria:** user can see, for any spot, whether they can legally
-work and what land constraints apply.
+work and what land constraints apply. ✅ (2.1 + 2.2 + 2.3)
 
-### Phase 3 — Infrastructure ("can I develop it?")  [ ]
-**3.1 — Transport**
+### Phase 3 — Infrastructure ("can I develop it?")  [ ] ← **NEXT**
+**3.1 — Transport** ← first Phase 3 slice
 - [ ] Roads (Trans-Labrador Hwy + forest access) — `GeoAtlas` transportation
 - [ ] Railways (iron-ore lines) — CanVec
 - [ ] Ports / marine access — CanVec
@@ -706,6 +823,7 @@ work and what land constraints apply.
 - [ ] Generation (Churchill Falls, Muskrat Falls; Gull Island potential)
 **3.3 — Communities**
 - [ ] Settlements / populated places — CanVec / StatCan
+      (incl. GeoAtlas `Land_Use/6` Municipal Boundaries deferred from 2.3)
 - [ ] Each sub-item: config + style + popup + legend + test + status
 
 **Phase 3 exit criteria:** logistics/infrastructure overlay complete enough to
@@ -745,6 +863,11 @@ reason about development feasibility.
       still open: jump to claim / NTS sheet / place geocode
 - [ ] **Measure & draw tools** (distance/area) — exploration utility
 - [ ] **Shareable state** — URL encodes active layers + extent + filters
+      (later: include Settings / KPI prefs)
+- [x] **Settings shell** — map + sidebar entry; collapsible sections; **KPI bar**
+      subcategory (default minimized; KPI-bar gear deep-links expanded);
+      `localStorage` via `UserPrefs`. Future sections (basemap defaults,
+      About data, etc.) plug into the same panel.
 - [ ] **Export** — visible features to GeoJSON/CSV
 - [ ] **Performance pass** — denser polygon layers (claims) may need further
       tiling/simplification beyond current bake + IndexedDB pattern
@@ -756,6 +879,32 @@ reason about development feasibility.
       full contributor playbook still open (point at §6 playbook + §6.2 refresh)
 - [x] **Public hosting** — GitHub Pages via Actions (2026-07-11)
 - [x] **Baked-data auto-refresh** — registry + monthly GHA → PR (§6.1 / §6.2)
+- [x] **Audit harden (2026-07-12)** — popup XSS + `PopupBuilder`; load-failure UX;
+      hash `cacheVersion` + GeoJSON `?v=`; KPI province filter + true polygon
+      intersect; legend defs without mutating `LAYER_CONFIG`; skip IndexedDB for
+      static bakes; MODS primary/secondary matrix in `modsFilters.js`; Settings
+      focus trap + drawer `inert` + `prefers-reduced-motion`
+
+### §5.1 Deferred audit follow-ups (schedule deliberately)
+
+From the 2026-07-12 architecture audit — **do not block Phase 3**. Schedule as follows:
+
+| # | Item | When | Why then |
+|---|---|---|---|
+| 8 | **CI `validate:data` + Vitest** on `modsFilters` / KPI helpers; assert bake `contentHash` + pagination counts | **Done (2026-07-12)** | `npm run validate:data` + Vitest; wired in deploy-pages + refresh-data |
+| 11 | **LegendPanel label escaping** (`textContent` instead of `innerHTML` for ArcGIS labels) | **Done with #8** (2026-07-12) | `_buildItemsList` uses DOM/`textContent` |
+| 16 | **Gate `window.app` behind `import.meta.env.DEV`** | **Done with #8** (2026-07-12) | `main.js` DEV-only assignment |
+| 13 | **Document / unify Labrador extents** (MODS REGION vs claims bbox vs WMS `NL_LABRADOR_BOUNDS`) — at least Rights-group hint text | **Done with Phase 2.3** (2026-07-12) | Documented in `mineralLands.js` / `protectedAreas.js`; Rights hint notes mainland clip |
+| 14 | **Refactor bedrock/surficial bake scripts** onto `esriPolygons.js` + `writeBakeOutputs`; registry `cadenceMonths` as single source of truth | **Before next geology re-bake** | Avoid three-way polygon helper drift; natural when editing bake pipeline |
+| 9 | **MODS density surfaces → Web Worker** | **Phase 5 performance pass** (or sooner if field users report jank with surfaces on) | Opt-in feature; not on cold-start path; defer until surfaces see heavier use |
+
+Checklist (mirror of table):
+- [x] §5.1.8 — `npm run validate:data` in refresh + deploy CI; Vitest for filters/KPI
+- [x] §5.1.11 — LegendPanel escape ArcGIS labels via DOM/`textContent`
+- [x] §5.1.16 — `window.app` only in DEV builds
+- [x] §5.1.13 — Canonical Labrador extent + UI hint (bundled with 2.3)
+- [ ] §5.1.14 — Bedrock/surficial share bake libs; cadence from registry
+- [ ] §5.1.9 — SurfaceInterpolation Web Worker + computing UI state
 
 ---
 
@@ -812,13 +961,26 @@ Force all: Actions `workflow_dispatch` with force=true, or
 |---|---|---|---|
 | **Bedrock Geology (NL 1:1M)** | ✅ Baked GeoJSON + IndexedDB + lazy | **6 mo** | see `geoatlas-bedrock-1m.meta.json` |
 | **Surficial Geology (NL regional)** | ✅ Baked GeoJSON + IndexedDB + lazy | **6 mo** | see `geoatlas-surficial-regional.meta.json` |
+| **Map-staked Claims (Labrador)** | ✅ Baked GeoJSON + IndexedDB + lazy (`fetch:claims`) | **3 mo** | see `geoatlas-claims-labrador.meta.json` |
+| **Mineral Tenure (Labrador)** | ✅ Baked GeoJSON + IndexedDB + lazy (`fetch:tenure`; parks excluded) | **3 mo** | see `geoatlas-tenure-labrador.meta.json` |
+| **Nunatsiavut (LISA)** | ✅ Baked GeoJSON + IndexedDB + lazy (`fetch:nunatsiavut`) | **12 mo** | see `inuit-nunatsiavut.meta.json` |
+| **ATRIS Land Claims (Labrador)** | ✅ Baked GeoJSON + IndexedDB + lazy (`fetch:atris`) | **12 mo** | see `atris-claims-labrador.meta.json` |
+| **Protected & Conserved (CPCAD)** | ✅ Baked GeoJSON + IndexedDB + lazy (`fetch:cpcad`) | **12 mo** | see `geoatlas-cpcad-labrador.meta.json` |
+| **Land Use Constraints (Labrador)** | ✅ Baked GeoJSON + IndexedDB + lazy (`fetch:landuse`) | **12 mo** | see `geoatlas-landuse-labrador.meta.json` |
 | **Mineral Occurrences (MODS)** | ✅ Baked GeoJSON + IndexedDB (`fetch:mods`) | **3 mo** | see `mods-labrador.meta.json` |
 | **Critical Mineral Facilities** | ✅ Baked NL&L GeoJSON + IndexedDB (`fetch:facilities`) | **3 mo** | see `critical-minerals-nl.meta.json` |
 | **Li / REE / Graphite / Ni / CD+MVT Zn / national bedrock / surficial** | ✅ Baked Mercator PNG (`fetch:wms`) | **12 mo** | see `wms-*-nll.meta.json` |
 | **MODS density surface** | Client Turf from loaded MODS | n/a (derived) | — |
 
-Registry: `scripts/data-refresh-registry.json` (12 entries). Manual bakes:
-`npm run fetch:bedrock` · `fetch:surficial` · `fetch:mods` · `fetch:facilities` · `fetch:wms`.
+Registry: `scripts/data-refresh-registry.json` (18 entries). Manual bakes:
+`npm run fetch:bedrock` · `fetch:surficial` · `fetch:claims` · `fetch:tenure` ·
+`fetch:nunatsiavut` · `fetch:atris` · `fetch:cpcad` · `fetch:landuse` ·
+`fetch:mods` · `fetch:facilities` · `fetch:wms`.
+
+**Audit (2026-07-12):** every registry row has matching baked asset + meta
+(`generatedAt` / `nextDue` / `cadenceMonths` / `contentHash`), npm fetch
+script, and `cacheKey`/`cacheVersion` in `layerConfig.js`. Phase 2.1 claims +
+tenure confirmed Labrador-clipped live fallback. No gaps found.
 
 **When adding a layer:** playbook steps 8–9 are mandatory (bake + registry +
 cadence). Prefer the same monthly GHA + `nextDue` skip over extra crons.
@@ -840,9 +1002,9 @@ branch** with Actions enabled:
 
 | Cadence | Datasets | Typical next due after a bake |
 |---|---|---|
-| 3 months | MODS, Critical Mineral Facilities | +3 months from `generatedAt` |
+| 3 months | MODS, Critical Mineral Facilities, Map-staked Claims, Mineral Tenure | +3 months from `generatedAt` |
 | 6 months | Bedrock Geology (NL 1:1M), Surficial Geology (NL regional) | +6 months |
-| 12 months | Eight NRCan WMS PNG bakes (6 prospectivity + national bedrock/surficial) | +12 months |
+| 12 months | Eight NRCan WMS PNG bakes; Nunatsiavut; ATRIS; CPCAD; land use | +12 months |
 
 **Optional / one-off**
 - Force every dataset now: Actions → **Refresh data sources** → Run workflow →
@@ -909,6 +1071,67 @@ branch** with Actions enabled:
 
 ## 10. Changelog
 
+- **2026-07-12** — §5.1.8 / 11 / 16 CI gate: `npm run validate:data` (registry
+  contentHash / cacheVersion / feature floors); Vitest for `modsFilters` +
+  `KpiEngine` (21 tests); LegendPanel ArcGIS labels via `textContent`;
+  `window.app` DEV-only; deploy-pages + refresh-data run validate/tests.
+  Normalized all bake `meta.version` fields to content-hash prefixes.
+  **Next:** Phase 3.1 transport.
+- **2026-07-12** — De-overlap tenure vs CPCAD: mineral tenure bake/live
+  excludes National/Provincial Park, Ecological Reserve, National Historic
+  Park (`TENURE_WHERE`); parks only on Protected & conserved. Tenure bake
+  177 → **69** mineral-rights polys; `cacheVersion` bumped. BUILD_PLAN
+  reconciled: Phase 2 fully closed; **next** = §5.1.8 CI/Vitest gate, then
+  Phase 3.1 transport.
+- **2026-07-12** — Phase **2.3** complete: **Protected & conserved areas**
+  (GeoAtlas `Land_Use/4` CPCAD mirror, 12 Labrador polys incl. Torngat /
+  Mealy) + **Land use constraints** (merged layers 0/1/5/7/8, 131 polys).
+  Bake-first; Rights group; **default OFF**; `fetch:cpcad` / `fetch:landuse`;
+  registry **18** @ 12-mo. Shared `js/config/protectedAreas.js`; land-use
+  per-kind legend checklist; CPCAD TYPE_E legend; popups; KPI opt-in.
+  §5.1.13 Labrador extents documented. Phase **2 exit criteria met**.
+  Skipped labradorgeolab ZIPs / federal CPCAD REST / LIL-LISA / municipal.
+  **Next:** §5.1.8 CI/Vitest, then Phase 3.1 transport.
+- **2026-07-12** — Audit harden pass: safe `PopupBuilder` + shared `htmlEscape`;
+  layer/WMS load failures surface in sidebar footer and uncheck toggles;
+  `cacheVersion` = content-hash prefix (bake + `refresh:data` + `layerConfig`);
+  GeoJSON `?v=` cache bust; skip IndexedDB for static bakes + evict stale
+  versions; KPI facilities respect province filter; polygon KPIs use true
+  geometry intersect + “intersecting view” labels; legends no longer mutate
+  `LAYER_CONFIG`; MODS primary/secondary matrix documented
+  (`modsUsesPrimaryOnlyFilter`); Settings focus trap + `inert`; mobile drawer
+  `inert`; `prefers-reduced-motion`. Deferred items → **§5.1**. **Next:** Phase 2.3.
+- **2026-07-12** — Settings UX polish: **KPI bar** is a collapsible Settings
+  subcategory (**default minimized**); map/sidebar Settings opens the shell
+  collapsed; KPI-bar **gear** deep-links to Settings → KPI **expanded**. Ready
+  for additional Settings sections. **Next:** Phase 2.3.
+- **2026-07-12** — Customizable **multi-layer KPI bar** + **Settings** panel:
+  viewport-aware counts (MODS / claims / tenure / facilities / ATRIS /
+  Nunatsiavut / layers-on); pan/zoom refresh; prefs in `localStorage`;
+  modules `KpiBar`, `KpiEngine`, `UserPrefs`, `SettingsPanel`. **Next:**
+  Phase 2.3.
+- **2026-07-12** — Bake/cache/refresh audit: **16/16** registry datasets OK
+  (assets ↔ meta ↔ `cacheKey`/`cacheVersion` ↔ fetch scripts). Phase **2.1**
+  claims/tenure reconfirmed against playbook gold standard (IndexedDB →
+  bake → Labrador-clipped live fallback; 3-mo cadence; `nextDue` 2026-10-12).
+  ATRIS legend UX: per-claim toggles + descriptions for overlapping polygons.
+  BUILD_PLAN §2.1 / §2.2 / §6.1 updated. **Next:** Phase 2.3.
+- **2026-07-12** — Phase 2.2 complete: **Nunatsiavut (LISA)** + **ATRIS
+  Labrador land claims** (Innu, NunatuKavut, Labrador Inuit Assn Quebec claim,
+  Naskapi Labrador). Bake-first; Rights group; **default OFF**; dashed
+  context outlines; combined popups; registry **16** @ 12-mo. Corrected Inuit
+  Regions URL hyphen path (`Donnees_Ouvertes-Open_Data`). **Next:** Phase 2.3
+  protected areas / land use.
+- **2026-07-12** — Phase 2.1 complete: **Map-staked Claims** + **Mineral Tenure**
+  (GeoAtlas `Mineral_Lands` layers 0 + 5), Labrador-clipped bbox south of
+  Strait of Belle Isle (~975 / ~177 polys). Bake-first
+  `geoatlas-claims-labrador.geojson` / `geoatlas-tenure-labrador.geojson` +
+  IndexedDB + lazy Rights toggles; STATUS / TYPEDESC fills; popups (licence,
+  holder, dates; FILENUM + GeoFiles search). Shared
+  `js/config/mineralLands.js`; `fetch:claims` / `fetch:tenure`; registry **14**
+  entries @ **3 mo**. LayerManager: spatial envelope on `paginatedQuery`.
+  Deferred: historical (~42k), quarries, cancelled, notices (empty).
+  **Next:** Phase 2.2 Indigenous lands.
 - **2026-07-12** — Session close-out: BUILD_PLAN reconciled for Phase 1
   complete (surficial + all 6 NRCan prospectivity models + endowment
   subgroups). Registry **12** entries. **Next:** Phase 2.1 mineral claims.

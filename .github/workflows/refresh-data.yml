@@ -46,6 +46,9 @@ jobs:
           FORCE_REFRESH: ${{ github.event_name == 'workflow_dispatch' && inputs.force == 'true' && '1' || '' }}
         run: npm run refresh:data
 
+      - name: Validate baked datasets
+        run: npm run validate:data
+
       - name: Read refresh result
         id: result
         run: |

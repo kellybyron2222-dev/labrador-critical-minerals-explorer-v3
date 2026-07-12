@@ -78,10 +78,24 @@ export default class LegendPanel {
     items.forEach(({ label, color, icon }) => {
       const row = document.createElement('div');
       row.className = 'legend-row';
-      const swatchHtml = icon
-        ? `<img class="legend-icon" src="${icon}" alt="" />`
-        : `<span class="legend-swatch legend-swatch-${shape || 'circle'}" style="background:${color}"></span>`;
-      row.innerHTML = `${swatchHtml}<span class="legend-text">${label}</span>`;
+
+      if (icon) {
+        const img = document.createElement('img');
+        img.className = 'legend-icon';
+        img.src = icon;
+        img.alt = '';
+        row.appendChild(img);
+      } else {
+        const swatch = document.createElement('span');
+        swatch.className = `legend-swatch legend-swatch-${shape || 'circle'}`;
+        if (color) swatch.style.background = color;
+        row.appendChild(swatch);
+      }
+
+      const text = document.createElement('span');
+      text.className = 'legend-text';
+      text.textContent = label ?? '';
+      row.appendChild(text);
       list.appendChild(row);
     });
 
@@ -91,7 +105,7 @@ export default class LegendPanel {
   /**
    * @param {string} key - unique id for this layer's card (e.g. 'layer-deposits', 'wms-bedrock')
    * @param {boolean} visible
-   * @param {{title: string, items?: {label:string, color:string}[], shape?: 'circle'|'line'|'fill', imageUrl?: string, note?: string, surfaceToggle?: {label: string, checked: boolean, onChange: (checked: boolean) => void}, commodityToggles?: {commodities: {value:string, label:string, color:string}[], enabled: string[], onChange: (commodity: string, checked: boolean) => void, onAllOn: () => void, onAllOff: () => void}|null}} legendDef
+   * @param {{title: string, items?: {label:string, color:string}[], shape?: 'circle'|'line'|'fill', imageUrl?: string, note?: string, surfaceToggle?: {label: string, checked: boolean, onChange: (checked: boolean) => void}, commodityToggles?: {commodities: {value:string, label:string, color:string, description?:string}[], enabled: string[], onChange: (commodity: string, checked: boolean) => void, onAllOn: () => void, onAllOff: () => void}|null}} legendDef
    */
   setLayerLegend(key, visible, legendDef) {
     if (!visible) {
@@ -142,9 +156,11 @@ export default class LegendPanel {
 
       const list = document.createElement('div');
       list.className = 'legend-commodity-list';
-      commodities.forEach(({ value, label, color }) => {
+      commodities.forEach(({ value, label, color, description }) => {
         const row = document.createElement('label');
-        row.className = 'legend-commodity-row';
+        row.className = description
+          ? 'legend-commodity-row legend-commodity-row-described'
+          : 'legend-commodity-row';
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.checked = enabledSet.has(value);
@@ -152,9 +168,21 @@ export default class LegendPanel {
         const swatch = document.createElement('span');
         swatch.className = `legend-swatch legend-swatch-${legendDef.shape || 'circle'}`;
         swatch.style.background = color;
+        const textWrap = document.createElement('span');
+        textWrap.className = 'legend-commodity-text';
+        const title = document.createElement('span');
+        title.className = 'legend-commodity-label';
+        title.textContent = label;
+        textWrap.appendChild(title);
+        if (description) {
+          const desc = document.createElement('span');
+          desc.className = 'legend-commodity-desc';
+          desc.textContent = description;
+          textWrap.appendChild(desc);
+        }
         row.appendChild(checkbox);
         row.appendChild(swatch);
-        row.appendChild(document.createTextNode(label));
+        row.appendChild(textWrap);
         list.appendChild(row);
       });
       card.appendChild(list);

@@ -98,9 +98,13 @@ async function snapshotDataset(entry) {
   const metaPath = path.join(ROOT, entry.metaPath);
   const meta = await readMeta(metaPath);
   const hash = (await fileExists(assetAbs)) ? await hashFile(assetAbs) : null;
+  const contentHash = meta?.contentHash || hash;
   return {
     featureCount: meta?.featureCount ?? null,
     version: meta?.version ?? null,
+    contentHash,
+    /** Prefer hash prefix for IndexedDB / HTTP cache busting. */
+    cacheVersion: contentHash ? String(contentHash).slice(0, 12) : meta?.version ?? null,
     generatedAt: meta?.generatedAt ?? null,
     nextDue: meta?.nextDue ?? null,
     hash
@@ -149,13 +153,15 @@ async function refreshDataset(entry, ranScripts, treatAsDue) {
     (entry.kind !== 'image' && before.featureCount !== after.featureCount);
 
   if (changed) {
-    const version = after.version;
-    if (!version) throw new Error(`Missing meta.version after fetch for ${entry.id}`);
+    const cacheVersion = after.cacheVersion || after.version;
+    if (!cacheVersion) {
+      throw new Error(`Missing contentHash/version after fetch for ${entry.id}`);
+    }
     if (entry.cacheKey && entry.cacheVersionPath) {
-      await bumpCacheVersion(entry.cacheVersionPath, entry.cacheKey, version);
+      await bumpCacheVersion(entry.cacheVersionPath, entry.cacheKey, cacheVersion);
     }
     console.log(
-      `Changed: yes (count ${before.featureCount ?? 'n/a'} → ${after.featureCount ?? 'n/a'}, version ${version})`
+      `Changed: yes (count ${before.featureCount ?? 'n/a'} → ${after.featureCount ?? 'n/a'}, cacheVersion ${cacheVersion})`
     );
   } else {
     console.log('Changed: no (content hash unchanged)');

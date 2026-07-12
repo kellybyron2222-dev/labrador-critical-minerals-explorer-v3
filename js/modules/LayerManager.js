@@ -7,6 +7,18 @@ import {
   buildMODSSurfaceColorExpression
 } from '../config/layerConfig.js';
 import { normalizeMODSStatus } from '../config/modsFilters.js';
+import {
+  resolveClaimsFillColor,
+  resolveTenureFillColor
+} from '../config/mineralLands.js';
+import {
+  resolveNunatsiavutFillColor,
+  enrichAtrisFeatureProperties
+} from '../config/indigenousLands.js';
+import {
+  enrichCpcadFeatureProperties,
+  enrichLandUseFeatureProperties
+} from '../config/protectedAreas.js';
 import { getCachedGeoJSON, setCachedGeoJSON } from './layerCache.js';
 import { reprojectToMercator } from './wmsReprojection.js';
 
@@ -139,9 +151,20 @@ export default class LayerManager {
     outSR,
     format = 'geojson',
     maxAllowableOffset,
-    concurrency = 1
+    concurrency = 1,
+    geometry,
+    geometryType,
+    inSR,
+    spatialRel
   }) {
     const useEsri = format === 'esrijson';
+
+    const applySpatialFilter = (params) => {
+      if (geometry != null) params.set('geometry', String(geometry));
+      if (geometryType != null) params.set('geometryType', String(geometryType));
+      if (inSR != null) params.set('inSR', String(inSR));
+      if (spatialRel != null) params.set('spatialRel', String(spatialRel));
+    };
 
     const buildParams = (offset) => {
       const params = new URLSearchParams({
@@ -157,6 +180,7 @@ export default class LayerManager {
       if (maxAllowableOffset != null) {
         params.set('maxAllowableOffset', String(maxAllowableOffset));
       }
+      applySpatialFilter(params);
       return params;
     };
 
@@ -179,6 +203,7 @@ export default class LayerManager {
         returnCountOnly: 'true',
         f: 'json'
       });
+      applySpatialFilter(countParams);
       const countPage = await this.fetchGeoJSON(`${url}?${countParams}`);
       const total = countPage?.count ?? 0;
       if (!total) return null;
@@ -216,11 +241,41 @@ export default class LayerManager {
     return features.length ? { type: 'FeatureCollection', features } : null;
   }
 
+  /**
+   * Fetch and merge several ArcGIS paginated queries (e.g. Land_Use sublayers).
+   * Optional `featureProps` on each query are merged into every feature's properties.
+   */
+  async fetchMergedPaginatedGeoJSON(queries = []) {
+    const parts = await Promise.all(
+      queries.map(async (query) => {
+        const { featureProps, ...pageQuery } = query;
+        const fc = await this.fetchPaginatedGeoJSON(pageQuery);
+        if (!fc?.features?.length) return [];
+        if (!featureProps) return fc.features;
+        return fc.features.map((f) => ({
+          ...f,
+          properties: { ...f.properties, ...featureProps }
+        }));
+      })
+    );
+    const features = parts.flat();
+    return features.length ? { type: 'FeatureCollection', features } : null;
+  }
+
+  /**
+   * Load all non-lazy layers.
+   * @returns {Promise<{ ok: boolean, failed: string[] }>}
+   */
   async loadAllLayers() {
-    const loadPromises = Object.entries(LAYER_CONFIG)
-      .filter(([, config]) => !config.lazy)
-      .map(([name, config]) => this.loadLayer(name, config));
-    await Promise.all(loadPromises);
+    const entries = Object.entries(LAYER_CONFIG).filter(([, config]) => !config.lazy);
+    const results = await Promise.all(
+      entries.map(async ([name, config]) => {
+        const ok = await this.loadLayer(name, config);
+        return { name, ok };
+      })
+    );
+    const failed = results.filter((r) => !r.ok).map((r) => r.name);
+    return { ok: failed.length === 0, failed };
   }
 
   /** True once a lazy (or eager) vector layer has been fetched into loadedData. */
@@ -240,8 +295,7 @@ export default class LayerManager {
       this.addLayerByType(name, config, this.loadedData[name]);
       return true;
     }
-    await this.loadLayer(name, config);
-    return Boolean(this.loadedData[name]);
+    return this.loadLayer(name, config);
   }
 
   /** Fetches and merges multiple GeoJSON endpoints (e.g. an ArcGIS service split across sub-layers) into one FeatureCollection. */
@@ -261,9 +315,16 @@ export default class LayerManager {
     return features.length ? { type: 'FeatureCollection', features } : null;
   }
 
+  /** Append ?v=cacheVersion so browser/CDN caches invalidate with content-hash bumps. */
+  versionedDataUrl(url, cacheVersion) {
+    if (!url || !cacheVersion) return url;
+    const join = url.includes('?') ? '&' : '?';
+    return `${url}${join}v=${encodeURIComponent(cacheVersion)}`;
+  }
+
   /**
-   * Resolve GeoJSON for a layer: IndexedDB → static dataUrl → live query.
-   * Heavy layers (bedrock) ship a baked file and warm IndexedDB after first hit.
+   * Resolve GeoJSON for a layer: IndexedDB (live fallback only) → static dataUrl → live query.
+   * Static bakes are not re-written to IndexedDB (already on disk); live fetches are cached.
    */
   async resolveLayerData(name, config) {
     const { cacheKey, cacheVersion } = config;
@@ -274,11 +335,10 @@ export default class LayerManager {
     }
 
     if (config.dataUrl) {
-      const staticData = await this.fetchGeoJSON(config.dataUrl);
+      const staticUrl = this.versionedDataUrl(config.dataUrl, cacheVersion);
+      const staticData = await this.fetchGeoJSON(staticUrl);
       if (staticData?.features?.length) {
-        if (cacheKey && cacheVersion) {
-          setCachedGeoJSON(cacheKey, cacheVersion, staticData);
-        }
+        // Skip IndexedDB for static bake — HTTP ?v= handles freshness.
         return staticData;
       }
     }
@@ -286,6 +346,8 @@ export default class LayerManager {
     let live = null;
     if (config.paginatedQuery) {
       live = await this.fetchPaginatedGeoJSON(config.paginatedQuery);
+    } else if (config.paginatedQueries) {
+      live = await this.fetchMergedPaginatedGeoJSON(config.paginatedQueries);
     } else if (config.sources) {
       live = await this.fetchMergedGeoJSON(config.sources);
     } else if (config.dataUrl) {
@@ -299,9 +361,15 @@ export default class LayerManager {
     return live;
   }
 
+  /**
+   * @returns {Promise<boolean>} true when features were loaded and layers added
+   */
   async loadLayer(name, config) {
     const data = await this.resolveLayerData(name, config);
-    if (!data?.features?.length) return;
+    if (!data?.features?.length) {
+      console.error(`Layer "${name}" loaded empty (cache/bake/live all missed).`);
+      return false;
+    }
 
     if (config.enrichment === 'mods' || name === 'modsOccurrences') {
       // MODS: DEPNAME is the human deposit/occurrence name; some records only
@@ -353,6 +421,45 @@ export default class LayerManager {
             ? `rgb(${Math.round(r)},${Math.round(g)},${Math.round(b)})`
             : props.fillColor || '#94a3b8';
       });
+    } else if (config.enrichment === 'claimsStatus') {
+      data.features.forEach((feature) => {
+        const props = feature.properties;
+        if (props.fillColor && props.name) return;
+        const license = props.LICENSE_NBR?.trim();
+        const holder = props.CLIENT_NAME?.trim();
+        props.name = license || holder || props.name || 'Unnamed claim';
+        props.fillColor = props.fillColor || resolveClaimsFillColor(props.STATUS);
+      });
+    } else if (config.enrichment === 'tenureType') {
+      data.features.forEach((feature) => {
+        const props = feature.properties;
+        if (props.fillColor && props.name) return;
+        const name = props.FEATURENAME?.trim();
+        const type = props.TYPEDESC?.trim();
+        props.name = name || type || props.name || 'Unnamed tenure';
+        props.fillColor = props.fillColor || resolveTenureFillColor(props.TYPEDESC);
+      });
+    } else if (config.enrichment === 'nunatsiavut') {
+      data.features.forEach((feature) => {
+        const props = feature.properties;
+        if (props.fillColor && props.name) return;
+        props.name = props.REGION?.trim() || props.name || 'Nunatsiavut';
+        props.fillColor = props.fillColor || resolveNunatsiavutFillColor();
+      });
+    } else if (config.enrichment === 'atrisClaim') {
+      data.features.forEach((feature) => {
+        enrichAtrisFeatureProperties(feature.properties);
+      });
+    } else if (config.enrichment === 'cpcadType') {
+      data.features.forEach((feature) => {
+        const props = feature.properties;
+        if (props.fillColor && props.name) return;
+        enrichCpcadFeatureProperties(props);
+      });
+    } else if (config.enrichment === 'landUseKind') {
+      data.features.forEach((feature) => {
+        enrichLandUseFeatureProperties(feature.properties);
+      });
     }
 
     this.loadedData[name] = data;
@@ -365,6 +472,7 @@ export default class LayerManager {
       config,
       visible: config.visible
     };
+    return true;
   }
 
   /** Adds a layer's GeoJSON source if missing - also called from `refreshLayers` since `map.setStyle()` (basemap switch) tears down runtime-added sources along with the layers that reference them. */
@@ -576,11 +684,19 @@ export default class LayerManager {
     const config = LAYER_CONFIG[name];
     if (!config) return;
 
+    const filter = filterExpression || null;
     if (this.map.getLayer(config.layer)) {
-      this.map.setFilter(config.layer, filterExpression || null);
+      this.map.setFilter(config.layer, filter);
+    }
+    // Keep fill + outline (and labels) in sync for polygon layers like ATRIS.
+    if (config.outline && this.map.getLayer(config.outline)) {
+      this.map.setFilter(config.outline, filter);
+    }
+    if (config.labels && this.map.getLayer(config.labels)) {
+      this.map.setFilter(config.labels, filter);
     }
     if (this.layers[name]) {
-      this.layers[name].filter = filterExpression || null;
+      this.layers[name].filter = filter;
     }
   }
 
@@ -725,8 +841,16 @@ export default class LayerManager {
         this.addLayerByType(name, config, data);
         this.setLayerVisibility(name, layerState.visible);
 
-        if (layerState.filter !== undefined && this.map.getLayer(config.layer)) {
-          this.map.setFilter(config.layer, layerState.filter);
+        if (layerState.filter !== undefined) {
+          if (this.map.getLayer(config.layer)) {
+            this.map.setFilter(config.layer, layerState.filter);
+          }
+          if (config.outline && this.map.getLayer(config.outline)) {
+            this.map.setFilter(config.outline, layerState.filter);
+          }
+          if (config.labels && this.map.getLayer(config.labels)) {
+            this.map.setFilter(config.labels, layerState.filter);
+          }
         }
         if (layerState.paintOverrides && this.map.getLayer(config.layer)) {
           Object.entries(layerState.paintOverrides).forEach(([property, value]) => {
@@ -809,7 +933,8 @@ export default class LayerManager {
   async ensureWMSLayer(name) {
     const config = WMS_CONFIG[name];
     const key = `wms-${name}`;
-    if (!config || this.layers[key]) return;
+    if (!config) return false;
+    if (this.layers[key]) return true;
 
     let dataUrl = null;
     if (config.imageUrl) {
@@ -830,7 +955,7 @@ export default class LayerManager {
     if (!dataUrl) {
       dataUrl = await this.fetchReprojectedWMSImage(config);
     }
-    if (!dataUrl) return;
+    if (!dataUrl) return false;
 
     const sourceId = `${key}-source`;
     const layerId = `${key}-layer`;
@@ -845,6 +970,7 @@ export default class LayerManager {
       visible: true,
       isWMS: true
     };
+    return true;
   }
 
   addWMSSourceAndLayer(sourceId, layerId, dataUrl, config) {
@@ -880,16 +1006,19 @@ export default class LayerManager {
     }
   }
 
+  /**
+   * @returns {Promise<boolean>} false when a visible=true request failed to load
+   */
   async setWMSLayerVisibility(name, visible) {
     const key = `wms-${name}`;
 
     if (visible && !this.layers[key]) {
-      await this.ensureWMSLayer(name);
-      return;
+      const ok = await this.ensureWMSLayer(name);
+      return ok;
     }
 
     const state = this.layers[key];
-    if (!state) return;
+    if (!state) return !visible;
 
     const visibility = visible ? 'visible' : 'none';
     if (this.map.getLayer(state.layerId)) {
@@ -897,6 +1026,7 @@ export default class LayerManager {
     }
 
     state.visible = visible;
+    return true;
   }
 
   /** Re-adds previously-enabled WMS layers after a basemap style change, reusing the cached image (no re-fetch). */
