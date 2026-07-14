@@ -96,7 +96,7 @@ export default class OccurrenceBrowser {
       const active = this.statuses.has(bucket);
       const n = counts.get(bucket) || 0;
       return `
-        <button type="button" class="occ-chip${active ? ' active' : ''}" data-status="${bucket}" ${n === 0 && !active ? 'disabled' : ''}>
+        <button type="button" class="occ-chip${active ? ' active' : ''}" data-status="${bucket}" aria-pressed="${active}" ${n === 0 && !active ? 'disabled' : ''}>
           <span>${bucket}</span>
           <span class="occ-chip-count">${n}</span>
         </button>`;

@@ -3,12 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="description" content="Open-source critical minerals exploration platform for Labrador, Canada">
+  <meta name="description" content="Free, open map of Labrador critical-mineral occurrences, rights &amp; constraints, infrastructure, and geological signals — built from public data only.">
   <title>Critical Minerals Explorer V3 - Labrador, Canada</title>
   <link rel="icon" type="image/svg+xml" href="/vite.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script defer data-domain="kellybyron2222-dev.github.io" src="https://plausible.io/js/script.js"></script>
+  <script>window.plausible = window.plausible || function() { (window.plausible.q = window.plausible.q || []).push(arguments) }</script>
 </head>
 <body>
   <div class="app-container">
@@ -91,7 +93,7 @@
 
       <div class="sidebar-footer">
         <button type="button" id="settings-open-sidebar" class="settings-sidebar-btn">Settings</button>
-        <p class="data-status">Rights: claims, tenure, Indigenous lands, protected areas &amp; land use (off by default). Infrastructure: roads, rail, transmission, ports, airports, power, communities &amp; critical-mineral facilities (off by default).</p>
+        <p class="data-status">Tip: turn on Rights for claims &amp; hard exclusions. About &amp; export are in Settings.</p>
         <div class="coordinates">
           <span id="coordinates-display">Lat: -- | Lon: --</span>
         </div>
@@ -118,6 +120,14 @@
           <line x1="8" y1="17" x2="12" y2="17"/>
         </svg>
         <span>Legend</span>
+      </button>
+      <button type="button" id="about-open" class="map-chrome-btn about-open-btn" aria-label="About this map" aria-haspopup="dialog">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="16" x2="12" y2="12"/>
+          <line x1="12" y1="8" x2="12.01" y2="8"/>
+        </svg>
+        <span>About</span>
       </button>
       <button type="button" id="settings-open" class="map-chrome-btn settings-open-btn" aria-label="Open settings" aria-haspopup="dialog">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">

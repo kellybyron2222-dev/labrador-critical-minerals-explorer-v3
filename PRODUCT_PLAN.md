@@ -2,8 +2,8 @@
 
 > **Strategic overview** (go-to-market, freemium, geography expansion).
 > Engineering checklist stays in [`BUILD_PLAN.md`](./BUILD_PLAN.md).
-> Last updated: 2026-07-12 — Stage A engineering gate met (Phase 4.1 complete,
-> incl. radiometrics + footprint filters); next = Stage B soft launch
+> Last updated: 2026-07-13 — Stage B0 soft-launch eng shipped (welcome, Plausible,
+> Formspree hooks, share URL, multi-layer export); next = Stage B outreach
 
 ---
 
@@ -146,7 +146,7 @@ outreach.
 
 ---
 
-### Stage B — Soft launch & niche marketing (free)  [ ]
+### Stage B — Soft launch & niche marketing (free)  [~ eng done; outreach open]
 
 Start **as soon as Stage A is usable** — do **not** wait for national or for
 premium features. Audience is small and specialized; broad ads waste money.
@@ -163,15 +163,16 @@ premium features. Audience is small and specialized; broad ads waste money.
 
 #### Soft-launch checklist
 
-- [ ] Short landing blurb on the app (what it is / isn’t; free; Labrador focus;
-      data sources)
+- [x] Short landing blurb on the app (what it is / isn’t; free; Labrador focus;
+      data sources) — first-visit welcome + Settings → About (2026-07-13)
 - [ ] 5–10 screenshot “story” assets (claims + MODS; fatal-flaw mask; infra)
 - [ ] One-pager email for NLPA / prospectors
-- [ ] Simple waitlist or email capture (even a Formspree / Google Form) for
-      “notify me when alerts / export launch” — same list feeds the **Monthly
-      Data Changelog** (B+) once there is something real to report
-- [ ] Track crude usage if possible (privacy-light: Plausible / CloudFlare
-      analytics — no creepy fingerprinting)
+- [x] Simple waitlist or email capture (Formspree; set `VITE_FORMSPREE_WAITLIST`)
+      for product / changelog updates — same list feeds **Monthly Data
+      Changelog** (B+) once there is something real to report (2026-07-13)
+- [x] Track crude usage (Plausible privacy-light) (2026-07-13)
+- [x] Shareable view URL + multi-layer viewport export ZIP (GeoJSON / CSV / KML /
+      display rasters as PNG+bounds; Shapefile via QGIS from GeoJSON) (2026-07-13)
 
 #### Messaging angle
 
@@ -393,6 +394,9 @@ who pays** layer above it.
 
 ## 8. Changelog
 
+- **2026-07-13** — Stage **B0** eng shipped: welcome, Plausible, Formspree hooks,
+  shareable views, multi-layer free export ZIP. Soft-launch checklist eng items
+  closed; **next = Stage B outreach** (screenshots + NLPA) + Formspree config.
 - **2026-07-12** — Phase **4.1** footprint UX closed: keep full survey index;
   type + digital filters; detail popup → NL airborne page. Confirmed no MVP
   need to bake top-N individual digital surveys (already covered / not on

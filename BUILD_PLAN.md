@@ -12,22 +12,24 @@
 > checklist for the project. Review and update it as we move along — tick boxes,
 > flip status markers, and add notes in place.
 > **Product / GTM / freemium arc:** see [`PRODUCT_PLAN.md`](./PRODUCT_PLAN.md).
-> Last updated: 2026-07-12 — **Phase 4.1 complete** (aeromag + 1VD + radiometrics +
-> gravity + footprints w/ type·digital filters); **next = Stage B soft launch**
+> Last updated: 2026-07-13 — **Stage B0 soft-launch eng** (welcome, Plausible,
+> Formspree hooks, shareable URL, multi-layer export ZIP); **next = Stage B
+> outreach** (NLPA) + Formspree IDs
 
 **Status marker key:** `[x]` done · `[~]` in progress · `[ ]` not started · `[!]` blocked/needs decision
 Layer catalog status: `✅ done/in app` · `🟢 verified available` · `⬜ to confirm/wire` · `🔒 blocked`
 
 ---
 
-## Where we are (2026-07-12)
+## Where we are (2026-07-13)
 
 **Phase 0** ✅ · **Phase 1** ✅ (MODS, endowment, facilities honesty **1.1g**,
 bedrock mutual exclusion **1.4**) · **Phase 2** ✅ (2.1–2.3 + **2.1c** expiry
 bands + **2.4** hard exclusions) · **Pre–Phase 3 close-out** ✅ ·
 **Phase 3** ✅ (3.1–3.4 incl. nearest-infra distances) ·
 **Phase 4** ✅ (**4.1** aeromag/1VD/radiometrics/gravity/footprints; **4.2** post-MVP) ·
-**Phase 5** lite pulled forward; full provenance / shareable URL remain.
+**Phase 5** lite + **Stage B0** soft-launch eng ✅ (welcome, Plausible, Formspree
+hooks, shareable URL, multi-layer export ZIP); full provenance panel / measure remain.
 
 | Area | Status |
 |---|---|
@@ -44,12 +46,13 @@ bands + **2.4** hard exclusions) · **Pre–Phase 3 close-out** ✅ ·
 | Tenure↔CPCAD de-overlap (parks only on CPCAD; tenure 69 rights polys) | ✅ |
 | Status filters, search, list/detail, bottom KPI + Settings | ✅ |
 | Soft-launch Phase 5 lite (About data, GeoJSON export, legend collapse) | ✅ |
+| Stage B0 (welcome, Plausible, Formspree hooks, share URL, export ZIP) | ✅ (2026-07-13) |
 | Bake registry + monthly auto-refresh → PR (§6.2) | ✅ (~34 registry entries) |
 | GitHub repo + Pages hosting + CI validate/Vitest | ✅ |
 | Infrastructure (roads, power, communities, facilities + nearest distances) | ✅ Phase 3 (3.1–3.4) |
 | Geophysics MVP slice (1VD/aeromag/radiometrics + gravity; survey footprints) | ✅ Phase **4.1** (2026-07-12) |
 | Geochemistry / ice-flow / grade filters | [ ] Phase 4.2 (post-MVP) |
-| Provenance panel, shareable URL | [ ] Phase 5 remainder |
+| Full provenance panel / measure tools | [ ] Phase 5 remainder |
 | Optional later: detailed surficial, faults/contacts, LiDAR, aerial, EO | [ ] see §5 “Optional later” |
 | Optional later: historical claims, quarries, cancelled rights | [ ] Phase 2.1b |
 | Nearest-infra distances (3.4) | ✅ (2026-07-12) |
@@ -64,9 +67,10 @@ bands + **2.4** hard exclusions) · **Pre–Phase 3 close-out** ✅ ·
 > Pre–Phase 3 Must/Should close-out is done. Phase **4.2** geochemistry and
 > §5.2 stay post-MVP. Full triage → **§5.2**.
 
-1. **Stage B soft launch** — niche outreach (NLPA first); landing/About already
-   lite. Engineering gate (incl. **4.1** geophysics) is met.
-2. **Phase 5 remainder** — full provenance panel, shareable URL, measure tools.
+1. **Stage B outreach** — NLPA first; eng gate + B0 soft-launch UX met
+   (welcome, analytics, waitlist/feedback hooks, shareable URL, multi-layer
+   export). Configure `VITE_FORMSPREE_*` in `.env`.
+2. **Phase 5 remainder** — full provenance panel, measure tools.
 3. **Then Phase 4.2** — geochemistry / grade filters / ice-flow (beyond MVP).
 4. **§5.2 Post-MVP backlog** — drillholes, live claims API, ESG habitats,
    viability score, spatial query engine, etc.
@@ -958,25 +962,28 @@ done; **3.4** done; **4.1** geophysics still required for full product MVP.)
 
 ### Phase 5 — Cross-cutting features & polish  [~]
 > Soft-launch lite ✅ (2026-07-12): About data + GeoJSON export + legend
-> card collapse. Full provenance registry / shareable URL / measure remain.
+> card collapse. **Stage B0** ✅ (2026-07-13): welcome, Plausible, Formspree
+> hooks, shareable URL, multi-layer export ZIP. Full provenance registry /
+> measure remain.
 
 - [~] **Data-source registry** — Settings **About data** blurb done (lite);
       full per-layer provenance panel still open
 - [~] **Layer search / filter** — commodity picker + legend checklist done (1.1b/d);
       status + free-text over live MODS done (1.1e). Still open: filter by NTS sheet alone;
       cross-layer search beyond MODS
-- [ ] **Attribution / license panel** — required by NL GeoAtlas / NRCan / SAC-ISC terms
-      (About data covers sources at a high level)
+- [~] **Attribution / license panel** — About covers sources + CRS + cadence
+      (2026-07-13); dedicated license panel still open
 - [~] **Feature search / geocode** — occurrence list + flyTo/select done (1.1e);
       still open: jump to claim / NTS sheet / place geocode
 - [ ] **Measure & draw tools** (distance/area) — exploration utility; feeds 3.4
       nearest-infra distances
-- [ ] **Shareable state** — URL encodes active layers + extent + filters
-      (later: include Settings / KPI prefs)
+- [x] **Shareable state** — URL hash encodes layers + extent + MODS filters +
+      hard-exclusions; Settings → Share copies link (2026-07-13)
 - [x] **Settings shell** — map + sidebar entry; collapsible sections; **KPI bar**
-      + **About data** + **Export** (2026-07-12)
-- [x] **Export** — visible / filtered MODS (+ claims if on) to **GeoJSON** ✅ soft-launch
-      (Shapefile / KMZ → §5.2)
+      + **About data** + **Export** + Updates/Feedback/Share (2026-07-13)
+- [x] **Export** — viewport × on/loaded layers → ZIP (GeoJSON / CSV points / KML /
+      optional raster PNG+bounds; CRS WGS84; Shapefile via QGIS from GeoJSON)
+      (2026-07-13). In-browser Shapefile writer deferred.
 - [x] **Viewport status breakdown** — KPI `modsStatusBits` (default on; shortLabel
       clarified 2026-07-12)
 - [x] **Desktop legend declutter** — new legend cards start collapsed when ≥2
@@ -1247,6 +1254,11 @@ branch** with Actions enabled:
 
 ## 10. Changelog
 
+- **2026-07-13** — **Stage B0 soft-launch eng:** first-visit welcome + tips;
+  About map chrome; Plausible analytics; Formspree waitlist/feedback hooks
+  (`.env`); shareable URL hash; multi-layer viewport export ZIP (GeoJSON/CSV/KML/
+  rasters, WGS84 manifest); Occurrences group expanded by default. **Next:**
+  Stage B outreach (NLPA) + Formspree IDs.
 - **2026-07-12** — **Signals footprint honesty:** full `Indexes/6` inventory kept;
   mutually exclusive PARAMETERS type filter + digital Yes/No filter; richer
   popup (type, date, company, line spacing, digital plain-language, NL airborne

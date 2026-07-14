@@ -28,7 +28,6 @@ import {
   featureBelongsToCommodity,
   MODS_SURFACE_DEFAULT_COUNT
 } from './config/layerConfig.js';
-import { downloadGeoJSON } from './modules/geoJsonExport.js';
 import {
   combineMODSFilters,
   filterMODSFeatures,
@@ -60,6 +59,10 @@ import { getKpiEnabledIds } from './modules/UserPrefs.js';
 import { computeKpiMetrics, featureIntersectsBounds } from './modules/KpiEngine.js';
 import { buildPopupSection, buildModsPopupSection } from './modules/PopupBuilder.js';
 import { computeNearestInfraDistances, ensureInfraDistanceData } from './modules/infraDistance.js';
+import WelcomeModal from './modules/WelcomeModal.js';
+import { buildExportPackage, downloadBlob } from './modules/exportPackage.js';
+import { readViewState, writeViewState, buildShareUrl } from './modules/viewState.js';
+import { track, PlausibleEvents } from './modules/analytics.js';
 
 const POPUP_LAYER_IDS = [
   'mods-layer',
@@ -122,6 +125,10 @@ class MineralsMapApp {
     this.settingsPanel = null;
     /** Phase 4.1 — desaturate signal rasters (aeromag / 1VD / gravity). */
     this.signalsGrayscale = false;
+    /** Stage B0 soft launch — welcome modal, shareable view state. */
+    this.welcomeModal = null;
+    this._viewStateTimer = null;
+    this._bootStatusCleared = false;
     this.init();
   }
 
@@ -134,13 +141,17 @@ class MineralsMapApp {
       this.applyMODSCommodityVisibility();
     };
 
+    this.setDataStatus('Loading occurrences…', 'info');
     await this.layerManager.loadAllLayers().then((result) => {
       if (result?.failed?.length) {
         this.setDataStatus(
           `Failed to load: ${result.failed.join(', ')}. Check network or try refreshing.`,
           'error'
         );
+      } else {
+        this.setDataStatus(null);
       }
+      this._bootStatusCleared = true;
     });
 
     this.occurrenceBrowser = new OccurrenceBrowser({
@@ -153,14 +164,21 @@ class MineralsMapApp {
     });
     this.settingsPanel = new SettingsPanel({
       onChange: () => this.refreshKpiBar(),
-      onExportVisible: () => this.exportVisibleGeoJSON()
+      onExportPackage: (formats) => this.exportPackage(formats),
+      onCopyShareLink: () => this.copyShareLink()
     });
     document.getElementById('settings-open')?.addEventListener('click', () => {
+      track(PlausibleEvents.SETTINGS_OPEN);
       this.settingsPanel?.show();
     });
     document.getElementById('settings-open-sidebar')?.addEventListener('click', () => {
       this.mobileChrome?.close({ silent: true });
+      track(PlausibleEvents.SETTINGS_OPEN, { from: 'sidebar' });
       this.settingsPanel?.show();
+    });
+    document.getElementById('about-open')?.addEventListener('click', () => {
+      track(PlausibleEvents.SETTINGS_OPEN, { section: 'about' });
+      this.settingsPanel?.show({ section: 'about', expandSection: true });
     });
 
     this.mobileChrome.init();
@@ -179,68 +197,276 @@ class MineralsMapApp {
     this.refreshKpiBar();
     // Warm nearest-infra distance cache (Phase 3.4) without blocking UI.
     ensureInfraDistanceData().catch(() => {});
+
+    // Stage B0 soft launch — restore a shared view (if any) before wiring
+    // sync, then welcome first-time visitors once the map has settled.
+    this.welcomeModal = new WelcomeModal({
+      onExplore: () => {},
+      onOpenAbout: () => this.settingsPanel?.show({ section: 'about', expandSection: true }),
+      onOpenWaitlist: () => this.settingsPanel?.show({ section: 'updates', expandSection: true })
+    });
+    await this.applyViewState(readViewState());
+    this.bindViewStateSync();
+    requestAnimationFrame(() => this.welcomeModal?.maybeShow());
   }
 
-  /** Soft-launch export: filtered MODS in view + claims if that layer is on. */
-  exportVisibleGeoJSON() {
+  /** Above this feature count, confirm before building the export package (can be slow/large). */
+  static EXPORT_FEATURE_WARN_THRESHOLD = 25000;
+
+  /**
+   * Stage B0 export: every checked + loaded vector/raster layer, filtered to
+   * the current map view (and MODS/claims filters), packaged as a ZIP by
+   * {@link buildExportPackage}.
+   * @param {Record<string, boolean>} formats
+   */
+  async exportPackage(formats = {}) {
     const bounds = this.map?.getBounds?.();
-    const features = [];
+    const vectorLayers = [];
+    const rasterLayers = [];
+    const skippedUnloaded = [];
 
     const value = this.currentMODSPickerValue;
     const resolved = resolveMODSCommodities(value);
     const primaryOnly = modsUsesPrimaryOnlyFilter(resolved);
     const browser = this.occurrenceBrowser?.getFilterState() || { statuses: new Set(), query: '' };
-    const modsAll = this.layerManager.getLoadedFeatures('modsOccurrences');
-    const modsFiltered = filterMODSFeatures(modsAll, {
-      pickerCommodities: resolved,
-      enabledCommodities: this.enabledCommodities?.length
-        ? this.enabledCommodities
-        : resolveMODSLegendCommodities(value),
-      primaryOnly,
-      statuses: browser.statuses,
-      query: browser.query
-    });
-    const modsInView = bounds
-      ? modsFiltered.filter((f) => featureIntersectsBounds(f, bounds))
-      : modsFiltered;
-    modsInView.forEach((f) => {
-      features.push({
-        type: 'Feature',
-        geometry: f.geometry,
-        properties: { ...f.properties, _exportLayer: 'modsOccurrences' }
-      });
-    });
 
-    const claimsOn = document.getElementById('layer-geoatlasClaims')?.checked;
-    if (claimsOn) {
-      let claims = this.layerManager.getLoadedFeatures('geoatlasClaims');
-      const bands = this.enabledClaimExpiryBands;
-      if (bands?.length) {
-        claims = claims.filter((f) => bands.includes(f.properties?.expiryBand));
+    Object.entries(LAYER_CONFIG).forEach(([key, config]) => {
+      const checkbox = document.getElementById(`layer-${key}`);
+      if (!checkbox?.checked) return;
+
+      let features = this.layerManager.getLoadedFeatures(key);
+      if (!features.length) {
+        skippedUnloaded.push(key);
+        return;
       }
-      const claimsInView = bounds
-        ? claims.filter((f) => featureIntersectsBounds(f, bounds))
-        : claims;
-      claimsInView.forEach((f) => {
-        features.push({
-          type: 'Feature',
-          geometry: f.geometry,
-          properties: { ...f.properties, _exportLayer: 'geoatlasClaims' }
-        });
-      });
-    }
 
-    if (!features.length) {
-      this.setDataStatus('Nothing to export in the current view / filters.', 'error');
+      if (key === 'modsOccurrences') {
+        features = filterMODSFeatures(features, {
+          pickerCommodities: resolved,
+          enabledCommodities: this.enabledCommodities?.length
+            ? this.enabledCommodities
+            : resolveMODSLegendCommodities(value),
+          primaryOnly,
+          statuses: browser.statuses,
+          query: browser.query
+        });
+      } else if (key === 'geoatlasClaims') {
+        const bands = this.enabledClaimExpiryBands;
+        if (bands?.length) {
+          features = features.filter((f) => bands.includes(f.properties?.expiryBand));
+        }
+      }
+
+      const inView = bounds ? features.filter((f) => featureIntersectsBounds(f, bounds)) : features;
+      if (!inView.length) return;
+
+      vectorLayers.push({
+        id: key,
+        label: config.sidebarLabel || key,
+        features: inView,
+        source: config.dataUrl || config.paginatedQuery?.url || null
+      });
+    });
+
+    Object.entries(WMS_CONFIG).forEach(([key, config]) => {
+      const checkbox = document.getElementById(`wms-${key}`);
+      if (!checkbox?.checked) return;
+      if (!config.imageUrl || !config.bounds) return;
+
+      const imageUrl = config.cacheVersion
+        ? `${config.imageUrl}?v=${encodeURIComponent(config.cacheVersion)}`
+        : config.imageUrl;
+      rasterLayers.push({
+        id: key,
+        label: config.sidebarLabel || config.label || key,
+        imageUrl,
+        bounds: config.bounds
+      });
+    });
+
+    if (!vectorLayers.length && !rasterLayers.length) {
+      this.setDataStatus(
+        'Nothing to export — turn on a layer that has loaded data in the current view.',
+        'error'
+      );
       return;
     }
 
-    const stamp = new Date().toISOString().slice(0, 10);
-    downloadGeoJSON(
-      { type: 'FeatureCollection', features },
-      `labrador-explorer-visible-${stamp}.geojson`
-    );
-    this.setDataStatus(`Exported ${features.length} features (GeoJSON).`, 'info');
+    const totalFeatures = vectorLayers.reduce((sum, l) => sum + l.features.length, 0);
+    if (totalFeatures > MineralsMapApp.EXPORT_FEATURE_WARN_THRESHOLD) {
+      const proceed = window.confirm(
+        `This export includes ${totalFeatures.toLocaleString()} features and may take a while to build. Continue?`
+      );
+      if (!proceed) {
+        this.setDataStatus('Export cancelled.', 'info');
+        return;
+      }
+    }
+
+    this.setDataStatus('Building export package…', 'info');
+    try {
+      const { filename, blob, notes } = await buildExportPackage({
+        bounds,
+        vectorLayers,
+        rasterLayers,
+        formats,
+        meta: {
+          filters: {
+            mods: value,
+            statuses: [...browser.statuses],
+            query: browser.query || undefined,
+            fatalFlaw: this.fatalFlawPresetActive,
+            skippedUnloaded: skippedUnloaded.length ? skippedUnloaded : undefined
+          }
+        }
+      });
+      downloadBlob(blob, filename);
+      track(PlausibleEvents.EXPORT_PACKAGE, formats);
+      this.setDataStatus(
+        `Exported ${totalFeatures.toLocaleString()} feature(s) across ${
+          vectorLayers.length + rasterLayers.length
+        } layer(s).${notes?.length ? ' See README for notes.' : ''}`,
+        'info'
+      );
+    } catch (err) {
+      this.setDataStatus(`Export failed: ${err?.message || err}`, 'error');
+      throw err;
+    }
+  }
+
+  /** Fallback clipboard copy for browsers/contexts without navigator.clipboard (e.g. non-HTTPS). */
+  copyToClipboardFallback(text) {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    try {
+      document.execCommand('copy');
+    } finally {
+      textarea.remove();
+    }
+  }
+
+  /** Copies a link that restores the current layers/filters/map position (see viewState.js). */
+  async copyShareLink() {
+    const state = this.collectViewState();
+    const url = buildShareUrl(state);
+    if (navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(url);
+        track(PlausibleEvents.VIEW_SHARE);
+        return url;
+      } catch {
+        // Fall through to the legacy textarea copy below.
+      }
+    }
+    this.copyToClipboardFallback(url);
+    track(PlausibleEvents.VIEW_SHARE);
+    return url;
+  }
+
+  /** Snapshot of everything `applyViewState` can restore, for the URL hash / share link. */
+  collectViewState() {
+    const center = this.map?.getCenter?.();
+    const browser = this.occurrenceBrowser?.getFilterState() || { statuses: new Set(), query: '' };
+
+    const layers = [];
+    Object.keys(LAYER_CONFIG).forEach((name) => {
+      if (document.getElementById(`layer-${name}`)?.checked) layers.push(name);
+    });
+    Object.keys(WMS_CONFIG).forEach((name) => {
+      if (document.getElementById(`wms-${name}`)?.checked) layers.push(`wms:${name}`);
+    });
+
+    return {
+      zoom: this.map?.getZoom?.(),
+      lat: center?.lat,
+      lon: center?.lng,
+      layers,
+      mods: this.currentMODSPickerValue || undefined,
+      statuses: [...browser.statuses],
+      q: browser.query || undefined,
+      fatalFlaw: this.fatalFlawPresetActive
+    };
+  }
+
+  /**
+   * Restores a view state (from the URL hash or a share link) — map position,
+   * layer checkboxes, MODS picker, status filters/search, and hard exclusions.
+   * Reuses the same checkbox change events the sidebar UI fires, so lazy
+   * loading / mutual-exclusion / legend logic stays in one place.
+   * @param {import('./modules/viewState.js').ViewState | null} state
+   */
+  async applyViewState(state) {
+    if (!state) return;
+
+    if (this.map && (state.zoom != null || state.lat != null || state.lon != null)) {
+      const center = this.map.getCenter();
+      this.map.jumpTo({
+        center: [state.lon ?? center.lng, state.lat ?? center.lat],
+        zoom: state.zoom ?? this.map.getZoom()
+      });
+    }
+
+    if (state.mods) {
+      const picker = document.getElementById('modsOccurrences-commodity-picker');
+      if (picker && picker.value !== state.mods) {
+        picker.value = state.mods;
+        picker.dispatchEvent(new Event('change'));
+      }
+    }
+
+    if (this.occurrenceBrowser) {
+      if (state.statuses?.length) {
+        this.occurrenceBrowser.statuses = new Set(state.statuses);
+        this.occurrenceBrowser.renderStatusToggles();
+      }
+      if (state.q) {
+        this.occurrenceBrowser.query = state.q;
+        if (this.occurrenceBrowser.els.search) this.occurrenceBrowser.els.search.value = state.q;
+      }
+      if (state.statuses?.length || state.q) this.applyMODSCommodityVisibility();
+    }
+
+    if (state.layers?.length) {
+      for (const id of state.layers) {
+        const isWms = id.startsWith('wms:');
+        const checkbox = document.getElementById(isWms ? `wms-${id.slice(4)}` : `layer-${id}`);
+        if (checkbox && !checkbox.checked) {
+          checkbox.checked = true;
+          checkbox.dispatchEvent(new Event('change'));
+        }
+      }
+    }
+
+    if (state.fatalFlaw) {
+      const checkbox = document.getElementById('fatal-flaw-preset-toggle');
+      if (checkbox && !checkbox.checked) {
+        checkbox.checked = true;
+        checkbox.dispatchEvent(new Event('change'));
+      }
+    }
+  }
+
+  /** Debounced URL-hash sync so the current view stays shareable/bookmarkable. */
+  bindViewStateSync() {
+    const scheduleWrite = () => {
+      clearTimeout(this._viewStateTimer);
+      this._viewStateTimer = setTimeout(() => {
+        writeViewState(this.collectViewState());
+      }, 400);
+    };
+
+    this.map?.on('moveend', scheduleWrite);
+    document.getElementById('layer-groups')?.addEventListener('change', (e) => {
+      if (e.target?.matches?.('input[type="checkbox"]')) scheduleWrite();
+    });
+    document.getElementById('occ-status-filters')?.addEventListener('click', scheduleWrite);
+    document.getElementById('occ-search')?.addEventListener('input', scheduleWrite);
+    document.getElementById('fatal-flaw-preset-toggle')?.addEventListener('change', scheduleWrite);
+    document.getElementById('modsOccurrences-commodity-picker')?.addEventListener('change', scheduleWrite);
   }
 
   /** Sidebar footer status (default copy or load errors). */
@@ -540,6 +766,7 @@ class MineralsMapApp {
       checkbox.disabled = true;
       try {
         await this.applyFatalFlawPreset(active);
+        if (active) track(PlausibleEvents.HARD_EXCLUSIONS_ON);
       } finally {
         checkbox.disabled = false;
         this.syncFatalFlawUi();
@@ -1570,6 +1797,7 @@ class MineralsMapApp {
         await this.setLayerEnabled(name, checked);
         this.onFatalFlawLayerManualChange(name, checked);
         this.refreshKpiBar();
+        if (checked) track(PlausibleEvents.LAYER_ON, { layer: name });
       });
     });
 
@@ -1601,7 +1829,10 @@ class MineralsMapApp {
             this.refreshKpiBar();
             return;
           }
-          if (checked) this.setDataStatus(null);
+          if (checked) {
+            this.setDataStatus(null);
+            track(PlausibleEvents.LAYER_ON, { layer: `wms:${name}` });
+          }
           await this.updateWMSLegend(name, checkbox.checked);
           this.syncSignalsOpacityControl(name);
           if (checked && SIGNAL_RASTER_KEYS.includes(name) && this.signalsGrayscale) {

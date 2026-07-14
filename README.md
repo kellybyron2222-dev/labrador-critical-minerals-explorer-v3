@@ -22,14 +22,28 @@ geophysics (aeromag / 1VD) — built on public government data.
   audited vs CFS/Wikipedia airports (16) + harbours (10) + communities (21);
   one Infrastructure legend; MODS popup shows nearest road / transmission /
   port distances
-- **UX** — collapsible layer groups, Settings (KPI / About data / GeoJSON
-  export), mobile map-first chrome, bake-first data + monthly refresh CI
+- **UX** — collapsible layer groups, first-visit welcome, Settings (KPI / About /
+  multi-format export ZIP / waitlist / feedback / share link), Plausible
+  analytics, mobile map-first chrome, bake-first data + monthly refresh CI
 - **Signals (Phase 4.1)** — regional aeromag + detailed-survey 1VD, radiometrics
   (eU / eTh / K), NRCan Canada 2 km Bouguer gravity, airborne survey footprints
   (full index; filter by survey type + digital availability; popup → NL detail
   page); raster opacity, grayscale mode, mutual exclusion.
 
-**Stage A engineering gate met.** Next: Stage B soft launch.
+**Stage A engineering gate met.** Stage B0 soft-launch eng (welcome, capture,
+analytics, shareable views, multi-layer export) is in the app. Next: Stage B
+outreach (NLPA) + configure Formspree IDs in `.env`.
+
+## Soft-launch config
+
+Copy `.env.example` → `.env` and set:
+
+- `VITE_FORMSPREE_WAITLIST` — Formspree form id for “Stay updated”
+- `VITE_FORMSPREE_FEEDBACK` — Formspree form id for feedback
+- `VITE_PLAUSIBLE_DOMAIN` — defaults to the GitHub Pages host
+
+Privacy-light analytics via Plausible (no fingerprinting). Export packages are
+WGS 84 / EPSG:4326 (CRS84 lon-lat); see Settings → About / Export.
 
 ## Docs
 
@@ -70,7 +84,7 @@ npm run refresh:data     # Registry-driven data refresh (respects nextDue)
 
 ## Status
 
-Phases **0–4.1** complete (geophysics Signals group live, incl. footprint
-filters). **Next:** Stage B soft launch / Phase 5 remainder. Phase **4.2**
-geochem stays post-MVP.
-See [`BUILD_PLAN.md`](./BUILD_PLAN.md) for the live checklist.
+Phases **0–4.1** complete; **Stage B0** soft-launch UX (welcome, Plausible,
+waitlist/feedback hooks, shareable URL, multi-layer export ZIP) shipped.
+**Next:** Stage B outreach + Formspree credentials. Phase **4.2** geochem stays
+post-MVP. See [`BUILD_PLAN.md`](./BUILD_PLAN.md) for the live checklist.

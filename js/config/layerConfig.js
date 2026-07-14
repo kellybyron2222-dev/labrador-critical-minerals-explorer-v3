@@ -442,7 +442,7 @@ export const LAYER_GROUPS = {
   occurrences: {
     title: 'Occurrences & Activity',
     hint: 'MODS mineral occurrences (prospects through producers)',
-    defaultExpanded: false
+    defaultExpanded: true
   },
   rights: {
     title: 'Rights & Constraints',
