@@ -1,5 +1,6 @@
 /**
- * Soft-launch geo toolbox: measure distance + draw (plugin) or Turf click-measure fallback.
+ * Soft-launch geo toolbox: measure distance (Turf click-measure).
+ * Terra Draw can be reintroduced later when the package is installable in this env.
  */
 
 import maplibregl from 'maplibre-gl';
@@ -14,32 +15,6 @@ let coordMarker = null;
  * @returns {Promise<{ destroy: () => void, mode: () => string }>}
  */
 export async function attachMapTools(map) {
-  try {
-    const mod = await import('@watergis/maplibre-gl-terradraw');
-    try {
-      await import('@watergis/maplibre-gl-terradraw/dist/maplibre-gl-terradraw.css');
-    } catch {
-      /* CSS path may vary by version */
-    }
-    const MeasureControl = mod.MaplibreMeasureControl;
-    const DrawControl = mod.MaplibreTerradrawControl;
-    if (MeasureControl) {
-      map.addControl(new MeasureControl({ measureUnitType: 'metric' }), 'top-right');
-    }
-    if (DrawControl) {
-      map.addControl(
-        new DrawControl({
-          modes: ['point', 'linestring', 'polygon', 'select', 'delete-selection']
-        }),
-        'top-right'
-      );
-    }
-    if (MeasureControl || DrawControl) {
-      return { destroy() {}, mode: () => 'terradraw' };
-    }
-  } catch (err) {
-    console.warn('terradraw unavailable — using Turf measure fallback', err);
-  }
   return attachTurfMeasureFallback(map);
 }
 
@@ -197,7 +172,6 @@ export function zoomToFeatures(map, fcOrFeatures) {
   try {
     const box = bbox({ type: 'FeatureCollection', features });
     if (!box || box.some((n) => !Number.isFinite(n))) return false;
-    // Degenerate single-point bbox
     const pad = 0.05;
     const west = box[0] === box[2] ? box[0] - pad : box[0];
     const south = box[1] === box[3] ? box[1] - pad : box[1];
