@@ -9,12 +9,11 @@ import { escapeHtml } from './htmlEscape.js';
 import {
   FORMSPREE_WAITLIST_ID,
   FORMSPREE_FEEDBACK_ID,
-  formspreeUrl,
-  getUtmParams,
-  APP_PUBLIC_URL,
-  APP_REPO_URL
+  CONTACT_EMAIL,
+  getUtmParams
 } from './launchConfig.js';
 import { track, PlausibleEvents } from './analytics.js';
+import { submitLead, isLeadCaptureConfigured } from './leadCapture.js';
 
 const SECTION_IDS = ['kpi', 'about', 'export', 'updates', 'feedback', 'share'];
 
@@ -23,13 +22,15 @@ export default class SettingsPanel {
    * @param {{
    *   onChange?: () => void,
    *   onExportPackage?: (formats: Record<string, boolean>) => void | Promise<any>,
-   *   onCopyShareLink?: () => void | Promise<any>
+   *   onCopyShareLink?: () => void | Promise<any>,
+   *   onOpenAbout?: () => void
    * }} handlers
    */
   constructor(handlers = {}) {
     this.onChange = handlers.onChange || (() => {});
     this.onExportPackage = handlers.onExportPackage || (() => {});
     this.onCopyShareLink = handlers.onCopyShareLink || (() => {});
+    this.onOpenAbout = handlers.onOpenAbout || (() => {});
     this.open = false;
     /** @type {Record<string, boolean>} section id → expanded */
     this.sectionExpanded = SECTION_IDS.reduce((acc, id) => ({ ...acc, [id]: false }), {});
@@ -205,19 +206,10 @@ export default class SettingsPanel {
 
   _renderAboutBody() {
     return `
-      <p class="settings-note"><strong>Labrador Critical Minerals Explorer</strong> is a free, open map built entirely from public data — no logins, no paywalls.</p>
-      <ul class="settings-about-list">
-        <li><strong>Focus:</strong> mainland Labrador — not a thin Canada-wide map.</li>
-        <li><strong>Sources:</strong> NL GeoAtlas, Natural Resources Canada (NRCan), Crown-Indigenous Relations and Northern Affairs Canada / Indigenous Services Canada (CIRNAC / ISC), and MapLibre for the base map.</li>
-        <li><strong>Hard exclusions:</strong> parks / conserved areas and public water supplies are excluded outright. Indigenous lands are shown as consultation context, not a blanket exclusion.</li>
-        <li><strong>Coordinate reference:</strong> vector exports use WGS 84 / EPSG:4326 (CRS84 lon-lat ordering).</li>
-        <li><strong>Claims data:</strong> mineral claims are baked roughly every ~3 months, not a live staking feed — always verify against the official registry before making decisions.</li>
-      </ul>
-      <p class="settings-note">
-        <a href="${escapeHtml(APP_PUBLIC_URL)}" target="_blank" rel="noopener">Open the public app</a>
-        &nbsp;&middot;&nbsp;
-        <a href="${escapeHtml(APP_REPO_URL)}" target="_blank" rel="noopener">View source on GitHub</a>
-      </p>`;
+      <p class="settings-note">Data sources, coordinate reference, and honesty notes live in the About panel.</p>
+      <div class="settings-actions">
+        <button type="button" class="settings-primary-btn" data-open-about-modal>Open About</button>
+      </div>`;
   }
 
   _renderExportBody() {
@@ -259,18 +251,22 @@ export default class SettingsPanel {
   }
 
   _renderUpdatesBody() {
-    if (!FORMSPREE_WAITLIST_ID) {
-      return `<p class="settings-note">Waitlist form not configured yet. Set <code>VITE_FORMSPREE_WAITLIST</code> in <code>.env</code>.</p>`;
-    }
-
+    const configured = isLeadCaptureConfigured('waitlist');
     return `
-      <p class="settings-note">Get notified about new layers, data refreshes, and major changes. No spam.</p>
+      <p class="settings-note">Join the list for new layers and data refreshes — enter your email here (no separate signup site).</p>
+      ${
+        configured
+          ? CONTACT_EMAIL && !FORMSPREE_WAITLIST_ID
+            ? `<p class="settings-note">First submit may email you a FormSubmit <strong>Activate</strong> link — open it once. If delivery fails, your email app opens as backup.</p>`
+            : ''
+          : `<p class="settings-note settings-note-warn">Backend not configured yet — set <code>VITE_CONTACT_EMAIL</code> in <code>.env</code> and restart the dev server.</p>`
+      }
       <form class="settings-form" data-waitlist-form novalidate>
         <input type="hidden" name="_subject" value="Labrador Explorer — waitlist signup" />
         ${this._hiddenUtmFieldsHtml()}
         <label class="settings-field">
           <span class="settings-field-label">Email <span aria-hidden="true">*</span></span>
-          <input type="email" name="email" required autocomplete="email" />
+          <input type="email" name="email" required autocomplete="email" placeholder="you@example.com" />
         </label>
         <label class="settings-field">
           <span class="settings-field-label">Name (optional)</span>
@@ -292,25 +288,29 @@ export default class SettingsPanel {
           </label>
         </fieldset>
         <div class="settings-actions">
-          <button type="submit" class="settings-primary-btn" data-waitlist-submit>Join the waitlist</button>
+          <button type="submit" class="settings-primary-btn" data-waitlist-submit>Join the list</button>
         </div>
       </form>
       <p class="settings-form-status settings-note" data-waitlist-status hidden></p>`;
   }
 
   _renderFeedbackBody() {
-    if (!FORMSPREE_FEEDBACK_ID) {
-      return `<p class="settings-note">Feedback form not configured yet. Set <code>VITE_FORMSPREE_FEEDBACK</code> in <code>.env</code>.</p>`;
-    }
-
+    const configured = isLeadCaptureConfigured('feedback');
     return `
-      <p class="settings-note">Spot a bug, missing layer, or bad data? Tell us.</p>
+      <p class="settings-note">Bug, missing layer, or idea? Send it from here.</p>
+      ${
+        configured
+          ? CONTACT_EMAIL && !FORMSPREE_FEEDBACK_ID
+            ? `<p class="settings-note">First submit may email you a FormSubmit <strong>Activate</strong> link — open it once. If delivery fails, your email app opens as backup.</p>`
+            : ''
+          : `<p class="settings-note settings-note-warn">Backend not configured yet — set <code>VITE_CONTACT_EMAIL</code> in <code>.env</code> and restart the dev server.</p>`
+      }
       <form class="settings-form" data-feedback-form novalidate>
         <input type="hidden" name="_subject" value="Labrador Explorer — feedback" />
         ${this._hiddenUtmFieldsHtml()}
         <label class="settings-field">
           <span class="settings-field-label">Message <span aria-hidden="true">*</span></span>
-          <textarea name="message" rows="4" required></textarea>
+          <textarea name="message" rows="4" required placeholder="What should we improve?"></textarea>
         </label>
         <label class="settings-field">
           <span class="settings-field-label">Email (optional — so we can follow up)</span>
@@ -342,8 +342,8 @@ export default class SettingsPanel {
       ${this._sectionShell('kpi', 'KPI bar', `${enabled.length} on`, this._renderKpiBody())}
       ${this._sectionShell('about', 'About data', '', this._renderAboutBody())}
       ${this._sectionShell('export', 'Export', '', this._renderExportBody())}
-      ${this._sectionShell('updates', 'Stay updated', FORMSPREE_WAITLIST_ID ? '' : 'not set', this._renderUpdatesBody())}
-      ${this._sectionShell('feedback', 'Feedback', FORMSPREE_FEEDBACK_ID ? '' : 'not set', this._renderFeedbackBody())}
+      ${this._sectionShell('updates', 'Stay updated', FORMSPREE_WAITLIST_ID || CONTACT_EMAIL ? '' : 'setup', this._renderUpdatesBody())}
+      ${this._sectionShell('feedback', 'Feedback', FORMSPREE_FEEDBACK_ID || CONTACT_EMAIL ? '' : 'setup', this._renderFeedbackBody())}
       ${this._sectionShell('share', 'Share this view', '', this._renderShareBody())}
     `;
 
@@ -359,15 +359,19 @@ export default class SettingsPanel {
 
     this._bindKpiSection();
     this._bindExportSection();
+    this.panel.querySelector('[data-open-about-modal]')?.addEventListener('click', () => {
+      this.close();
+      this.onOpenAbout();
+    });
     this._bindFormspreeForm(this.panel.querySelector('[data-waitlist-form]'), {
       statusSelector: '[data-waitlist-status]',
-      formId: FORMSPREE_WAITLIST_ID,
+      kind: 'waitlist',
       eventName: PlausibleEvents.WAITLIST_SUBMIT,
-      successText: 'Thanks — you\u2019re on the list. We\u2019ll be in touch.'
+      successText: 'Thanks — you\u2019re on the list.'
     });
     this._bindFormspreeForm(this.panel.querySelector('[data-feedback-form]'), {
       statusSelector: '[data-feedback-status]',
-      formId: FORMSPREE_FEEDBACK_ID,
+      kind: 'feedback',
       eventName: PlausibleEvents.FEEDBACK_SUBMIT,
       successText: 'Thanks for the feedback — we read every note.'
     });
@@ -446,8 +450,25 @@ export default class SettingsPanel {
       if (status) status.textContent = 'Building export package…';
 
       try {
-        await this.onExportPackage(formats);
-        if (status) status.textContent = 'Export downloaded.';
+        const result = await this.onExportPackage(formats);
+        if (status) {
+          status.textContent = result?.filename
+            ? `Downloaded ${result.filename}. Check your Downloads folder.`
+            : 'Export downloaded. Check your Downloads folder.';
+        }
+        // Soft ask for feedback after a successful export.
+        const ask = document.createElement('button');
+        ask.type = 'button';
+        ask.className = 'settings-reset-btn';
+        ask.textContent = 'Send feedback on export?';
+        ask.style.marginTop = '8px';
+        ask.addEventListener('click', () => {
+          this.sectionExpanded.feedback = true;
+          this.sectionExpanded.export = true;
+          this.render();
+          this.panel.querySelector('#settings-section-feedback')?.scrollIntoView({ block: 'nearest' });
+        });
+        status?.parentElement?.appendChild(ask);
       } catch (err) {
         if (status) status.textContent = `Export failed: ${err?.message || err}`;
       } finally {
@@ -459,7 +480,7 @@ export default class SettingsPanel {
 
   /**
    * @param {HTMLFormElement | null} form
-   * @param {{ statusSelector: string, formId: string, eventName: string, successText: string }} opts
+   * @param {{ statusSelector: string, kind: 'waitlist'|'feedback', eventName: string, successText: string }} opts
    */
   _bindFormspreeForm(form, opts) {
     if (!form) return;
@@ -467,7 +488,6 @@ export default class SettingsPanel {
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      if (!opts.formId) return;
 
       const submitBtn = form.querySelector('button[type="submit"]');
       const originalLabel = submitBtn?.textContent;
@@ -481,22 +501,24 @@ export default class SettingsPanel {
       }
 
       try {
-        const resp = await fetch(formspreeUrl(opts.formId), {
-          method: 'POST',
-          headers: { Accept: 'application/json' },
-          body: new FormData(form)
-        });
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-
-        track(opts.eventName);
+        const result = await submitLead(opts.kind, new FormData(form));
+        track(opts.eventName, { channel: result.channel });
         form.hidden = true;
-        if (status) status.textContent = opts.successText;
+        if (status) {
+          if (result.channel === 'mailto') {
+            status.textContent =
+              result.warning ||
+              `${opts.successText} (your email app should open to finish sending.)`;
+          } else {
+            status.textContent = opts.successText;
+          }
+        }
       } catch (err) {
         if (submitBtn) {
           submitBtn.disabled = false;
           submitBtn.textContent = originalLabel;
         }
-        if (status) status.textContent = `Something went wrong — please try again. (${err?.message || err})`;
+        if (status) status.textContent = err?.message || 'Something went wrong — please try again.';
       }
     });
   }

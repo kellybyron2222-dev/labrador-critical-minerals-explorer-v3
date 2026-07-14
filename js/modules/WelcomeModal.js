@@ -1,5 +1,5 @@
 /**
- * First-visit welcome modal — soft-launch orientation and CTAs.
+ * First-visit welcome — short orientation only (About is a separate dialog).
  */
 
 import { escapeHtml } from './htmlEscape.js';
@@ -32,12 +32,12 @@ export default class WelcomeModal {
     document.body.appendChild(this.backdrop);
     document.body.appendChild(this.panel);
 
-    this.backdrop.addEventListener('click', () => this.dismiss({ remember: false }));
+    this.backdrop.addEventListener('click', () => this.dismiss({ remember: true }));
     this._onKeyDown = (e) => {
       if (!this.open) return;
       if (e.key === 'Escape') {
         e.preventDefault();
-        this.dismiss({ remember: false });
+        this.dismiss({ remember: true });
         return;
       }
       if (e.key === 'Tab') this.trapFocus(e);
@@ -79,12 +79,11 @@ export default class WelcomeModal {
     }
   }
 
-  /** Show on first visit when the dismiss flag is not stored. */
   maybeShow() {
     try {
       if (localStorage.getItem(STORAGE_KEY) === '1') return;
     } catch {
-      // private mode — still show once per session
+      /* private mode — show once */
     }
     this.show();
   }
@@ -113,14 +112,14 @@ export default class WelcomeModal {
     this.backdrop.hidden = true;
     this.panel.hidden = true;
     this.setInertBackground(false);
-    if (opts.remember) {
+    if (opts.remember !== false) {
       try {
         localStorage.setItem(STORAGE_KEY, '1');
       } catch {
-        // ignore
+        /* ignore */
       }
     }
-    track(PlausibleEvents.WELCOME_DISMISS, { remember: Boolean(opts.remember) });
+    track(PlausibleEvents.WELCOME_DISMISS, { remember: opts.remember !== false });
     if (this._lastFocus && typeof this._lastFocus.focus === 'function') {
       this._lastFocus.focus();
     }
@@ -130,55 +129,44 @@ export default class WelcomeModal {
   render() {
     this.panel.innerHTML = `
       <button type="button" class="settings-close welcome-close" data-welcome-dismiss aria-label="Close welcome">×</button>
-      <h2 id="welcome-title" class="settings-title welcome-title">${escapeHtml('Labrador Critical Minerals Explorer')}</h2>
+      <h2 id="welcome-title" class="settings-title welcome-title">${escapeHtml('Welcome')}</h2>
       <p class="settings-intro welcome-intro">
-        A free, open map for exploring Labrador critical-mineral context — geology, occurrences,
-        rights, constraints, and infrastructure from public sources.
+        Free Labrador map for critical-mineral context — public layers in one place.
+        Your view is remembered on this device when you come back.
       </p>
-      <ul class="settings-about-list welcome-points">
-        <li><strong>Labrador-focused</strong> — not a thin Canada-wide map.</li>
-        <li><strong>Public data</strong> — GeoAtlas, NRCan, CIRNAC/ISC, and curated infrastructure.</li>
-        <li><strong>Not AI discovery</strong> — no black-box prospecting scores; layers show what agencies publish.</li>
-        <li><strong>Baked claims</strong> — refreshed on a ~3-month cadence, not a live staking feed.</li>
-      </ul>
       <ol class="welcome-tips settings-about-list">
-        <li><strong>Click the map</strong> for occurrence / claim detail and nearest infrastructure.</li>
-        <li><strong>Open Rights</strong> for claims, tenure, and Hard exclusions (parks &amp; water).</li>
-        <li><strong>Settings → Export</strong> downloads your current view as a multi-format ZIP (WGS&nbsp;84).</li>
+        <li><strong>Click the map</strong> for details and nearest infrastructure.</li>
+        <li><strong>Open Rights</strong> for claims and Hard exclusions (parks &amp; water).</li>
+        <li><strong>Settings → Export</strong> downloads your current view as a ZIP (WGS&nbsp;84).</li>
       </ol>
       <div class="welcome-actions settings-actions">
-        <button type="button" class="settings-primary-btn" data-welcome-explore>Explore map</button>
+        <button type="button" class="settings-primary-btn" data-welcome-explore>Start exploring</button>
+        <button type="button" class="settings-reset-btn" data-welcome-about>About the data</button>
         <button type="button" class="settings-reset-btn" data-welcome-waitlist>Stay updated</button>
-        <button type="button" class="settings-reset-btn" data-welcome-about>About</button>
       </div>
       <label class="welcome-remember">
-        <input type="checkbox" data-welcome-remember />
-        <span>Don&rsquo;t show again</span>
+        <input type="checkbox" data-welcome-remember checked />
+        <span>Don&rsquo;t show this again</span>
       </label>`;
 
-    this.panel.querySelector('[data-welcome-dismiss]')?.addEventListener('click', () => {
-      const remember = this.panel.querySelector('[data-welcome-remember]')?.checked;
-      this.dismiss({ remember });
-    });
+    const remember = () => this.panel.querySelector('[data-welcome-remember]')?.checked !== false;
 
+    this.panel.querySelector('[data-welcome-dismiss]')?.addEventListener('click', () => {
+      this.dismiss({ remember: remember() });
+    });
     this.panel.querySelector('[data-welcome-explore]')?.addEventListener('click', () => {
       track(PlausibleEvents.WELCOME_EXPLORE);
-      const remember = this.panel.querySelector('[data-welcome-remember]')?.checked;
-      this.dismiss({ remember });
+      this.dismiss({ remember: remember() });
       this.onExplore();
     });
-
     this.panel.querySelector('[data-welcome-waitlist]')?.addEventListener('click', () => {
       track(PlausibleEvents.WELCOME_WAITLIST);
-      const remember = this.panel.querySelector('[data-welcome-remember]')?.checked;
-      this.dismiss({ remember });
+      this.dismiss({ remember: remember() });
       this.onOpenWaitlist();
     });
-
     this.panel.querySelector('[data-welcome-about]')?.addEventListener('click', () => {
       track(PlausibleEvents.WELCOME_ABOUT);
-      const remember = this.panel.querySelector('[data-welcome-remember]')?.checked;
-      this.dismiss({ remember });
+      this.dismiss({ remember: remember() });
       this.onOpenAbout();
     });
   }

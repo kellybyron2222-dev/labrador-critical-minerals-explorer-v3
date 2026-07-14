@@ -530,6 +530,63 @@ html, body {
   margin-bottom: 4px;
 }
 
+.feedback-fab {
+  position: fixed;
+  right: 16px;
+  bottom: 72px;
+  z-index: 40;
+  padding: 10px 14px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: #0f172a;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.12);
+  cursor: pointer;
+}
+
+.feedback-fab:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
+.settings-note-warn {
+  color: #9a3412;
+  background: #fff7ed;
+  padding: 8px 10px;
+  border-radius: 6px;
+}
+
+@media (max-width: 768px) {
+  .feedback-fab {
+    right: 12px;
+    bottom: 88px;
+    padding: 8px 12px;
+  }
+}
+
+.about-stats {
+  padding: 8px 10px;
+  background: #f1f5f9;
+  border-radius: 6px;
+  line-height: 1.45;
+}
+
+.occ-section-nested {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--card-light-border);
+}
+
+.occ-section-nested .occ-section-header .nav-section-title {
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--card-light-text-muted);
+}
+
 .settings-about-list {
   margin: 8px 0 0;
   padding-left: 1.1rem;

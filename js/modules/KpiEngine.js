@@ -176,6 +176,37 @@ export function featureIntersectsBounds(feature, bounds) {
   return positions.some((c) => pointInBounds(bounds, c));
 }
 
+/**
+ * Normalize MapLibre LngLatBounds (getWest/…) or a plain {west,south,east,north}.
+ * @param {object | null | undefined} bounds
+ * @returns {{ west: number, south: number, east: number, north: number } | null}
+ */
+export function normalizeMapBounds(bounds) {
+  if (!bounds) return null;
+  if (typeof bounds.getWest === 'function') {
+    return {
+      west: bounds.getWest(),
+      south: bounds.getSouth(),
+      east: bounds.getEast(),
+      north: bounds.getNorth()
+    };
+  }
+  if (
+    Number.isFinite(bounds.west) &&
+    Number.isFinite(bounds.south) &&
+    Number.isFinite(bounds.east) &&
+    Number.isFinite(bounds.north)
+  ) {
+    return {
+      west: bounds.west,
+      south: bounds.south,
+      east: bounds.east,
+      north: bounds.north
+    };
+  }
+  return null;
+}
+
 /** Mirror MapLibre facilities filter: province string contains NL&L. */
 export function featureMatchesFacilitiesFilter(feature) {
   const provinces = feature?.properties?.ProvincesEN;
@@ -185,13 +216,7 @@ export function featureMatchesFacilitiesFilter(feature) {
 
 function boundsFromMap(map) {
   if (!map) return null;
-  const b = map.getBounds();
-  return {
-    west: b.getWest(),
-    south: b.getSouth(),
-    east: b.getEast(),
-    north: b.getNorth()
-  };
+  return normalizeMapBounds(map.getBounds());
 }
 
 /**

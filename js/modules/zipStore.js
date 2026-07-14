@@ -27,15 +27,27 @@ function uIntLE(value, bytes) {
   return out;
 }
 
-function concat(...parts) {
-  const total = parts.reduce((n, p) => n + p.length, 0);
+/** Concatenate Uint8Arrays without call-stack spread limits. */
+function concatList(list) {
+  let total = 0;
+  for (const p of list) total += p.length;
   const out = new Uint8Array(total);
   let offset = 0;
-  for (const p of parts) {
+  for (const p of list) {
     out.set(p, offset);
     offset += p.length;
   }
   return out;
+}
+
+function asBytes(content) {
+  if (typeof content === 'string') return encodeUtf8(content);
+  if (content instanceof ArrayBuffer) return new Uint8Array(content);
+  if (content instanceof Uint8Array) return content;
+  if (ArrayBuffer.isView(content)) {
+    return new Uint8Array(content.buffer, content.byteOffset, content.byteLength);
+  }
+  throw new Error('Unsupported ZIP entry type');
 }
 
 /**
@@ -49,15 +61,11 @@ export function buildStoreZip(files) {
   const entries = Object.entries(files).filter(([, v]) => v != null);
 
   for (const [rawName, content] of entries) {
-    const name = encodeUtf8(rawName.replace(/^\/+/, ''));
-    let data;
-    if (typeof content === 'string') data = encodeUtf8(content);
-    else if (content instanceof ArrayBuffer) data = new Uint8Array(content);
-    else data = content;
-
+    const name = encodeUtf8(String(rawName).replace(/^\/+/, ''));
+    const data = asBytes(content);
     const crc = crc32(data);
     const size = data.length;
-    const localHeader = concat(
+    const localHeader = concatList([
       uIntLE(0x04034b50, 4),
       uIntLE(20, 2),
       uIntLE(0, 2),
@@ -70,10 +78,10 @@ export function buildStoreZip(files) {
       uIntLE(name.length, 2),
       uIntLE(0, 2),
       name
-    );
+    ]);
     localParts.push(localHeader, data);
 
-    const central = concat(
+    const central = concatList([
       uIntLE(0x02014b50, 4),
       uIntLE(20, 2),
       uIntLE(20, 2),
@@ -92,13 +100,13 @@ export function buildStoreZip(files) {
       uIntLE(0, 4),
       uIntLE(offset, 4),
       name
-    );
+    ]);
     centralParts.push(central);
     offset += localHeader.length + data.length;
   }
 
-  const centralDir = concat(...centralParts);
-  const end = concat(
+  const centralDir = concatList(centralParts);
+  const end = concatList([
     uIntLE(0x06054b50, 4),
     uIntLE(0, 2),
     uIntLE(0, 2),
@@ -107,7 +115,8 @@ export function buildStoreZip(files) {
     uIntLE(centralDir.length, 4),
     uIntLE(offset, 4),
     uIntLE(0, 2)
-  );
+  ]);
 
-  return new Blob([concat(...localParts, centralDir, end)], { type: 'application/zip' });
+  const bytes = concatList([...localParts, centralDir, end]);
+  return new Blob([bytes], { type: 'application/zip' });
 }

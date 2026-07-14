@@ -163,7 +163,7 @@ const MODS_PICKER_ALL = 'all';
 
 /** Sidebar dropdown structure for the MODS commodity picker (see app.js). */
 const MODS_COMMODITY_PICKER = {
-  defaultValue: MODS_PICKER_PRESET_CRITICAL,
+  defaultValue: MODS_PICKER_ALL,
   groups: [
     {
       label: 'Presets',

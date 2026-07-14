@@ -30,7 +30,12 @@ export function track(eventName, props) {
     const plausible = typeof window !== 'undefined' ? window.plausible : undefined;
     if (typeof plausible !== 'function') return;
     if (props && Object.keys(props).length) {
-      plausible(eventName, { props });
+      const clean = {};
+      for (const [k, v] of Object.entries(props)) {
+        if (v == null) continue;
+        clean[k] = typeof v === 'string' ? v : String(v);
+      }
+      plausible(eventName, { props: clean });
     } else {
       plausible(eventName);
     }

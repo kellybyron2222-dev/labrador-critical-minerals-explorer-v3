@@ -31,16 +31,20 @@ geophysics (aeromag / 1VD) — built on public government data.
   page); raster opacity, grayscale mode, mutual exclusion.
 
 **Stage A engineering gate met.** Stage B0 soft-launch eng (welcome, capture,
-analytics, shareable views, multi-layer export) is in the app. Next: Stage B
-outreach (NLPA) + configure Formspree IDs in `.env`.
+analytics, shareable views, multi-layer export) is in the app. Next: **Stage B
+outreach** (NLPA + screenshots). Long-term Leapfrog-adjacent data quality is
+documented as Stage **C′** / **G** — not current work (PRODUCT_PLAN §2.1).
 
 ## Soft-launch config
 
 Copy `.env.example` → `.env` and set:
 
-- `VITE_FORMSPREE_WAITLIST` — Formspree form id for “Stay updated”
-- `VITE_FORMSPREE_FEEDBACK` — Formspree form id for feedback
-- `VITE_PLAUSIBLE_DOMAIN` — defaults to the GitHub Pages host
+- `VITE_CONTACT_EMAIL` — FormSubmit inbox for Stay updated / Feedback (open the
+  Activate email once), **or**
+- `VITE_FORMSPREE_WAITLIST` / `VITE_FORMSPREE_FEEDBACK` — preferred Formspree ids
+- `VITE_PLAUSIBLE_DOMAIN` — site hostname in Plausible (default:
+  `kellybyron2222-dev.github.io`). The tracker snippet itself lives in
+  `index.html` (Plausible `pa-….js` site script).
 
 Privacy-light analytics via Plausible (no fingerprinting). Export packages are
 WGS 84 / EPSG:4326 (CRS84 lon-lat); see Settings → About / Export.
@@ -50,7 +54,7 @@ WGS 84 / EPSG:4326 (CRS84 lon-lat); see Settings → About / Export.
 | Doc | Role |
 |-----|------|
 | [`BUILD_PLAN.md`](./BUILD_PLAN.md) | Engineering checklist (layers, phases, data pipeline) |
-| [`PRODUCT_PLAN.md`](./PRODUCT_PLAN.md) | Product arc: free Labrador MVP → marketing → premium → national |
+| [`PRODUCT_PLAN.md`](./PRODUCT_PLAN.md) | Product arc A→G incl. professional data quality (§2.1) |
 
 ## Run
 
@@ -84,7 +88,7 @@ npm run refresh:data     # Registry-driven data refresh (respects nextDue)
 
 ## Status
 
-Phases **0–4.1** complete; **Stage B0** soft-launch UX (welcome, Plausible,
-waitlist/feedback hooks, shareable URL, multi-layer export ZIP) shipped.
-**Next:** Stage B outreach + Formspree credentials. Phase **4.2** geochem stays
-post-MVP. See [`BUILD_PLAN.md`](./BUILD_PLAN.md) for the live checklist.
+Phases **0–4.1** complete; **Stage B0** soft-launch UX shipped. **Next:** Stage B
+outreach (NLPA + screenshot assets). Phase **4.2** geochem and professional
+data quality (C′ / G) stay post-outreach — see PRODUCT_PLAN §2.1 and
+BUILD_PLAN §5.2.

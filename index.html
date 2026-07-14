@@ -9,8 +9,14 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <script defer data-domain="kellybyron2222-dev.github.io" src="https://plausible.io/js/script.js"></script>
-  <script>window.plausible = window.plausible || function() { (window.plausible.q = window.plausible.q || []).push(arguments) }</script>
+  <!-- Privacy-friendly analytics by Plausible (site-specific snippet) -->
+  <script async src="https://plausible.io/js/pa-HjV1BGg96srKSv8amPVhB.js"></script>
+  <script>
+    window.plausible = window.plausible || function () { (plausible.q = plausible.q || []).push(arguments) };
+    plausible.init = plausible.init || function (i) { plausible.o = i || {} };
+    // Do not enable hashBasedRouting — our #v=… hash is map state, not SPA routes.
+    plausible.init();
+  </script>
 </head>
 <body>
   <div class="app-container">
@@ -65,7 +71,7 @@
           <div class="basemap-options">
             <button id="basemap-positron" class="basemap-btn active" type="button" data-style="positron" aria-pressed="true">Positron</button>
             <button id="basemap-dark" class="basemap-btn" type="button" data-style="dark" aria-pressed="false">Dark</button>
-            <button id="basemap-streets" class="basemap-btn" type="button" data-style="streets" aria-pressed="false">Streets</button>
+            <button id="basemap-satellite" class="basemap-btn" type="button" data-style="satellite" aria-pressed="false">Satellite</button>
           </div>
         </div>
 

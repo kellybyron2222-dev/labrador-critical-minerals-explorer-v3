@@ -56,12 +56,14 @@ import MobileChrome from './modules/MobileChrome.js';
 import KpiBar from './modules/KpiBar.js';
 import SettingsPanel from './modules/SettingsPanel.js';
 import { getKpiEnabledIds } from './modules/UserPrefs.js';
-import { computeKpiMetrics, featureIntersectsBounds } from './modules/KpiEngine.js';
+import { computeKpiMetrics, featureIntersectsBounds, normalizeMapBounds } from './modules/KpiEngine.js';
 import { buildPopupSection, buildModsPopupSection } from './modules/PopupBuilder.js';
 import { computeNearestInfraDistances, ensureInfraDistanceData } from './modules/infraDistance.js';
 import WelcomeModal from './modules/WelcomeModal.js';
+import AboutModal from './modules/AboutModal.js';
 import { buildExportPackage, downloadBlob } from './modules/exportPackage.js';
-import { readViewState, writeViewState, buildShareUrl } from './modules/viewState.js';
+import { resolveBootstrapViewState, writeViewState, buildShareUrl } from './modules/viewState.js';
+import FeedbackFab from './modules/FeedbackFab.js';
 import { track, PlausibleEvents } from './modules/analytics.js';
 
 const POPUP_LAYER_IDS = [
@@ -125,8 +127,9 @@ class MineralsMapApp {
     this.settingsPanel = null;
     /** Phase 4.1 — desaturate signal rasters (aeromag / 1VD / gravity). */
     this.signalsGrayscale = false;
-    /** Stage B0 soft launch — welcome modal, shareable view state. */
+    /** Stage B0 soft launch — welcome modal, about modal, shareable view state. */
     this.welcomeModal = null;
+    this.aboutModal = null;
     this._viewStateTimer = null;
     this._bootStatusCleared = false;
     this.init();
@@ -165,7 +168,8 @@ class MineralsMapApp {
     this.settingsPanel = new SettingsPanel({
       onChange: () => this.refreshKpiBar(),
       onExportPackage: (formats) => this.exportPackage(formats),
-      onCopyShareLink: () => this.copyShareLink()
+      onCopyShareLink: () => this.copyShareLink(),
+      onOpenAbout: () => this.aboutModal?.show()
     });
     document.getElementById('settings-open')?.addEventListener('click', () => {
       track(PlausibleEvents.SETTINGS_OPEN);
@@ -177,12 +181,12 @@ class MineralsMapApp {
       this.settingsPanel?.show();
     });
     document.getElementById('about-open')?.addEventListener('click', () => {
-      track(PlausibleEvents.SETTINGS_OPEN, { section: 'about' });
-      this.settingsPanel?.show({ section: 'about', expandSection: true });
+      this.aboutModal?.show();
     });
 
     this.mobileChrome.init();
     this.renderLayerSidebar();
+    this.nestOccurrenceBrowserInOccurrencesGroup();
     this.bindLayerControls();
     // Applies the default commodity filter/color + legend before the initial
     // legend sync below, so MODS renders its default (critical-minerals
@@ -198,16 +202,41 @@ class MineralsMapApp {
     // Warm nearest-infra distance cache (Phase 3.4) without blocking UI.
     ensureInfraDistanceData().catch(() => {});
 
-    // Stage B0 soft launch — restore a shared view (if any) before wiring
-    // sync, then welcome first-time visitors once the map has settled.
+    const modsCount = this.layerManager.getLoadedFeatures('modsOccurrences')?.length;
+    this.aboutModal = new AboutModal({
+      stats: {
+        modsCount,
+        vectorLayers: Object.keys(LAYER_CONFIG).length,
+        signalLayers: SIGNAL_RASTER_KEYS.length
+      }
+    });
+
+    // Stage B0 soft launch — restore shared URL or last device view, then welcome.
     this.welcomeModal = new WelcomeModal({
       onExplore: () => {},
-      onOpenAbout: () => this.settingsPanel?.show({ section: 'about', expandSection: true }),
+      onOpenAbout: () => this.aboutModal?.show(),
       onOpenWaitlist: () => this.settingsPanel?.show({ section: 'updates', expandSection: true })
     });
-    await this.applyViewState(readViewState());
+    await this.applyViewState(resolveBootstrapViewState());
     this.bindViewStateSync();
+    this.feedbackFab = new FeedbackFab({
+      onOpen: () => this.settingsPanel?.show({ section: 'feedback', expandSection: true })
+    });
     requestAnimationFrame(() => this.welcomeModal?.maybeShow());
+  }
+
+  /**
+   * Move the occurrence search/list UI into the Occurrences & Activity group
+   * so browse tools sit with the MODS layer toggle (list stays collapsed).
+   */
+  nestOccurrenceBrowserInOccurrencesGroup() {
+    const occSection = document.querySelector('.occ-section');
+    const groupBody = document.querySelector(
+      '.layer-group[data-group-id="occurrences"] .layer-group-body'
+    );
+    if (!occSection || !groupBody) return;
+    occSection.classList.add('occ-section-nested');
+    groupBody.appendChild(occSection);
   }
 
   /** Above this feature count, confirm before building the export package (can be slow/large). */
@@ -220,10 +249,23 @@ class MineralsMapApp {
    * @param {Record<string, boolean>} formats
    */
   async exportPackage(formats = {}) {
-    const bounds = this.map?.getBounds?.();
+    const bounds = normalizeMapBounds(this.map?.getBounds?.());
     const vectorLayers = [];
     const rasterLayers = [];
     const skippedUnloaded = [];
+    const skippedEmptyView = [];
+
+    // Always include GeoJSON if the user left every format unchecked.
+    const resolvedFormats = {
+      geojson: formats.geojson !== false,
+      csv: Boolean(formats.csv),
+      kml: Boolean(formats.kml),
+      shapefile: Boolean(formats.shapefile),
+      rasters: Boolean(formats.rasters)
+    };
+    if (!resolvedFormats.geojson && !resolvedFormats.csv && !resolvedFormats.kml && !resolvedFormats.rasters) {
+      resolvedFormats.geojson = true;
+    }
 
     const value = this.currentMODSPickerValue;
     const resolved = resolveMODSCommodities(value);
@@ -236,7 +278,7 @@ class MineralsMapApp {
 
       let features = this.layerManager.getLoadedFeatures(key);
       if (!features.length) {
-        skippedUnloaded.push(key);
+        skippedUnloaded.push(config.sidebarLabel || key);
         return;
       }
 
@@ -258,7 +300,10 @@ class MineralsMapApp {
       }
 
       const inView = bounds ? features.filter((f) => featureIntersectsBounds(f, bounds)) : features;
-      if (!inView.length) return;
+      if (!inView.length) {
+        skippedEmptyView.push(config.sidebarLabel || key);
+        return;
+      }
 
       vectorLayers.push({
         id: key,
@@ -285,11 +330,19 @@ class MineralsMapApp {
     });
 
     if (!vectorLayers.length && !rasterLayers.length) {
-      this.setDataStatus(
-        'Nothing to export — turn on a layer that has loaded data in the current view.',
-        'error'
-      );
-      return;
+      const parts = [];
+      if (skippedUnloaded.length) {
+        parts.push(`Still loading: ${skippedUnloaded.join(', ')}`);
+      }
+      if (skippedEmptyView.length) {
+        parts.push(`No features in current view for: ${skippedEmptyView.join(', ')} (zoom/pan to coverage)`);
+      }
+      if (!parts.length) {
+        parts.push('Turn on a layer (MODS is on by default) and wait for it to finish loading.');
+      }
+      const msg = `Nothing to export. ${parts.join(' ')}`;
+      this.setDataStatus(msg, 'error');
+      throw new Error(msg);
     }
 
     const totalFeatures = vectorLayers.reduce((sum, l) => sum + l.features.length, 0);
@@ -299,17 +352,17 @@ class MineralsMapApp {
       );
       if (!proceed) {
         this.setDataStatus('Export cancelled.', 'info');
-        return;
+        throw new Error('Export cancelled.');
       }
     }
 
     this.setDataStatus('Building export package…', 'info');
     try {
-      const { filename, blob, notes } = await buildExportPackage({
+      const result = await buildExportPackage({
         bounds,
         vectorLayers,
         rasterLayers,
-        formats,
+        formats: resolvedFormats,
         meta: {
           filters: {
             mods: value,
@@ -320,14 +373,18 @@ class MineralsMapApp {
           }
         }
       });
-      downloadBlob(blob, filename);
-      track(PlausibleEvents.EXPORT_PACKAGE, formats);
+      downloadBlob(result.blob, result.filename);
+      track(PlausibleEvents.EXPORT_PACKAGE, {
+        layers: String(vectorLayers.length + rasterLayers.length),
+        features: String(totalFeatures)
+      });
       this.setDataStatus(
         `Exported ${totalFeatures.toLocaleString()} feature(s) across ${
           vectorLayers.length + rasterLayers.length
-        } layer(s).${notes?.length ? ' See README for notes.' : ''}`,
+        } layer(s) → ${result.filename}`,
         'info'
       );
+      return result;
     } catch (err) {
       this.setDataStatus(`Export failed: ${err?.message || err}`, 'error');
       throw err;

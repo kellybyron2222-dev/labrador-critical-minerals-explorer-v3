@@ -2,8 +2,9 @@
 
 > **Strategic overview** (go-to-market, freemium, geography expansion).
 > Engineering checklist stays in [`BUILD_PLAN.md`](./BUILD_PLAN.md).
-> Last updated: 2026-07-13 — Stage B0 soft-launch eng shipped (welcome, Plausible,
-> Formspree hooks, share URL, multi-layer export); next = Stage B outreach
+> Last updated: 2026-07-14 — Stage B0 eng done; long-term **professional data
+> quality** north star documented (§2.1); **next = Stage B outreach** (not
+> Leapfrog-grade schema work)
 
 ---
 
@@ -38,9 +39,11 @@ A  Labrador MVP (free)          ← finish BUILD_PLAN Musts (incl. geophysics 4.
 B  Soft launch + niche marketing ← while still Labrador-deep
 B+ Monthly Data Changelog email ← retention loop once list + deltas exist
 C  Premium v1 (free beta)        ← alerts, export, logistics (+ geochem)
+   └─ C′ Export schema hardening ← normalize MODS/nulls; CRS/provenance in package
 D  Freemium paywall              ← clear Free vs Premium split
 E  National / multi-region v2    ← expand geography once free+paid stick
 F  Premium v2                    ← multi-jurisdiction + collaboration + API
+G  Professional data platform    ← Leapfrog-adjacent open Labrador DB (long-term)
 ```
 
 | Stage | What ships | Price | Goal |
@@ -49,9 +52,44 @@ F  Premium v2                    ← multi-jurisdiction + collaboration + API
 | **B — Make it known** | Same product + landing / About + outreach | Free | First 50–200 real users; learn what they click |
 | **B+ — Monthly changelog** | Auto (then lightly reviewed) technical delta email: new layers, feature bullets, land-status teases | Free | Return visits + map CTR; later upgrade intent |
 | **C — Premium v1 (beta)** | Claim expiry alerts, bulk export, logistics score; optional higher-res / multi-region signals | **Free during beta**, clearly labeled | Habit + willingness-to-pay signal |
+| **C′ — Export / schema hardening** | Machine-friendly export (nulls, aliases, CRS sidecar, distance columns); still *not* a 3D project DB | Free core / Premium packaging | Best open Labrador *screening* package |
 | **D — Paywall** | Free tier stays useful; premium locks | Modest monthly / annual | Convert juniors & consultants |
 | **E — National MVP v2** | Next province/territory or Canada-wide layers (phased) | Free core + paid premium | Scale after monetization works |
 | **F — Premium v2** | Multi-region alerts, saved projects, team seats, API | Paid (+ higher tier optional) | Expand ARPU without killing free utility |
+| **G — Professional data platform** | Relational open schema, geochem, drillholes where public, structural geology, elevation — see §2.1 | Free browse + paid bulk/API | Leapfrog-*adjacent* intelligence, not a Surpac replacement |
+
+### 2.1 Long-term: professional / Leapfrog-grade data quality  [north star — not Stage B]
+
+External audit (2026-07): export CSVs look like a strong **regional reconnaissance
+DB**, not a Leapfrog Geo / Target / Micromine project database. That verdict is
+fair for *screening vs modeling* — and **most “missing” tenure / roads / rail /
+geology / geophysics layers already exist in the app** (lazy, off by default;
+polygons/lines export as GeoJSON, not CSV).
+
+**Product identity (keep):** best open Labrador **screening + context** map.
+**Do not promise:** replace Leapfrog / Surpac / Datamine as a 3D modeling workspace.
+
+**Why not now (Stage B):** wrong bottleneck. Soft launch needs users and
+willingness-to-pay signal before months of ETL, relational schema, and sparse
+public drillhole/assay coverage. Premature “enterprise DB” work burns Stage C
+capacity and can make later paid export harder to position.
+
+**Sequenced ambition**
+
+| Horizon | What | When |
+|---|---|---|
+| **Cheap wins** | CRS/provenance in every export package; normalize MODS −1/blank→null; alias DDH→drillHoleCount; clarify commodity columns; optional nearest-infra distance columns (already in popups); “enable Claims/Roads/… for full package” UX | Stage **C′** with Premium export packaging (small pieces OK earlier if trivial) |
+| **High-value open data** | Phase **4.2** lake/till geochem + ice-flow; structural geology if a clean NL source exists; elevation sample-on-export | Stage **C** depth / early **E** |
+| **Professional-grade (G)** | Coded domains (statusCode); depositModelCode where mappable; per-row provenance; relational occurrence↔commodity↔mineral tables for bulk/API; drillhole collars/surveys/assays **only where public**; resource tables only with citable NI 43-101-class sources | Stage **G** after paywall + clear demand — BUILD_PLAN §5.2 |
+
+**Pros of Stage G (later):** credibility with senior geos; export as a real
+sales asset; differentiation vs raw GeoAtlas dumps.
+**Cons if done in Stage B:** huge scope vs incomplete open data; identity drift
+toward “why no 3D?”; opportunity cost vs outreach / alerts / geochem; ongoing
+QA burden on every GeoAtlas refresh.
+
+Engineering checklist: [`BUILD_PLAN.md`](./BUILD_PLAN.md) §5.2
+**Professional data quality**.
 
 ### Why this order
 
@@ -138,6 +176,9 @@ drilling.”
 - Field crews who need AOI → KMZ/Shapefile (Stage C premium export)
 - Landmen who need email alerts the day a claim lapses (Stage C alerts)
 - Anyone needing Canada-wide depth (Stage E)
+- Anyone needing a Leapfrog-grade project DB (drillholes, relational assays,
+  coded deposit models) — Stage **G** / BUILD_PLAN §5.2; Stage **C′** is
+  export hygiene only
 
 **Launch verdict:** Must gate (incl. geophysics) = enough to be *useful to
 geos*. Soft-launch bar (Must + expiry colors + About) = enough to be
@@ -167,9 +208,10 @@ premium features. Audience is small and specialized; broad ads waste money.
       data sources) — first-visit welcome + Settings → About (2026-07-13)
 - [ ] 5–10 screenshot “story” assets (claims + MODS; fatal-flaw mask; infra)
 - [ ] One-pager email for NLPA / prospectors
-- [x] Simple waitlist or email capture (Formspree; set `VITE_FORMSPREE_WAITLIST`)
-      for product / changelog updates — same list feeds **Monthly Data
-      Changelog** (B+) once there is something real to report (2026-07-13)
+- [x] Simple waitlist or email capture (`VITE_CONTACT_EMAIL` FormSubmit and/or
+      Formspree ids) for product / changelog updates — same list feeds
+      **Monthly Data Changelog** (B+) once there is something real to report
+      (2026-07-13; FormSubmit FormData + mailto fallback 2026-07-14)
 - [x] Track crude usage (Plausible privacy-light) (2026-07-13)
 - [x] Shareable view URL + multi-layer viewport export ZIP (GeoJSON / CSV / KML /
       display rasters as PNG+bounds; Shapefile via QGIS from GeoJSON) (2026-07-13)
@@ -255,12 +297,15 @@ Phase 4 / Phase 5 / §5.2 items, promoted deliberately.
 |---|---|---|
 | **Real-time / frequent claim expiry alerts** | Stake ground when it lapses; beat slower competitors | Static expiry color on map; no email/push alerts |
 | **Bulk spatial export** (draw box → Shapefile / KMZ / GeoJSON) | Saves GIS tech hours | View-only; maybe tiny CSV of visible MODS names only |
+| **Export schema hardening (C′)** | Machine-ready package (nulls, aliases, CRS, distances) | Current viewport ZIP; raw MODS quirks documented in About |
 | **Logistical viability indexing** | Instant distance-to-road/port/power + score | Manual eyeballing; optional one-off distance measure on free |
 | **Multi-region / packaged signal packs** (later) | Convenience beyond free Labrador public layers | Free Labrador **1VD + gravity** already in MVP |
 
 > **Note:** Labrador public geophysics ships in **Stage A free forever** — do
 > not put basic GeoAtlas 1VD/gravity behind the paywall. Premium is alerts,
 > export packaging, scored logistics, and later multi-region convenience.
+> Full Leapfrog-adjacent relational DB is **Stage G**, not a Premium v1
+> checkbox — see §2.1.
 
 **Also ship in beta (supporting):** account-light auth (magic link), saved
 aoi/bookmarks, alert preferences.
@@ -370,9 +415,11 @@ Tune this table when Stage C usage data arrives.
 | B Marketing | Landing/About copy; light analytics; no heavy eng |
 | B+ Monthly changelog | Ingestion event log + optional curated ship notes; cron → LLM format → email API; human approve v1 |
 | C Premium v1 beta | Phase 5 export; 2.1c→alerts; 3.4→index; Phase **4.2** geochem |
+| C′ Schema hardening | BUILD_PLAN §5.2 Professional data quality — cheap wins |
 | D Paywall | Auth, billing, entitlement gating (new eng workstream) |
 | E National v2 | New geographic epics using §6 Add-a-Layer playbook |
-| F Premium v2 | BUILD_PLAN §5.2 + new collaboration/API epics |
+| F Premium v2 | Collaboration / API + remaining §5.2 product backlog |
+| G Professional data platform | §5.2 Professional data quality — full ambition (§2.1) |
 
 `BUILD_PLAN.md` remains the day-to-day checklist. This file is the **why / when /
 who pays** layer above it.
@@ -394,6 +441,10 @@ who pays** layer above it.
 
 ## 8. Changelog
 
+- **2026-07-14** — Added **§2.1 Professional / Leapfrog-grade data quality**
+  north star: Stage **C′** cheap export hygiene vs Stage **G** full ambition;
+  do **not** prioritize during Stage B outreach. Mapped into arc + BUILD_PLAN
+  §5.2. FormSubmit capture hardening noted on soft-launch checklist.
 - **2026-07-13** — Stage **B0** eng shipped: welcome, Plausible, Formspree hooks,
   shareable views, multi-layer free export ZIP. Soft-launch checklist eng items
   closed; **next = Stage B outreach** (screenshots + NLPA) + Formspree config.

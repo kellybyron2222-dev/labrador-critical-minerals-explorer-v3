@@ -9,6 +9,9 @@ export const FORMSPREE_WAITLIST_ID = import.meta.env.VITE_FORMSPREE_WAITLIST || 
 
 export const FORMSPREE_FEEDBACK_ID = import.meta.env.VITE_FORMSPREE_FEEDBACK || '';
 
+/** Optional mailto fallback when Formspree ids are empty (set in .env). */
+export const CONTACT_EMAIL = import.meta.env.VITE_CONTACT_EMAIL || '';
+
 export const APP_PUBLIC_URL =
   'https://kellybyron2222-dev.github.io/labrador-critical-minerals-explorer-v3/';
 

@@ -12,24 +12,25 @@
 > checklist for the project. Review and update it as we move along — tick boxes,
 > flip status markers, and add notes in place.
 > **Product / GTM / freemium arc:** see [`PRODUCT_PLAN.md`](./PRODUCT_PLAN.md).
-> Last updated: 2026-07-13 — **Stage B0 soft-launch eng** (welcome, Plausible,
-> Formspree hooks, shareable URL, multi-layer export ZIP); **next = Stage B
-> outreach** (NLPA) + Formspree IDs
+> Last updated: 2026-07-14 — Stage B0 eng done; **§5.2 Professional data
+> quality** (C′ cheap wins → Stage G Leapfrog-adjacent); **next = Stage B
+> outreach** (NLPA) — not schema overhaul
 
 **Status marker key:** `[x]` done · `[~]` in progress · `[ ]` not started · `[!]` blocked/needs decision
 Layer catalog status: `✅ done/in app` · `🟢 verified available` · `⬜ to confirm/wire` · `🔒 blocked`
 
 ---
 
-## Where we are (2026-07-13)
+## Where we are (2026-07-14)
 
 **Phase 0** ✅ · **Phase 1** ✅ (MODS, endowment, facilities honesty **1.1g**,
 bedrock mutual exclusion **1.4**) · **Phase 2** ✅ (2.1–2.3 + **2.1c** expiry
 bands + **2.4** hard exclusions) · **Pre–Phase 3 close-out** ✅ ·
 **Phase 3** ✅ (3.1–3.4 incl. nearest-infra distances) ·
 **Phase 4** ✅ (**4.1** aeromag/1VD/radiometrics/gravity/footprints; **4.2** post-MVP) ·
-**Phase 5** lite + **Stage B0** soft-launch eng ✅ (welcome, Plausible, Formspree
-hooks, shareable URL, multi-layer export ZIP); full provenance panel / measure remain.
+**Phase 5** lite + **Stage B0** soft-launch eng ✅ (welcome, Plausible, Formspree /
+FormSubmit capture, shareable URL, multi-layer export ZIP); full provenance
+panel / measure remain.
 
 | Area | Status |
 |---|---|
@@ -46,13 +47,14 @@ hooks, shareable URL, multi-layer export ZIP); full provenance panel / measure r
 | Tenure↔CPCAD de-overlap (parks only on CPCAD; tenure 69 rights polys) | ✅ |
 | Status filters, search, list/detail, bottom KPI + Settings | ✅ |
 | Soft-launch Phase 5 lite (About data, GeoJSON export, legend collapse) | ✅ |
-| Stage B0 (welcome, Plausible, Formspree hooks, share URL, export ZIP) | ✅ (2026-07-13) |
+| Stage B0 (welcome, Plausible, capture hooks, share URL, export ZIP) | ✅ (2026-07-13) |
 | Bake registry + monthly auto-refresh → PR (§6.2) | ✅ (~34 registry entries) |
 | GitHub repo + Pages hosting + CI validate/Vitest | ✅ |
 | Infrastructure (roads, power, communities, facilities + nearest distances) | ✅ Phase 3 (3.1–3.4) |
 | Geophysics MVP slice (1VD/aeromag/radiometrics + gravity; survey footprints) | ✅ Phase **4.1** (2026-07-12) |
 | Geochemistry / ice-flow / grade filters | [ ] Phase 4.2 (post-MVP) |
 | Full provenance panel / measure tools | [ ] Phase 5 remainder |
+| Professional data quality (export hygiene → Leapfrog-adjacent) | [ ] §5.2 — Stage **C′** / **G** (PRODUCT_PLAN §2.1) |
 | Optional later: detailed surficial, faults/contacts, LiDAR, aerial, EO | [ ] see §5 “Optional later” |
 | Optional later: historical claims, quarries, cancelled rights | [ ] Phase 2.1b |
 | Nearest-infra distances (3.4) | ✅ (2026-07-12) |
@@ -65,15 +67,18 @@ hooks, shareable URL, multi-layer export ZIP); full provenance panel / measure r
 
 > **MVP gate:** ship Must items before calling the product “MVP complete.”
 > Pre–Phase 3 Must/Should close-out is done. Phase **4.2** geochemistry and
-> §5.2 stay post-MVP. Full triage → **§5.2**.
+> §5.2 stay post-MVP. Full triage → **§5.2**. Do **not** start Leapfrog-grade
+> schema work during Stage B outreach (PRODUCT_PLAN §2.1).
 
-1. **Stage B outreach** — NLPA first; eng gate + B0 soft-launch UX met
-   (welcome, analytics, waitlist/feedback hooks, shareable URL, multi-layer
-   export). Configure `VITE_FORMSPREE_*` in `.env`.
+1. **Stage B outreach** — NLPA first; eng gate + B0 soft-launch UX met.
+   Confirm FormSubmit Activate (or set `VITE_FORMSPREE_*`) so waitlist/feedback
+   land in inbox. Screenshot story assets + NLPA one-pager still open.
 2. **Phase 5 remainder** — full provenance panel, measure tools.
 3. **Then Phase 4.2** — geochemistry / grade filters / ice-flow (beyond MVP).
-4. **§5.2 Post-MVP backlog** — drillholes, live claims API, ESG habitats,
-   viability score, spatial query engine, etc.
+4. **Stage C′ (with Premium export)** — §5.2 Professional data quality *cheap
+   wins* (nulls, aliases, CRS sidecar, distance columns in export).
+5. **§5.2 remainder / Stage G** — drillholes, relational schema, etc. only
+   after paywall demand — see PRODUCT_PLAN §2.1.
 
 > ✅ Pre–Phase 3 close-out (2026-07-12): **1.1g** facilities honesty · **1.4**
 > bedrock mutual exclusion · **2.1c** claim expiry bands · soft-launch Phase 5
@@ -1061,8 +1066,42 @@ Checklist (mirror of table):
 Keep as a living idea backlog — promote into numbered phases only when
 prioritized:
 
+##### Professional data quality (PRODUCT_PLAN §2.1)
+
+North star: Leapfrog-*adjacent* open Labrador intelligence DB — **not** a 3D
+modeling workspace. Sequence: **C′ cheap wins** with Premium export → **G**
+full ambition after paywall demand. Do **not** prioritize during Stage B
+outreach.
+
+**Stage C′ — cheap wins (export / packaging)**
+- [ ] CRS + datum stated in every export package (CSV sidecar or header comment;
+      keep `manifest.json` / README as source of truth)
+- [ ] Normalize MODS sentinels on export (−1 / blank → null; document DDH as
+      `drillHoleCount`)
+- [ ] Clarify commodity columns (prefer primaryCommodity + commodityList;
+      retire or hide raw COMNAME/COMMODS duplicates in CSV)
+- [ ] Optional: write nearest-infra distance columns (already computed for MODS
+      popups) into occurrence CSV
+- [ ] Export UX tip: enable Claims / Roads / Rail / Transmission / Bedrock /
+      Signals for a “full package” (many layers exist but are lazy/off)
+- [ ] Optional: numeric `runwayLengthM` (or class enum) for curated airports
+
+**Stage G — professional-grade (only with clear demand)**
+- [ ] Coded domains: `statusCode` + `statusLabel`; depositModelCode where
+      DEPDESC can be mapped reliably
+- [ ] Per-row provenance fields (sourceDataset, sourceVersion, sourceDate) for
+      bulk/API consumers
+- [ ] Relational export option (occurrence ↔ commodity ↔ mineral / work history)
+      for Premium bulk download — keep map bake flat
+- [ ] Elevation (sample DEM on export or store `elevationM` where available)
+- [ ] Structural geology layer if a clean NL open source exists (faults/shears)
 - [ ] **Historical drillholes + NL core-library / GEOFILE intercept links**
-      (Issue 3) — collar map + one-click logs
+      (Issue 3) — collar map + one-click logs (**only where public**)
+- [ ] Resource / reserve tables only with citable public NI 43-101-class sources
+      (do not invent grades from MODS text)
+
+##### Other post-MVP ideas
+
 - [ ] **Live claims registry API** (Issue 7) — vs shorter bake cadence; decide
       architecture (bake-first vs live)
 - [ ] **Scale-dependent bedrock cross-fade** (Issue 1 full) — national ↔
@@ -1254,6 +1293,10 @@ branch** with Actions enabled:
 
 ## 10. Changelog
 
+- **2026-07-14** — Documented **Professional data quality** under §5.2
+  (Stage **C′** export hygiene → Stage **G** Leapfrog-adjacent platform);
+  aligned with PRODUCT_PLAN §2.1. Explicit: not Stage B work. Next remains
+  Stage B outreach (NLPA + screenshots) + FormSubmit Activate / Formspree.
 - **2026-07-13** — **Stage B0 soft-launch eng:** first-visit welcome + tips;
   About map chrome; Plausible analytics; Formspree waitlist/feedback hooks
   (`.env`); shareable URL hash; multi-layer viewport export ZIP (GeoJSON/CSV/KML/

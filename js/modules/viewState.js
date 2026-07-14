@@ -1,5 +1,7 @@
 /**
  * Shareable map view state encoded in the URL hash (#v=1&…).
+ * Also persists last view to localStorage so returning visitors resume
+ * (no cookies required — same-origin browser storage only).
  */
 
 import { DEFAULT_ZOOM, LABRADOR_CENTER } from '../config/mapConfig.js';
@@ -8,6 +10,7 @@ import { APP_PUBLIC_URL } from './launchConfig.js';
 const VERSION = '1';
 const DEFAULT_LON = LABRADOR_CENTER[0];
 const DEFAULT_LAT = LABRADOR_CENTER[1];
+const LAST_VIEW_KEY = 'explorer-v3-last-view';
 
 /** @typedef {{
  *   zoom?: number,
@@ -150,6 +153,7 @@ export function readViewState() {
 
 /**
  * Update the URL hash without scrolling the page.
+ * Also persists to localStorage for return visits.
  * @param {ViewState} state
  */
 export function writeViewState(state) {
@@ -158,6 +162,41 @@ export function writeViewState(state) {
   const hash = `#${params.toString()}`;
   const url = `${location.pathname}${location.search}${hash}`;
   history.replaceState(history.state, '', url);
+  saveLastView(state);
+}
+
+/**
+ * Persist last view on this device (localStorage — not cookies).
+ * @param {ViewState} state
+ */
+export function saveLastView(state) {
+  try {
+    localStorage.setItem(LAST_VIEW_KEY, JSON.stringify(state || {}));
+  } catch {
+    /* quota / private mode */
+  }
+}
+
+/**
+ * @returns {ViewState | null}
+ */
+export function loadLastView() {
+  try {
+    const raw = localStorage.getItem(LAST_VIEW_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Prefer URL hash (shared link); else last saved view on this device.
+ * @returns {ViewState | null}
+ */
+export function resolveBootstrapViewState() {
+  return readViewState() || loadLastView();
 }
 
 /**
