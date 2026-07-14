@@ -34,10 +34,37 @@ export const ESRI_SATELLITE_STYLE = {
   ]
 };
 
+/** Esri World Topographic Map — useful for field orientation. */
+export const ESRI_TOPO_STYLE = {
+  version: 8,
+  name: 'Esri World Topographic',
+  sources: {
+    esriWorldTopo: {
+      type: 'raster',
+      tiles: [
+        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}'
+      ],
+      tileSize: 256,
+      attribution:
+        'Tiles © Esri — Source: Esri, TomTom, Garmin, FAO, NOAA, USGS, and the GIS User Community'
+    }
+  },
+  layers: [
+    {
+      id: 'esri-world-topo',
+      type: 'raster',
+      source: 'esriWorldTopo',
+      minzoom: 0,
+      maxzoom: 22
+    }
+  ]
+};
+
 /** Style URL string or MapLibre style object. */
 export const BASEMAP_STYLES = {
   positron: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
   dark: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+  topo: ESRI_TOPO_STYLE,
   satellite: ESRI_SATELLITE_STYLE
 };
 

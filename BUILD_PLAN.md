@@ -65,20 +65,21 @@ panel / measure remain.
 
 ### Recommended next steps (build sequence)
 
-> **MVP gate:** ship Must items before calling the product “MVP complete.”
-> Pre–Phase 3 Must/Should close-out is done. Phase **4.2** geochemistry and
-> §5.2 stay post-MVP. Full triage → **§5.2**. Do **not** start Leapfrog-grade
-> schema work during Stage B outreach (PRODUCT_PLAN §2.1).
+> Soft-launch readiness (B-R) is in progress in app code. Do **not** start NLPA
+> outreach until production `VITE_*` vars are set on Pages and capture is tested.
 
-1. **Stage B outreach** — NLPA first; eng gate + B0 soft-launch UX met.
-   Confirm FormSubmit Activate (or set `VITE_FORMSPREE_*`) so waitlist/feedback
-   land in inbox. Screenshot story assets + NLPA one-pager still open.
-2. **Phase 5 remainder** — full provenance panel, measure tools.
-3. **Then Phase 4.2** — geochemistry / grade filters / ice-flow (beyond MVP).
-4. **Stage C′ (with Premium export)** — §5.2 Professional data quality *cheap
-   wins* (nulls, aliases, CRS sidecar, distance columns in export).
-5. **§5.2 remainder / Stage G** — drillholes, relational schema, etc. only
-   after paywall demand — see PRODUCT_PLAN §2.1.
+1. **Operator:** set GitHub Actions Variables `VITE_CONTACT_EMAIL` (and/or
+   Formspree ids); re-run Deploy; Activate FormSubmit if used; register Plausible Goals.
+2. **Smoke:** Screen this area → measure → Go to place → export with helper → feedback.
+3. **Then** Stage B outreach (NLPA) once DoD met.
+4. Phase 5 remainder / 4.2 / C′ after first cohort feedback.
+
+### Soft-launch ops runbook
+
+- **Inbox:** check Formspree/FormSubmit or mailto daily during cohort.
+- **Bake failures:** `refresh-data` workflow opens a GitHub Issue on failure — triage within a week.
+- **Reply template:** thank them, ask AOI / commodity of interest, link share URL if they reported a bug.
+- **Privacy:** [`public/privacy.html`](./public/privacy.html) — link from About.
 
 > ✅ Pre–Phase 3 close-out (2026-07-12): **1.1g** facilities honesty · **1.4**
 > bedrock mutual exclusion · **2.1c** claim expiry bands · soft-launch Phase 5
@@ -1293,6 +1294,12 @@ branch** with Actions enabled:
 
 ## 10. Changelog
 
+- **2026-07-14** — Soft-launch readiness (B-R): privacy page; Pages build
+  `VITE_*` env; bake-fail GitHub Issue; Screen this area preset; Critical Minerals
+  default; Topo basemap; measure (Turf fallback / terradraw when available);
+  place/claim/coord Go-to; expanded nearest-infra; export layer helper; Help
+  replay; feedback view context; ops runbook. npm terradraw install blocked by
+  local TLS — dynamic import falls back to Turf measure.
 - **2026-07-14** — Documented **Professional data quality** under §5.2
   (Stage **C′** export hygiene → Stage **G** Leapfrog-adjacent platform);
   aligned with PRODUCT_PLAN §2.1. Explicit: not Stage B work. Next remains

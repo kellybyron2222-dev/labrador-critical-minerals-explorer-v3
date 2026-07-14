@@ -66,7 +66,10 @@ export function buildInfraDistanceHtml(distances) {
       ${rowsHtml([
         distanceRow(roadLabel, distances.road),
         distanceRow('Nearest transmission', distances.transmission),
-        distanceRow('Nearest port', distances.port)
+        distanceRow('Nearest port', distances.port),
+        distanceRow('Nearest airport', distances.airport),
+        distanceRow('Nearest power', distances.power),
+        distanceRow('Nearest community', distances.town)
       ])}
       <div class="popup-row popup-infra-note"><span class="popup-value">Straight-line distances (km). Not a viability score.</span></div>
     </div>`;

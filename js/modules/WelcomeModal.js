@@ -135,8 +135,8 @@ export default class WelcomeModal {
         Your view is remembered on this device when you come back.
       </p>
       <ol class="welcome-tips settings-about-list">
-        <li><strong>Click the map</strong> for details and nearest infrastructure.</li>
-        <li><strong>Open Rights</strong> for claims and Hard exclusions (parks &amp; water).</li>
+        <li><strong>Screen this area</strong> (Rights group) turns on claims, hard exclusions, and Critical Minerals.</li>
+        <li><strong>Measure</strong> (map control, top-right) and <strong>Go to</strong> (place / claim / lon,lat).</li>
         <li><strong>Settings → Export</strong> downloads your current view as a ZIP (WGS&nbsp;84).</li>
       </ol>
       <div class="welcome-actions settings-actions">

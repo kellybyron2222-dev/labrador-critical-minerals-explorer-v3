@@ -16,6 +16,7 @@ const LAST_VIEW_KEY = 'explorer-v3-last-view';
  *   zoom?: number,
  *   lat?: number,
  *   lon?: number,
+ *   basemap?: string,
  *   layers?: string[],
  *   mods?: string,
  *   statuses?: string[],
@@ -100,6 +101,9 @@ function encodeStateToParams(state = {}) {
   if (state.fatalFlaw) {
     params.set('ff', '1');
   }
+  if (state.basemap && state.basemap !== 'positron') {
+    params.set('bm', state.basemap);
+  }
 
   return params;
 }
@@ -147,6 +151,9 @@ export function readViewState() {
   if (q) state.q = q;
 
   if (params.get('ff') === '1') state.fatalFlaw = true;
+
+  const basemap = params.get('bm');
+  if (basemap) state.basemap = basemap;
 
   return state;
 }

@@ -23,7 +23,10 @@ export default class SettingsPanel {
    *   onChange?: () => void,
    *   onExportPackage?: (formats: Record<string, boolean>) => void | Promise<any>,
    *   onCopyShareLink?: () => void | Promise<any>,
-   *   onOpenAbout?: () => void
+   *   onOpenAbout?: () => void,
+   *   onReplayHelp?: () => void,
+   *   onEnableExportLayers?: () => void | Promise<any>,
+   *   getFeedbackContext?: () => Record<string, string>
    * }} handlers
    */
   constructor(handlers = {}) {
@@ -31,6 +34,9 @@ export default class SettingsPanel {
     this.onExportPackage = handlers.onExportPackage || (() => {});
     this.onCopyShareLink = handlers.onCopyShareLink || (() => {});
     this.onOpenAbout = handlers.onOpenAbout || (() => {});
+    this.onReplayHelp = handlers.onReplayHelp || (() => {});
+    this.onEnableExportLayers = handlers.onEnableExportLayers || (() => {});
+    this.getFeedbackContext = handlers.getFeedbackContext || (() => ({}));
     this.open = false;
     /** @type {Record<string, boolean>} section id → expanded */
     this.sectionExpanded = SECTION_IDS.reduce((acc, id) => ({ ...acc, [id]: false }), {});
@@ -209,12 +215,18 @@ export default class SettingsPanel {
       <p class="settings-note">Data sources, coordinate reference, and honesty notes live in the About panel.</p>
       <div class="settings-actions">
         <button type="button" class="settings-primary-btn" data-open-about-modal>Open About</button>
-      </div>`;
+        <button type="button" class="settings-reset-btn" data-replay-help>Replay welcome tips</button>
+      </div>
+      <p class="settings-note"><a href="./privacy.html" target="_blank" rel="noopener">Privacy notice</a></p>`;
   }
 
   _renderExportBody() {
     return `
-      <p class="settings-note">Downloads layers that are on and loaded, intersecting the current map view, as a single ZIP: GeoJSON, CSV (point layers), KML, Shapefile, and display rasters (if on). Coordinate reference: WGS 84 (EPSG:4326).</p>
+      <p class="settings-note">Downloads layers that are on and loaded, intersecting the current map view, as a single ZIP: GeoJSON, CSV (point layers), KML, Shapefile tip, and display rasters (if on). Coordinate reference: WGS 84 (EPSG:4326).</p>
+      <p class="settings-note">For a fuller package, enable Claims, Roads, Rail, Transmission, Bedrock, and Signals — or use the button below.</p>
+      <div class="settings-actions">
+        <button type="button" class="settings-reset-btn" data-export-enable-layers>Enable recommended layers for export</button>
+      </div>
       <div class="settings-form settings-export-formats">
         <label class="settings-field settings-field-checkbox">
           <input type="checkbox" data-export-fmt="geojson" checked />
@@ -363,6 +375,11 @@ export default class SettingsPanel {
       this.close();
       this.onOpenAbout();
     });
+    this.panel.querySelector('[data-replay-help]')?.addEventListener('click', () => {
+      track(PlausibleEvents.HELP_REPLAY);
+      this.close();
+      this.onReplayHelp();
+    });
     this._bindFormspreeForm(this.panel.querySelector('[data-waitlist-form]'), {
       statusSelector: '[data-waitlist-status]',
       kind: 'waitlist',
@@ -434,6 +451,18 @@ export default class SettingsPanel {
   }
 
   _bindExportSection() {
+    const enableBtn = this.panel.querySelector('[data-export-enable-layers]');
+    enableBtn?.addEventListener('click', async () => {
+      const status = this.panel.querySelector('[data-export-status]');
+      if (status) status.textContent = 'Enabling recommended layers…';
+      try {
+        await this.onEnableExportLayers();
+        if (status) status.textContent = 'Recommended layers enabled — wait for loads, then download.';
+      } catch (err) {
+        if (status) status.textContent = `Could not enable layers: ${err?.message || err}`;
+      }
+    });
+
     const btn = this.panel.querySelector('[data-export-package]');
     const status = this.panel.querySelector('[data-export-status]');
     if (!btn) return;
@@ -501,7 +530,14 @@ export default class SettingsPanel {
       }
 
       try {
-        const result = await submitLead(opts.kind, new FormData(form));
+        const fd = new FormData(form);
+        if (opts.kind === 'feedback') {
+          const ctx = this.getFeedbackContext() || {};
+          Object.entries(ctx).forEach(([k, v]) => {
+            if (v != null && v !== '' && !fd.has(k)) fd.append(k, String(v));
+          });
+        }
+        const result = await submitLead(opts.kind, fd);
         track(opts.eventName, { channel: result.channel });
         form.hidden = true;
         if (status) {

@@ -65,6 +65,28 @@ import { buildExportPackage, downloadBlob } from './modules/exportPackage.js';
 import { resolveBootstrapViewState, writeViewState, buildShareUrl } from './modules/viewState.js';
 import FeedbackFab from './modules/FeedbackFab.js';
 import { track, PlausibleEvents } from './modules/analytics.js';
+import { attachMapTools, zoomToFeatures } from './modules/MapTools.js';
+import { mountPlaceSearch } from './modules/PlaceSearch.js';
+
+/** Layers enabled by “Screen this area” / export helper (soft-launch readiness). */
+const SCREEN_PRESET_VECTOR_LAYERS = [
+  'geoatlasClaims',
+  'geoatlasCpcad',
+  'geoatlasLandUse',
+  'geoatlasRoads',
+  'infraAirports',
+  'infraPorts',
+  'infraGeneration',
+  'infraCommunities'
+];
+const EXPORT_HELPER_VECTOR_LAYERS = [
+  ...SCREEN_PRESET_VECTOR_LAYERS,
+  'geoatlasRail',
+  'geoatlasTransmission',
+  'geoatlasBedrock'
+];
+const EXPORT_HELPER_WMS = ['aeromag', 'gravity'];
+const MODS_CRITICAL_PICKER = 'preset:critical';
 
 const POPUP_LAYER_IDS = [
   'mods-layer',
@@ -169,7 +191,10 @@ class MineralsMapApp {
       onChange: () => this.refreshKpiBar(),
       onExportPackage: (formats) => this.exportPackage(formats),
       onCopyShareLink: () => this.copyShareLink(),
-      onOpenAbout: () => this.aboutModal?.show()
+      onOpenAbout: () => this.aboutModal?.show(),
+      onReplayHelp: () => this.welcomeModal?.show(),
+      onEnableExportLayers: () => this.enableExportRecommendedLayers(),
+      getFeedbackContext: () => this.getFeedbackContext()
     });
     document.getElementById('settings-open')?.addEventListener('click', () => {
       track(PlausibleEvents.SETTINGS_OPEN);
@@ -213,15 +238,35 @@ class MineralsMapApp {
 
     // Stage B0 soft launch — restore shared URL or last device view, then welcome.
     this.welcomeModal = new WelcomeModal({
-      onExplore: () => {},
+      onExplore: () => {
+        this.runScreenPreset().catch(() => {});
+      },
       onOpenAbout: () => this.aboutModal?.show(),
       onOpenWaitlist: () => this.settingsPanel?.show({ section: 'updates', expandSection: true })
     });
-    await this.applyViewState(resolveBootstrapViewState());
+    const bootState = resolveBootstrapViewState();
+    await this.applyViewState(bootState);
+    if (bootState?.layers?.length || bootState?.fatalFlaw || location.hash.includes('v=')) {
+      track(PlausibleEvents.VIEW_LOAD, {
+        shared: location.hash.includes('v=') ? '1' : '0'
+      });
+    }
     this.bindViewStateSync();
     this.feedbackFab = new FeedbackFab({
-      onOpen: () => this.settingsPanel?.show({ section: 'feedback', expandSection: true })
+      onOpen: () => {
+        track(PlausibleEvents.FEEDBACK_FAB);
+        this.settingsPanel?.show({ section: 'feedback', expandSection: true });
+      }
     });
+
+    attachMapTools(map).catch((err) => console.warn('Map tools failed', err));
+    mountPlaceSearch({
+      map,
+      getCommunityFeatures: () => this.layerManager.getLoadedFeatures('infraCommunities') || [],
+      getClaimFeatures: () => this.layerManager.getLoadedFeatures('geoatlasClaims') || [],
+      onStatus: (msg, tone) => this.setDataStatus(msg, tone)
+    });
+
     requestAnimationFrame(() => this.welcomeModal?.maybeShow());
   }
 
@@ -445,8 +490,67 @@ class MineralsMapApp {
       mods: this.currentMODSPickerValue || undefined,
       statuses: [...browser.statuses],
       q: browser.query || undefined,
-      fatalFlaw: this.fatalFlawPresetActive
+      fatalFlaw: this.fatalFlawPresetActive,
+      basemap: this.mapBase?.currentStyle || undefined
     };
+  }
+
+  /** Context attached to feedback emails for repro. */
+  getFeedbackContext() {
+    const state = this.collectViewState();
+    return {
+      viewUrl: buildShareUrl(state),
+      layers: (state.layers || []).join(', '),
+      mods: state.mods || '',
+      basemap: state.basemap || ''
+    };
+  }
+
+  /**
+   * Soft-launch guided preset: Critical Minerals + claims + hard exclusions + key infra.
+   */
+  async runScreenPreset() {
+    track(PlausibleEvents.SCREEN_PRESET);
+    this.expandRightsGroup();
+    const picker = document.getElementById('modsOccurrences-commodity-picker');
+    if (picker && picker.value !== MODS_CRITICAL_PICKER) {
+      picker.value = MODS_CRITICAL_PICKER;
+      picker.dispatchEvent(new Event('change'));
+    }
+    for (const name of SCREEN_PRESET_VECTOR_LAYERS) {
+      await this.setLayerEnabled(name, true);
+      const cb = document.getElementById(`layer-${name}`);
+      if (cb && !cb.checked) {
+        cb.checked = true;
+      }
+    }
+    const ff = document.getElementById('fatal-flaw-preset-toggle');
+    if (ff && !ff.checked) {
+      ff.checked = true;
+      ff.dispatchEvent(new Event('change'));
+    }
+    this.setDataStatus(
+      'Screen preset on: Critical Minerals, claims, hard exclusions, roads & key infra.',
+      'info'
+    );
+  }
+
+  /** Enable layers typically needed for a useful multi-layer export ZIP. */
+  async enableExportRecommendedLayers() {
+    for (const name of EXPORT_HELPER_VECTOR_LAYERS) {
+      await this.setLayerEnabled(name, true);
+      const cb = document.getElementById(`layer-${name}`);
+      if (cb) cb.checked = true;
+    }
+    for (const name of EXPORT_HELPER_WMS) {
+      const cb = document.getElementById(`wms-${name}`);
+      if (cb && !cb.checked) {
+        cb.checked = true;
+        cb.dispatchEvent(new Event('change'));
+      }
+    }
+    const features = this.layerManager.getLoadedFeatures('modsOccurrences') || [];
+    if (features.length) zoomToFeatures(this.map, features);
   }
 
   /**
@@ -504,6 +608,12 @@ class MineralsMapApp {
         checkbox.checked = true;
         checkbox.dispatchEvent(new Event('change'));
       }
+    }
+
+    if (state.basemap && this.mapBase?.currentStyle !== state.basemap) {
+      const btn = document.querySelector(`.basemap-btn[data-style="${state.basemap}"]`);
+      if (btn) btn.click();
+      else this.mapBase.switchBasemap(state.basemap);
     }
   }
 
@@ -627,6 +737,7 @@ class MineralsMapApp {
       body.className = 'layer-group-body';
 
       if (groupId === 'rights') {
+        body.appendChild(this.buildScreenPresetControl());
         body.appendChild(this.buildFatalFlawPresetControl());
       }
 
@@ -768,6 +879,32 @@ class MineralsMapApp {
 
     select.value = pickerConfig.defaultValue;
     wrap.appendChild(select);
+    return wrap;
+  }
+
+  /** Soft-launch one-click: Critical Minerals + claims + exclusions + key infra. */
+  buildScreenPresetControl() {
+    const wrap = document.createElement('div');
+    wrap.className = 'screen-preset';
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'screen-preset-btn';
+    btn.textContent = 'Screen this area';
+    btn.title =
+      'Turn on Critical Minerals MODS, claims, hard exclusions, roads, and key infrastructure';
+    btn.addEventListener('click', () => {
+      btn.disabled = true;
+      this.runScreenPreset()
+        .catch((err) => this.setDataStatus(`Screen preset failed: ${err?.message || err}`, 'error'))
+        .finally(() => {
+          btn.disabled = false;
+        });
+    });
+    wrap.appendChild(btn);
+    const note = document.createElement('p');
+    note.className = 'screen-preset-note';
+    note.textContent = 'Guided first look for site screening.';
+    wrap.appendChild(note);
     return wrap;
   }
 

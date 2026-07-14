@@ -37,17 +37,26 @@ documented as Stage **C′** / **G** — not current work (PRODUCT_PLAN §2.1).
 
 ## Soft-launch config
 
-Copy `.env.example` → `.env` and set:
+Copy `.env.example` → `.env` (local) and set the same values as **GitHub Actions
+repository Variables/Secrets** so Pages builds include them:
 
 - `VITE_CONTACT_EMAIL` — FormSubmit inbox for Stay updated / Feedback (open the
   Activate email once), **or**
 - `VITE_FORMSPREE_WAITLIST` / `VITE_FORMSPREE_FEEDBACK` — preferred Formspree ids
-- `VITE_PLAUSIBLE_DOMAIN` — site hostname in Plausible (default:
-  `kellybyron2222-dev.github.io`). The tracker snippet itself lives in
-  `index.html` (Plausible `pa-….js` site script).
+- `VITE_PLAUSIBLE_DOMAIN` — site hostname (default `kellybyron2222-dev.github.io`)
+
+The Plausible tracker snippet lives in `index.html`. Privacy notice:
+[`public/privacy.html`](./public/privacy.html).
 
 Privacy-light analytics via Plausible (no fingerprinting). Export packages are
 WGS 84 / EPSG:4326 (CRS84 lon-lat); see Settings → About / Export.
+
+### Soft-launch readiness tools
+
+- **Screen this area** (Rights group) — Critical Minerals + claims + exclusions + key infra
+- **Measure** — map control (Terra Draw when installed; Turf click-measure fallback)
+- **Go to** — place / claim # / lon,lat search over the map
+- Nearest infrastructure on MODS popups includes road, transmission, port, airport, power, community
 
 ## Docs
 

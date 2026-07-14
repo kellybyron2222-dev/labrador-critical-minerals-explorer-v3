@@ -11,12 +11,16 @@ export const PlausibleEvents = {
   WELCOME_WAITLIST: 'Welcome Waitlist',
   WELCOME_ABOUT: 'Welcome About',
   VIEW_SHARE: 'View Share',
+  VIEW_LOAD: 'View Load',
   EXPORT_PACKAGE: 'Export Package',
   WAITLIST_SUBMIT: 'Waitlist Submit',
   FEEDBACK_SUBMIT: 'Feedback Submit',
+  FEEDBACK_FAB: 'Feedback Fab',
   LAYER_ON: 'Layer On',
   HARD_EXCLUSIONS_ON: 'Hard Exclusions On',
-  SETTINGS_OPEN: 'Settings Open'
+  SETTINGS_OPEN: 'Settings Open',
+  SCREEN_PRESET: 'Screen Preset',
+  HELP_REPLAY: 'Help Replay'
 };
 
 /**

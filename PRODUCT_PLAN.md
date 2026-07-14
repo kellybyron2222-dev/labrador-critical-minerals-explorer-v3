@@ -2,9 +2,9 @@
 
 > **Strategic overview** (go-to-market, freemium, geography expansion).
 > Engineering checklist stays in [`BUILD_PLAN.md`](./BUILD_PLAN.md).
-> Last updated: 2026-07-14 — Stage B0 eng done; long-term **professional data
-> quality** north star documented (§2.1); **next = Stage B outreach** (not
-> Leapfrog-grade schema work)
+> Last updated: 2026-07-14 — Soft-launch readiness (B-R) engineering: Screen
+> preset, measure/Go-to tools, privacy, Pages `VITE_*` wiring; **outreach still
+> blocked** until production capture verified
 
 ---
 
@@ -37,6 +37,7 @@ coast-to-coast.
 ```text
 A  Labrador MVP (free)          ← finish BUILD_PLAN Musts (incl. geophysics 4.1)
 B  Soft launch + niche marketing ← while still Labrador-deep
+B-R Soft Launch Readiness         ← geo toolbox + ops gate (before first invite)
 B+ Monthly Data Changelog email ← retention loop once list + deltas exist
 C  Premium v1 (free beta)        ← alerts, export, logistics (+ geochem)
    └─ C′ Export schema hardening ← normalize MODS/nulls; CRS/provenance in package

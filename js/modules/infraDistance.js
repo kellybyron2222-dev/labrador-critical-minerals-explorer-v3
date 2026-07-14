@@ -5,7 +5,7 @@
  * Sources (bake-first, independent of sidebar layer visibility):
  *   - Roads: highway/collector + resource access (whichever nearer)
  *   - Transmission: Nalcor + CanVec merge
- *   - Port: curated Labrador marine access points
+ *   - Port / airport / generation / community: curated Labrador points
  */
 
 import { point as turfPoint } from '@turf/helpers';
@@ -15,7 +15,10 @@ const DATA_URLS = {
   roads: './data/geoatlas-roads-labrador.geojson',
   resourceRoads: './data/geoatlas-resource-roads-labrador.geojson',
   transmission: './data/geoatlas-transmission-labrador.geojson',
-  ports: './data/infra-ports-labrador.geojson'
+  ports: './data/infra-ports-labrador.geojson',
+  airports: './data/infra-airports-labrador.geojson',
+  generation: './data/infra-generation-labrador.geojson',
+  communities: './data/infra-communities-labrador.geojson'
 };
 
 /** @type {Record<string, GeoJSON.FeatureCollection|null>} */
@@ -23,7 +26,10 @@ const cache = {
   roads: null,
   resourceRoads: null,
   transmission: null,
-  ports: null
+  ports: null,
+  airports: null,
+  generation: null,
+  communities: null
 };
 
 /** @type {Promise<void>|null} */
@@ -37,21 +43,36 @@ async function fetchCollection(url) {
 
 /** Prefetch / cache baked infra used for distance queries. */
 export async function ensureInfraDistanceData() {
-  if (cache.roads && cache.transmission && cache.ports && cache.resourceRoads) {
+  if (
+    cache.roads &&
+    cache.transmission &&
+    cache.ports &&
+    cache.resourceRoads &&
+    cache.airports &&
+    cache.generation &&
+    cache.communities
+  ) {
     return cache;
   }
   if (!loadPromise) {
     loadPromise = (async () => {
-      const [roads, resourceRoads, transmission, ports] = await Promise.all([
-        fetchCollection(DATA_URLS.roads),
-        fetchCollection(DATA_URLS.resourceRoads),
-        fetchCollection(DATA_URLS.transmission),
-        fetchCollection(DATA_URLS.ports)
-      ]);
+      const [roads, resourceRoads, transmission, ports, airports, generation, communities] =
+        await Promise.all([
+          fetchCollection(DATA_URLS.roads),
+          fetchCollection(DATA_URLS.resourceRoads),
+          fetchCollection(DATA_URLS.transmission),
+          fetchCollection(DATA_URLS.ports),
+          fetchCollection(DATA_URLS.airports),
+          fetchCollection(DATA_URLS.generation),
+          fetchCollection(DATA_URLS.communities)
+        ]);
       cache.roads = roads;
       cache.resourceRoads = resourceRoads;
       cache.transmission = transmission;
       cache.ports = ports;
+      cache.airports = airports;
+      cache.generation = generation;
+      cache.communities = communities;
     })().catch((err) => {
       loadPromise = null;
       throw err;
@@ -106,7 +127,11 @@ function nearestLine(from, features, kind) {
   for (const feature of features) {
     const geom = feature.geometry;
     const lines =
-      geom.type === 'MultiLineString' ? geom.coordinates : geom.type === 'LineString' ? [geom.coordinates] : [];
+      geom.type === 'MultiLineString'
+        ? geom.coordinates
+        : geom.type === 'LineString'
+          ? [geom.coordinates]
+          : [];
 
     for (const coords of lines) {
       if (!Array.isArray(coords) || coords.length < 2) continue;
@@ -165,7 +190,7 @@ export function formatDistanceKm(km) {
 /**
  * Sync compute given already-loaded collections (also used by tests).
  * @param {GeoJSON.Feature|[number, number]} featureOrCoords
- * @param {{ roads?: object, resourceRoads?: object, transmission?: object, ports?: object }} data
+ * @param {Record<string, object>} data
  */
 export function computeNearestInfraDistancesFromData(featureOrCoords, data) {
   const from = asPoint(featureOrCoords);
@@ -182,12 +207,15 @@ export function computeNearestInfraDistancesFromData(featureOrCoords, data) {
 
   const transmission = nearestLine(from, lineFeatures(data.transmission), 'transmission');
   const port = nearestPoint(from, pointFeatures(data.ports), 'port');
+  const airport = nearestPoint(from, pointFeatures(data.airports), 'airport');
+  const power = nearestPoint(from, pointFeatures(data.generation), 'power');
+  const town = nearestPoint(from, pointFeatures(data.communities), 'town');
 
-  return { road, transmission, port };
+  return { road, transmission, port, airport, power, town };
 }
 
 /**
- * Compute nearest road, transmission, and port for a MODS (or any) point feature.
+ * Compute nearest road, transmission, port, airport, power, and town.
  */
 export async function computeNearestInfraDistances(featureOrCoords) {
   await ensureInfraDistanceData();
@@ -196,9 +224,8 @@ export async function computeNearestInfraDistances(featureOrCoords) {
 
 /** Reset cache (tests). */
 export function _resetInfraDistanceCacheForTests() {
-  cache.roads = null;
-  cache.resourceRoads = null;
-  cache.transmission = null;
-  cache.ports = null;
+  Object.keys(cache).forEach((k) => {
+    cache[k] = null;
+  });
   loadPromise = null;
 }

@@ -109,12 +109,15 @@ export default class AboutModal {
         <li><strong>Coordinates:</strong> vector data and exports use WGS&nbsp;84 / EPSG:4326 (CRS84 lon-lat).</li>
         <li><strong>Freshness:</strong> claims and most layers are baked on a cadence (claims ~3 months) — not a live staking feed. Verify against official registries before decisions.</li>
         <li><strong>Honesty:</strong> midstream / processing icons may sit off-island (e.g. Long Harbour); Labrador has primary production, not local critical-mineral refining.</li>
+        <li><strong>Privacy:</strong> Plausible analytics (no ad cookies) and optional email forms — see the <a href="./privacy.html" target="_blank" rel="noopener">privacy notice</a>. Last view is stored in localStorage on this device only.</li>
       </ul>
 
       <p class="settings-note">
         <a href="${escapeHtml(APP_PUBLIC_URL)}" target="_blank" rel="noopener">Public app</a>
         &nbsp;&middot;&nbsp;
         <a href="${escapeHtml(APP_REPO_URL)}" target="_blank" rel="noopener">Source on GitHub</a>
+        &nbsp;&middot;&nbsp;
+        <a href="./privacy.html" target="_blank" rel="noopener">Privacy</a>
       </p>
 
       <div class="settings-actions">

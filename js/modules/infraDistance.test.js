@@ -62,10 +62,40 @@ describe('computeNearestInfraDistancesFromData', () => {
           geometry: { type: 'Point', coordinates: [-60.1, 53.05] }
         }
       ]
+    },
+    airports: {
+      type: 'FeatureCollection',
+      features: [
+        {
+          type: 'Feature',
+          properties: { name: 'Test airstrip' },
+          geometry: { type: 'Point', coordinates: [-60.2, 53.1] }
+        }
+      ]
+    },
+    generation: {
+      type: 'FeatureCollection',
+      features: [
+        {
+          type: 'Feature',
+          properties: { name: 'Test hydro' },
+          geometry: { type: 'Point', coordinates: [-60.3, 53.0] }
+        }
+      ]
+    },
+    communities: {
+      type: 'FeatureCollection',
+      features: [
+        {
+          type: 'Feature',
+          properties: { name: 'Testville' },
+          geometry: { type: 'Point', coordinates: [-60.05, 53.02] }
+        }
+      ]
     }
   };
 
-  it('finds nearest road, transmission, and port', () => {
+  it('finds nearest road, transmission, port, airport, power, and town', () => {
     const result = computeNearestInfraDistancesFromData([-60.01, 53.05], data);
     expect(result.road.name).toBe('Hwy test');
     expect(result.road.km).toBeLessThan(2);
@@ -73,6 +103,9 @@ describe('computeNearestInfraDistancesFromData', () => {
     expect(result.transmission.km).toBeGreaterThan(result.road.km);
     expect(result.port.name).toBe('Test harbour');
     expect(result.port.km).toBeLessThan(15);
+    expect(result.airport.name).toBe('Test airstrip');
+    expect(result.power.name).toBe('Test hydro');
+    expect(result.town.name).toBe('Testville');
   });
 
   it('prefers nearer resource road over highway', () => {

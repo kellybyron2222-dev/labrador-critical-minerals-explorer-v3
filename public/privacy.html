@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy — Labrador Critical Minerals Explorer</title>
+  <meta name="description" content="Privacy notice for the Labrador Critical Minerals Explorer (analytics, local storage, email forms)." />
+  <style>
+    :root {
+      color-scheme: light dark;
+      --fg: #1a1a1a;
+      --muted: #555;
+      --bg: #f7f7f5;
+      --card: #fff;
+      --link: #0b5fff;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --fg: #f0f0f0;
+        --muted: #aaa;
+        --bg: #121212;
+        --card: #1c1c1c;
+        --link: #7eb0ff;
+      }
+    }
+    body {
+      margin: 0;
+      font-family: Georgia, 'Times New Roman', serif;
+      background: var(--bg);
+      color: var(--fg);
+      line-height: 1.55;
+    }
+    main {
+      max-width: 40rem;
+      margin: 0 auto;
+      padding: 2rem 1.25rem 4rem;
+    }
+    .card {
+      background: var(--card);
+      padding: 1.5rem 1.25rem;
+      border-radius: 4px;
+    }
+    h1 { font-size: 1.75rem; margin: 0 0 0.5rem; }
+    h2 { font-size: 1.15rem; margin: 1.75rem 0 0.5rem; }
+    p, li { color: var(--fg); }
+    .muted { color: var(--muted); font-size: 0.95rem; }
+    a { color: var(--link); }
+    ul { padding-left: 1.2rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="card">
+      <h1>Privacy notice</h1>
+      <p class="muted">Labrador Critical Minerals Explorer · last updated 2026-07-14</p>
+      <p>
+        This is a free public map of Labrador critical-mineral context built from government open data.
+        We collect as little as possible.
+      </p>
+
+      <h2>Analytics</h2>
+      <p>
+        We use <a href="https://plausible.io/" rel="noopener">Plausible Analytics</a> (privacy-oriented, no advertising cookies)
+        to count page views and a small set of product events (for example: layer toggles, export, feedback).
+        Plausible does not use cross-site tracking cookies.
+      </p>
+
+      <h2>Local storage on your device</h2>
+      <p>The app may store on this device only (not cookies for ads):</p>
+      <ul>
+        <li>Whether you dismissed the welcome tips</li>
+        <li>Your last map view (layers, position, filters) so return visits resume where you left off</li>
+        <li>Optional KPI display preferences</li>
+      </ul>
+      <p>You can clear this via your browser’s site data controls.</p>
+
+      <h2>Email forms (Stay updated / Feedback)</h2>
+      <p>
+        If you submit an email or message, it is delivered to the project operator through a form processor
+        (Formspree and/or FormSubmit) or, as a fallback, your device’s email app (mailto).
+        We use submissions to improve the map and, if you opted in, to send occasional product/data updates.
+        We do not sell your email.
+      </p>
+
+      <h2>Third-party map tiles</h2>
+      <p>
+        Basemap imagery/tiles are loaded from providers such as CARTO, Esri, or OpenStreetMap-derived services
+        as shown in the map attribution. Those providers may receive standard web request metadata (IP, user agent).
+      </p>
+
+      <h2>Contact</h2>
+      <p>
+        Questions about this notice: use <strong>Settings → Feedback</strong> in the app, or open an issue on the
+        <a href="https://github.com/kellybyron2222-dev/labrador-critical-minerals-explorer-v3">project repository</a>.
+      </p>
+      <p><a href="./">← Back to the map</a></p>
+    </div>
+  </main>
+</body>
+</html>

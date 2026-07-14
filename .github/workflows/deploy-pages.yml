@@ -26,7 +26,15 @@ jobs:
       - run: npm ci
       - run: npm run validate:data
       - run: npm test
-      - run: npm run build
+      - name: Build
+        env:
+          # Set these as GitHub Actions repository Variables and/or Secrets so
+          # production Stay updated / Feedback work on Pages.
+          VITE_CONTACT_EMAIL: ${{ vars.VITE_CONTACT_EMAIL || secrets.VITE_CONTACT_EMAIL }}
+          VITE_FORMSPREE_WAITLIST: ${{ vars.VITE_FORMSPREE_WAITLIST || secrets.VITE_FORMSPREE_WAITLIST }}
+          VITE_FORMSPREE_FEEDBACK: ${{ vars.VITE_FORMSPREE_FEEDBACK || secrets.VITE_FORMSPREE_FEEDBACK }}
+          VITE_PLAUSIBLE_DOMAIN: ${{ vars.VITE_PLAUSIBLE_DOMAIN || 'kellybyron2222-dev.github.io' }}
+        run: npm run build
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

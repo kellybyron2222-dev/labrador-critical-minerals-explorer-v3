@@ -95,3 +95,21 @@ jobs:
             require("fs").writeFileSync("/tmp/pr-body.md", lines.join("\n"));
           '
           gh pr create --title "Refresh baked map datasets ${DATE}" --body-file /tmp/pr-body.md
+
+      - name: Open issue on refresh failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TITLE="Data refresh workflow failed ($(date -u +%Y-%m-%d))"
+          BODY="The scheduled/manual **Refresh data sources** workflow failed.
+
+          - Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          - Check validate:data / fetch logs, then re-run with FORCE_REFRESH if needed.
+
+          This issue was opened automatically so soft-launch operators notice bake failures."
+          # Avoid duplicate open issues with the same title
+          EXISTING=$(gh issue list --state open --search "$TITLE in:title" --json number --jq '.[0].number' || true)
+          if [ -z "$EXISTING" ] || [ "$EXISTING" = "null" ]; then
+            gh issue create --title "$TITLE" --body "$BODY" || true
+          fi

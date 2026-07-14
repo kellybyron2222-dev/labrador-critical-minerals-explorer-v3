@@ -874,6 +874,126 @@ html, body {
   padding: 0 var(--space-1) var(--space-2) 32px;
 }
 
+.screen-preset {
+  margin: 0 0 8px;
+}
+
+.screen-preset-btn {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border-color, #ccc);
+  border-radius: 4px;
+  background: var(--bg-elevated, #f4f4f2);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.screen-preset-btn:hover:not(:disabled) {
+  filter: brightness(0.97);
+}
+
+.screen-preset-note {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: var(--card-light-text-muted, #666);
+}
+
+.place-search-bar {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  max-width: min(420px, calc(100% - 8rem));
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 4px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.place-search-label {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.place-search-input {
+  flex: 1;
+  min-width: 140px;
+  padding: 6px 8px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  font: inherit;
+}
+
+.place-search-btn {
+  padding: 6px 10px;
+  border: 1px solid #bbb;
+  border-radius: 3px;
+  background: #f0f0ee;
+  cursor: pointer;
+  font: inherit;
+}
+
+.place-search-results {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  max-height: 12rem;
+  overflow: auto;
+}
+
+.place-search-results button {
+  width: 100%;
+  text-align: left;
+  padding: 6px 8px;
+  border: 0;
+  border-bottom: 1px solid #eee;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+}
+
+.place-search-kind {
+  color: #888;
+  font-size: 11px;
+}
+
+.map-measure-hud {
+  position: absolute;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 4;
+  padding: 4px 10px;
+  background: rgba(0, 0, 0, 0.72);
+  color: #fff;
+  border-radius: 3px;
+  font-size: 13px;
+  pointer-events: none;
+}
+
+.map-tools-fallback .map-tool-measure-btn.active {
+  background: #fde68a;
+}
+
+@media (max-width: 768px) {
+  .place-search-bar {
+    left: 8px;
+    right: 8px;
+    transform: none;
+    max-width: none;
+    top: 56px;
+  }
+}
+
 .fatal-flaw-preset {
   margin: 0 0 4px;
   padding: 0;
