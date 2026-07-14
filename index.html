@@ -71,7 +71,7 @@
           <div class="basemap-options">
             <button id="basemap-positron" class="basemap-btn active" type="button" data-style="positron" aria-pressed="true">Positron</button>
             <button id="basemap-dark" class="basemap-btn" type="button" data-style="dark" aria-pressed="false">Dark</button>
-            <button id="basemap-topo" class="basemap-btn" type="button" data-style="topo" aria-pressed="false">Topo</button>
+            <button id="basemap-topo" class="basemap-btn" type="button" data-style="topo" aria-pressed="false" title="Contour lines on top of the current basemap (Positron / Dark / Satellite)">Topo</button>
             <button id="basemap-satellite" class="basemap-btn" type="button" data-style="satellite" aria-pressed="false">Satellite</button>
           </div>
         </div>
@@ -145,7 +145,10 @@
       </button>
       <div id="map"></div>
       <div id="legend-panel" class="legend-panel" tabindex="-1"></div>
-      <div id="occ-kpi" class="occ-kpi" aria-live="polite"></div>
+      <div id="map-bottom-toolbar" class="map-bottom-toolbar" role="toolbar" aria-label="Map tools and KPIs">
+        <div id="map-toolbar-tools" class="map-toolbar-tools"></div>
+        <div id="occ-kpi" class="occ-kpi" aria-live="polite"></div>
+      </div>
     </main>
   </div>
 

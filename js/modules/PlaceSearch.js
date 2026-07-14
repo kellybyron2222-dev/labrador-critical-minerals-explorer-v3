@@ -10,9 +10,10 @@ import { parseCoordinatePair, flyToCoordinate } from './MapTools.js';
  * @param {() => GeoJSON.Feature[]} opts.getCommunityFeatures
  * @param {() => GeoJSON.Feature[]} [opts.getClaimFeatures]
  * @param {(msg: string, tone?: string) => void} [opts.onStatus]
+ * @param {(lon: number, lat: number) => void} [opts.onFocus]
  */
 export function mountPlaceSearch(opts) {
-  const { map, getCommunityFeatures, getClaimFeatures, onStatus } = opts;
+  const { map, getCommunityFeatures, getClaimFeatures, onStatus, onFocus } = opts;
   const container = document.querySelector('.map-container');
   if (!container || document.getElementById('place-search-bar')) return null;
 
@@ -38,6 +39,7 @@ export function mountPlaceSearch(opts) {
     const coords = parseCoordinatePair(q);
     if (coords) {
       flyToCoordinate(map, coords[0], coords[1]);
+      onFocus?.(coords[0], coords[1]);
       results.hidden = true;
       onStatus?.(`Flew to ${coords[1].toFixed(4)}, ${coords[0].toFixed(4)}`, 'info');
       return;
@@ -99,6 +101,7 @@ export function mountPlaceSearch(opts) {
         const hit = hits[Number(btn.getAttribute('data-hit'))];
         if (!hit?.center) return;
         flyToCoordinate(map, hit.center[0], hit.center[1]);
+        onFocus?.(hit.center[0], hit.center[1]);
         results.hidden = true;
         input.value = hit.label;
       });
@@ -106,6 +109,7 @@ export function mountPlaceSearch(opts) {
 
     if (hits.length === 1) {
       flyToCoordinate(map, hits[0].center[0], hits[0].center[1]);
+      onFocus?.(hits[0].center[0], hits[0].center[1]);
       results.hidden = true;
     }
   };

@@ -265,12 +265,14 @@ export default class SettingsPanel {
   _renderUpdatesBody() {
     const configured = isLeadCaptureConfigured('waitlist');
     return `
-      <p class="settings-note">Join the list for new layers and data refreshes — enter your email here (no separate signup site).</p>
+      <p class="settings-note">Join the list for new layers and data refreshes. Submissions are emailed to the project operator inbox via FormSubmit (or Formspree if configured) — nothing is stored in this app.</p>
       ${
         configured
           ? CONTACT_EMAIL && !FORMSPREE_WAITLIST_ID
-            ? `<p class="settings-note">First submit may email you a FormSubmit <strong>Activate</strong> link — open it once. If delivery fails, your email app opens as backup.</p>`
-            : ''
+            ? `<p class="settings-note">Delivered to <code>${escapeHtml(CONTACT_EMAIL)}</code>. First submit may send a FormSubmit <strong>Activate</strong> link — open it once. If delivery fails, your email app opens as backup.</p>`
+            : FORMSPREE_WAITLIST_ID
+              ? `<p class="settings-note">Delivered via Formspree form <code>${escapeHtml(FORMSPREE_WAITLIST_ID)}</code>.</p>`
+              : ''
           : `<p class="settings-note settings-note-warn">Backend not configured yet — set <code>VITE_CONTACT_EMAIL</code> in <code>.env</code> and restart the dev server.</p>`
       }
       <form class="settings-form" data-waitlist-form novalidate>
@@ -309,12 +311,14 @@ export default class SettingsPanel {
   _renderFeedbackBody() {
     const configured = isLeadCaptureConfigured('feedback');
     return `
-      <p class="settings-note">Bug, missing layer, or idea? Send it from here.</p>
+      <p class="settings-note">Bug, missing layer, or idea? Messages are emailed to the project operator (same inbox as Stay updated) via FormSubmit / Formspree — nothing is stored in this app.</p>
       ${
         configured
           ? CONTACT_EMAIL && !FORMSPREE_FEEDBACK_ID
-            ? `<p class="settings-note">First submit may email you a FormSubmit <strong>Activate</strong> link — open it once. If delivery fails, your email app opens as backup.</p>`
-            : ''
+            ? `<p class="settings-note">Delivered to <code>${escapeHtml(CONTACT_EMAIL)}</code>. First submit may send a FormSubmit <strong>Activate</strong> link — open it once. If delivery fails, your email app opens as backup.</p>`
+            : FORMSPREE_FEEDBACK_ID
+              ? `<p class="settings-note">Delivered via Formspree form <code>${escapeHtml(FORMSPREE_FEEDBACK_ID)}</code>.</p>`
+              : ''
           : `<p class="settings-note settings-note-warn">Backend not configured yet — set <code>VITE_CONTACT_EMAIL</code> in <code>.env</code> and restart the dev server.</p>`
       }
       <form class="settings-form" data-feedback-form novalidate>

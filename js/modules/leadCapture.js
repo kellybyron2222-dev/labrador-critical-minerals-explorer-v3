@@ -5,6 +5,9 @@
  * 1. Formspree (if VITE_FORMSPREE_* set)
  * 2. FormSubmit.co via CONTACT_EMAIL (FormData — more reliable than JSON)
  * 3. mailto: fallback so the user always has a path that works
+ *
+ * FormSubmit can hang with no response — we abort after FETCH_TIMEOUT_MS and
+ * fall back to mailto so the UI never stays on “Sending…”.
  */
 
 import {
@@ -14,6 +17,8 @@ import {
   formspreeUrl,
   getUtmParams
 } from './launchConfig.js';
+
+const FETCH_TIMEOUT_MS = 12000;
 
 /**
  * @param {'waitlist' | 'feedback'} kind
@@ -36,7 +41,7 @@ export async function submitLead(kind, data) {
 
   if (formId) {
     try {
-      const resp = await fetch(formspreeUrl(formId), {
+      const resp = await fetchWithTimeout(formspreeUrl(formId), {
         method: 'POST',
         headers: { Accept: 'application/json' },
         body: objectToFormData(payload)
@@ -44,21 +49,18 @@ export async function submitLead(kind, data) {
       if (!resp.ok) throw new Error(await readError(resp));
       return { channel: 'formspree' };
     } catch (err) {
-      // Fall through to FormSubmit / mailto
       if (!CONTACT_EMAIL) throw err;
     }
   }
 
   if (CONTACT_EMAIL) {
     try {
-      // FormData (multipart) — FormSubmit's AJAX JSON path often returns 500
-      // until the inbox is activated or when JSON bodies are rejected.
       const body = objectToFormData({
         ...payload,
         _template: 'table',
-        _honey: '' // honeypot empty
+        _honey: ''
       });
-      const resp = await fetch(
+      const resp = await fetchWithTimeout(
         `https://formsubmit.co/ajax/${encodeURIComponent(CONTACT_EMAIL)}`,
         {
           method: 'POST',
@@ -69,7 +71,6 @@ export async function submitLead(kind, data) {
       if (resp.ok) return { channel: 'formsubmit' };
 
       const detail = await readError(resp);
-      // First-time / activation / upstream failure → still deliver via mailto
       openMailtoFallback(CONTACT_EMAIL, subject, payload);
       return {
         channel: 'mailto',
@@ -82,7 +83,8 @@ export async function submitLead(kind, data) {
       openMailtoFallback(CONTACT_EMAIL, subject, payload);
       return {
         channel: 'mailto',
-        warning: 'Network error reaching the form service. Your email app was opened as a backup.'
+        warning:
+          'The form service did not respond in time. Your email app was opened as a backup — send from there to finish.'
       };
     }
   }
@@ -95,6 +97,20 @@ export async function submitLead(kind, data) {
 export function isLeadCaptureConfigured(kind = 'waitlist') {
   if (kind === 'feedback') return Boolean(FORMSPREE_FEEDBACK_ID || CONTACT_EMAIL);
   return Boolean(FORMSPREE_WAITLIST_ID || CONTACT_EMAIL);
+}
+
+/**
+ * @param {string} url
+ * @param {RequestInit} opts
+ */
+async function fetchWithTimeout(url, opts = {}) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...opts, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 async function readError(resp) {

@@ -135,8 +135,8 @@ export default class WelcomeModal {
         Your view is remembered on this device when you come back.
       </p>
       <ol class="welcome-tips settings-about-list">
-        <li><strong>Screen this area</strong> (Rights group) turns on claims, hard exclusions, and Critical Minerals.</li>
-        <li><strong>Measure</strong> (map control, top-right) and <strong>Go to</strong> (place / claim / lon,lat).</li>
+        <li><strong>Screen this area</strong> enables screening layers for the selected AOI and opens a report panel with an index of data in the area.</li>
+        <li><strong>Measure</strong> / <strong>Polygon</strong> are on the bottom toolbar (multi-draw); <strong>Topo</strong> toggles contour lines on the current basemap.</li>
         <li><strong>Settings → Export</strong> downloads your current view as a ZIP (WGS&nbsp;84).</li>
       </ol>
       <div class="welcome-actions settings-actions">

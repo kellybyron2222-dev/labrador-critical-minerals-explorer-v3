@@ -33,6 +33,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@turf/area": "^7.3.5",
     "@turf/bbox": "^7.3.5",
     "@turf/clusters-dbscan": "^7.3.5",
     "@turf/distance": "^7.3.5",

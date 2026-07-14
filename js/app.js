@@ -65,7 +65,20 @@ import { buildExportPackage, downloadBlob } from './modules/exportPackage.js';
 import { resolveBootstrapViewState, writeViewState, buildShareUrl } from './modules/viewState.js';
 import FeedbackFab from './modules/FeedbackFab.js';
 import { track, PlausibleEvents } from './modules/analytics.js';
-import { attachMapTools, zoomToFeatures } from './modules/MapTools.js';
+import { attachMapTools, zoomToFeatures, isMapToolDrawing } from './modules/MapTools.js';
+import {
+  aoiBbox,
+  beginPinPickFocus,
+  cancelPinPick,
+  getScreenAoiState,
+  onScreenAoiChange,
+  paintScreenAoiOutline,
+  resolveScreenAoi,
+  setScreenAoiMode,
+  setScreenFocus
+} from './modules/ScreenAoi.js';
+import { openScreenReport } from './modules/ScreenReport.js';
+import { setContourOverlay } from './modules/ContourOverlay.js';
 import { mountPlaceSearch } from './modules/PlaceSearch.js';
 
 /** Layers enabled by “Screen this area” / export helper (soft-launch readiness). */
@@ -164,6 +177,7 @@ class MineralsMapApp {
     this.mapBase.onStyleChange = () => {
       this.layerManager.refreshLayers();
       this.applyMODSCommodityVisibility();
+      this.mapBase.restoreOverlays?.();
     };
 
     this.setDataStatus('Loading occurrences…', 'info');
@@ -264,7 +278,11 @@ class MineralsMapApp {
       map,
       getCommunityFeatures: () => this.layerManager.getLoadedFeatures('infraCommunities') || [],
       getClaimFeatures: () => this.layerManager.getLoadedFeatures('geoatlasClaims') || [],
-      onStatus: (msg, tone) => this.setDataStatus(msg, tone)
+      onStatus: (msg, tone) => this.setDataStatus(msg, tone),
+      onFocus: (lon, lat) => {
+        setScreenFocus(lon, lat, this.map);
+        setScreenAoiMode('goto');
+      }
     });
 
     requestAnimationFrame(() => this.welcomeModal?.maybeShow());
@@ -508,9 +526,56 @@ class MineralsMapApp {
 
   /**
    * Soft-launch guided preset: Critical Minerals + claims + hard exclusions + key infra.
+   * Uses the selected Screen AOI mode (current view / Go-to buffer / drawn polygon).
    */
   async runScreenPreset() {
     track(PlausibleEvents.SCREEN_PRESET);
+    let aoi = resolveScreenAoi(this.map);
+    if (!aoi.ok && aoi.needsPin) {
+      this.setDataStatus(aoi.message, 'info');
+      const picked = await new Promise((resolve) => {
+        const onKey = (e) => {
+          if (e.key === 'Escape') {
+            window.removeEventListener('keydown', onKey);
+            cancelPinPick();
+            resolve(false);
+          }
+        };
+        window.addEventListener('keydown', onKey);
+        beginPinPickFocus(this.map, {
+          onPicked: () => {
+            window.removeEventListener('keydown', onKey);
+            resolve(true);
+          },
+          onCancel: () => {
+            window.removeEventListener('keydown', onKey);
+            resolve(false);
+          }
+        });
+      });
+      if (!picked) {
+        this.setDataStatus('Screen cancelled — no pin placed.', 'info');
+        return;
+      }
+      aoi = resolveScreenAoi(this.map);
+    }
+    if (!aoi.ok) {
+      this.setDataStatus(aoi.message, 'error');
+      return;
+    }
+    paintScreenAoiOutline(this.map, aoi.feature);
+    const box = aoiBbox(aoi.feature);
+    const mode = getScreenAoiState().mode;
+    if (box && mode !== 'view') {
+      this.map.fitBounds(
+        [
+          [box[0], box[1]],
+          [box[2], box[3]]
+        ],
+        { padding: 56, maxZoom: 11, duration: 700 }
+      );
+    }
+
     this.expandRightsGroup();
     const picker = document.getElementById('modsOccurrences-commodity-picker');
     if (picker && picker.value !== MODS_CRITICAL_PICKER) {
@@ -529,8 +594,33 @@ class MineralsMapApp {
       ff.checked = true;
       ff.dispatchEvent(new Event('change'));
     }
+
+    // Brief pause so newly enabled layers can populate before indexing.
+    await new Promise((r) => setTimeout(r, 400));
+
+    const wmsOn = Object.keys(WMS_CONFIG).filter((id) => {
+      const cb = document.getElementById(`wms-${id}`);
+      return cb?.checked;
+    });
+    const reportResult = openScreenReport({
+      aoiFeature: aoi.feature,
+      aoiLabel: aoi.label,
+      getFeatures: (name) => this.layerManager.getLoadedFeatures(name) || [],
+      isLayerOn: (name) => this.isLayerOn(name),
+      modsFiltered: this._modsFilteredCache || this.layerManager.getLoadedFeatures('modsOccurrences') || [],
+      wmsOn
+    });
+
+    if (!reportResult.ok) {
+      this.setDataStatus(
+        `Screen layers on (${aoi.label}). Report: ${reportResult.message}`,
+        'error'
+      );
+      return;
+    }
+
     this.setDataStatus(
-      'Screen preset on: Critical Minerals, claims, hard exclusions, roads & key infra.',
+      `Screen on (${aoi.label}): layers ready — report open in the panel.`,
       'info'
     );
   }
@@ -610,10 +700,16 @@ class MineralsMapApp {
       }
     }
 
-    if (state.basemap && this.mapBase?.currentStyle !== state.basemap) {
+    if (state.basemap && state.basemap !== 'topo' && this.mapBase?.currentStyle !== state.basemap) {
       const btn = document.querySelector(`.basemap-btn[data-style="${state.basemap}"]`);
       if (btn) btn.click();
       else this.mapBase.switchBasemap(state.basemap);
+    } else if (state.basemap === 'topo') {
+      // Legacy share links used topo as a basemap; now it's a contour overlay.
+      if (this.mapBase?.currentStyle !== 'positron') {
+        document.getElementById('basemap-positron')?.click();
+      }
+      setContourOverlay(this.map, true).then(() => this.mapBase?._syncTopoButton?.());
     }
   }
 
@@ -736,9 +832,16 @@ class MineralsMapApp {
       const body = document.createElement('div');
       body.className = 'layer-group-body';
 
-      if (groupId === 'rights') {
+      if (groupId === 'occurrences') {
         body.appendChild(this.buildScreenPresetControl());
+      }
+
+      if (groupId === 'rights') {
         body.appendChild(this.buildFatalFlawPresetControl());
+      }
+
+      if (groupId === 'infrastructure') {
+        body.appendChild(this.buildGroupToggleAllControl('infrastructure'));
       }
 
       const subgroups = this.partitionGroupLayers(layers, groupDef);
@@ -886,12 +989,88 @@ class MineralsMapApp {
   buildScreenPresetControl() {
     const wrap = document.createElement('div');
     wrap.className = 'screen-preset';
+
+    const modes = document.createElement('div');
+    modes.className = 'screen-aoi-modes';
+    modes.setAttribute('role', 'radiogroup');
+    modes.setAttribute('aria-label', 'Screen area of interest');
+
+    const modeDefs = [
+      { id: 'view', label: 'Current view', title: 'Screen whatever is in the map viewport' },
+      {
+        id: 'goto',
+        label: 'Go to + 25 km',
+        title: 'Screen a 25 km buffer around the last Go to place / coordinate'
+      },
+      {
+        id: 'polygon',
+        label: 'Drawn polygon',
+        title: 'Screen the closed polygon from the bottom-toolbar Polygon tool'
+      }
+    ];
+
+    const syncModes = () => {
+      const state = getScreenAoiState();
+      modes.querySelectorAll('[data-aoi-mode]').forEach((el) => {
+        const on = el.getAttribute('data-aoi-mode') === state.mode;
+        el.classList.toggle('active', on);
+        el.setAttribute('aria-checked', String(on));
+      });
+      const polyBtn = modes.querySelector('[data-aoi-mode="polygon"]');
+      if (polyBtn) {
+        polyBtn.disabled = !state.hasDrawnPolygon && state.mode !== 'polygon';
+        polyBtn.title = state.hasDrawnPolygon
+          ? 'Screen the closed polygon from the Polygon tool'
+          : 'Draw and close a polygon with the Polygon tool first';
+      }
+    };
+
+    modeDefs.forEach((m) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'screen-aoi-mode-btn';
+      b.setAttribute('role', 'radio');
+      b.setAttribute('data-aoi-mode', m.id);
+      b.textContent = m.label;
+      b.title = m.title;
+      b.addEventListener('click', () => {
+        if (m.id === 'polygon' && !getScreenAoiState().hasDrawnPolygon) {
+          this.setDataStatus('Draw and close a polygon with the Polygon tool first.', 'error');
+          return;
+        }
+        if (m.id === 'goto' && !getScreenAoiState().focus) {
+          setScreenAoiMode('goto');
+          syncModes();
+          this.setDataStatus('Click the map to drop a pin (25 km buffer around that point). Esc cancels.', 'info');
+          beginPinPickFocus(this.map, {
+            onPicked: (lon, lat) => {
+              syncModes();
+              this.setDataStatus(
+                `Pin set at ${lat.toFixed(4)}, ${lon.toFixed(4)} · 25 km buffer ready — hit Screen this area.`,
+                'info'
+              );
+            },
+            onCancel: () => {
+              setScreenAoiMode('view');
+              syncModes();
+              this.setDataStatus('Pin pick cancelled.', 'info');
+            }
+          });
+          return;
+        }
+        setScreenAoiMode(/** @type {'view'|'goto'|'polygon'} */ (m.id));
+        syncModes();
+      });
+      modes.appendChild(b);
+    });
+    wrap.appendChild(modes);
+
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'screen-preset-btn';
     btn.textContent = 'Screen this area';
     btn.title =
-      'Turn on Critical Minerals MODS, claims, hard exclusions, roads, and key infrastructure';
+      'Turn on Critical Minerals MODS, claims, hard exclusions, roads, and key infrastructure for the selected area';
     btn.addEventListener('click', () => {
       btn.disabled = true;
       this.runScreenPreset()
@@ -901,11 +1080,75 @@ class MineralsMapApp {
         });
     });
     wrap.appendChild(btn);
+
     const note = document.createElement('p');
     note.className = 'screen-preset-note';
-    note.textContent = 'Guided first look for site screening.';
+    note.textContent =
+      'Choose AOI, then Screen: enables screening layers and opens a report panel with an index of data in the area.';
     wrap.appendChild(note);
+
+    onScreenAoiChange(syncModes);
+    syncModes();
     return wrap;
+  }
+
+  /** Toggle every vector/WMS checkbox in a sidebar group. */
+  buildGroupToggleAllControl(groupId) {
+    const wrap = document.createElement('div');
+    wrap.className = 'group-toggle-all';
+    const onBtn = document.createElement('button');
+    onBtn.type = 'button';
+    onBtn.className = 'group-toggle-all-btn';
+    onBtn.textContent = 'All on';
+    onBtn.title = 'Enable every layer in this group';
+    const offBtn = document.createElement('button');
+    offBtn.type = 'button';
+    offBtn.className = 'group-toggle-all-btn';
+    offBtn.textContent = 'All off';
+    offBtn.title = 'Disable every layer in this group';
+
+    onBtn.addEventListener('click', () => this.setGroupLayersEnabled(groupId, true));
+    offBtn.addEventListener('click', () => this.setGroupLayersEnabled(groupId, false));
+
+    wrap.appendChild(onBtn);
+    wrap.appendChild(offBtn);
+    return wrap;
+  }
+
+  /**
+   * @param {string} groupId
+   * @param {boolean} on
+   */
+  async setGroupLayersEnabled(groupId, on) {
+    const vectorNames = Object.entries(LAYER_CONFIG)
+      .filter(([, cfg]) => cfg.group === groupId)
+      .map(([name]) => name);
+    const wmsNames = Object.entries(WMS_CONFIG)
+      .filter(([, cfg]) => cfg.group === groupId)
+      .map(([name]) => name);
+
+    for (const name of vectorNames) {
+      const cb = document.getElementById(`layer-${name}`);
+      if (!cb) continue;
+      if (on && !cb.checked) {
+        await this.setLayerEnabled(name, true);
+      } else if (!on && cb.checked) {
+        await this.setLayerEnabled(name, false);
+      }
+    }
+
+    for (const name of wmsNames) {
+      const cb = document.getElementById(`wms-${name}`);
+      if (!cb) continue;
+      if (cb.checked === on) continue;
+      cb.checked = on;
+      cb.dispatchEvent(new Event('change'));
+    }
+
+    this.setDataStatus(
+      on ? `${LAYER_GROUPS[groupId]?.title || groupId}: all layers on` : `${LAYER_GROUPS[groupId]?.title || groupId}: all layers off`,
+      'info'
+    );
   }
 
   /** Rights-group control: hard exclusions / fatal-flaw mask (Phase 2.4). */
@@ -1389,6 +1632,9 @@ class MineralsMapApp {
 
   /** One popup for everything under the click (points + polygons), not one card per layer. */
   openCombinedPopup(e) {
+    // Don't open feature tooltips while Measure / Polygon drawing is active.
+    if (isMapToolDrawing()) return;
+
     const layers = POPUP_LAYER_IDS.filter((id) => this.map.getLayer(id));
     if (!layers.length) return;
 
