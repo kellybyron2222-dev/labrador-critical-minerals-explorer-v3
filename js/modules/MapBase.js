@@ -42,6 +42,13 @@ export default class MapBase {
       new maplibregl.NavigationControl({ visualizePitch: false }),
       'top-right'
     );
+    this.geolocateControl = new maplibregl.GeolocateControl({
+      positionOptions: { enableHighAccuracy: true },
+      trackUserLocation: true,
+      showAccuracyCircle: true,
+      showUserLocation: true
+    });
+    this.map.addControl(this.geolocateControl, 'top-right');
     this.map.addControl(
       new maplibregl.ScaleControl({ maxWidth: 200, unit: 'metric' }),
       'bottom-right'

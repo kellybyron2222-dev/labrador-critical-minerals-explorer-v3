@@ -1,5 +1,5 @@
 /**
- * Screen AOI state: current view, Go-to buffer, or closed drawn polygon.
+ * Screen AOI state: current view, radius around a pin, or closed drawn polygon.
  */
 
 import maplibregl from 'maplibre-gl';
@@ -8,15 +8,22 @@ import distance from '@turf/distance';
 import bbox from '@turf/bbox';
 import { normalizeMapBounds } from './KpiEngine.js';
 
-/** @typedef {'view' | 'goto' | 'polygon'} ScreenAoiMode */
+/** @typedef {'view' | 'radius' | 'polygon'} ScreenAoiMode */
 
+/** @deprecated Use DEFAULT_RADIUS_KM — kept for older imports/tests */
 export const GOTO_BUFFER_KM = 25;
+export const DEFAULT_RADIUS_KM = 25;
+export const RADIUS_OPTIONS_KM = [1, 5, 10, 25];
+const TOOL_INK = '#111111';
 
 /** @type {ScreenAoiMode} */
 let mode = 'view';
 
 /** @type {[number, number]|null} [lon, lat] */
 let focus = null;
+
+/** @type {number} */
+let radiusKm = DEFAULT_RADIUS_KM;
 
 /** @type {GeoJSON.Feature|null} */
 let drawnPolygon = null;
@@ -30,10 +37,22 @@ let focusMarker = null;
 /** @type {{ map: import('maplibre-gl').Map, onPicked?: Function, onCancel?: Function, clickHandler: Function }|null} */
 let pinPickSession = null;
 
+/**
+ * Normalize legacy `goto` → `radius`.
+ * @param {string} next
+ * @returns {ScreenAoiMode|null}
+ */
+function normalizeMode(next) {
+  if (next === 'goto') return 'radius';
+  if (next === 'view' || next === 'radius' || next === 'polygon') return next;
+  return null;
+}
+
 export function getScreenAoiState() {
   return {
     mode,
     focus: focus ? [...focus] : null,
+    radiusKm,
     drawnPolygon,
     hasDrawnPolygon: Boolean(drawnPolygon),
     pinPicking: Boolean(pinPickSession)
@@ -41,11 +60,21 @@ export function getScreenAoiState() {
 }
 
 /**
- * @param {ScreenAoiMode} next
+ * @param {ScreenAoiMode|'goto'} next
  */
 export function setScreenAoiMode(next) {
-  if (next !== 'view' && next !== 'goto' && next !== 'polygon') return;
-  mode = next;
+  const m = normalizeMode(next);
+  if (!m) return;
+  mode = m;
+  notify();
+}
+
+/**
+ * @param {number} km
+ */
+export function setScreenRadiusKm(km) {
+  if (!Number.isFinite(km) || km <= 0) return;
+  radiusKm = km;
   notify();
 }
 
@@ -62,6 +91,22 @@ export function setScreenFocus(lon, lat, map) {
 }
 
 /**
+ * Place focus + set radius mode (used by right-click / selection shortcuts).
+ * @param {number} lon
+ * @param {number} lat
+ * @param {import('maplibre-gl').Map} map
+ * @param {number} [km]
+ */
+export function placeScreenRadius(lon, lat, map, km = radiusKm) {
+  if (Number.isFinite(km) && km > 0) radiusKm = km;
+  setScreenFocus(lon, lat, map);
+  setScreenAoiMode('radius');
+  const feature = circlePolygon([lon, lat], radiusKm);
+  paintScreenAoiOutline(map, feature);
+  return feature;
+}
+
+/**
  * @param {import('maplibre-gl').Map} map
  * @param {number} lon
  * @param {number} lat
@@ -75,7 +120,7 @@ export function placeFocusMarker(map, lon, lat) {
       /* ignore */
     }
   }
-  focusMarker = new maplibregl.Marker({ color: '#2563eb' }).setLngLat([lon, lat]).addTo(map);
+  focusMarker = new maplibregl.Marker({ color: TOOL_INK }).setLngLat([lon, lat]).addTo(map);
 }
 
 export function cancelPinPick() {
@@ -89,7 +134,7 @@ export function cancelPinPick() {
 }
 
 /**
- * Ask the user to click the map to place a Go-to focus pin.
+ * Ask the user to click the map to place a radius focus pin.
  * @param {import('maplibre-gl').Map} map
  * @param {{ onPicked?: (lon: number, lat: number) => void, onCancel?: () => void }} [opts]
  * @returns {boolean}
@@ -106,7 +151,8 @@ export function beginPinPickFocus(map, opts = {}) {
     map.getCanvas().style.cursor = '';
     pinPickSession = null;
     setScreenFocus(lon, lat, map);
-    setScreenAoiMode('goto');
+    setScreenAoiMode('radius');
+    paintScreenAoiOutline(map, circlePolygon([lon, lat], radiusKm));
     notify();
     session?.onPicked?.(lon, lat);
   };
@@ -152,16 +198,16 @@ function notify() {
 /**
  * Approximate circle polygon around a lon/lat (km radius).
  * @param {[number, number]} center
- * @param {number} radiusKm
+ * @param {number} radiusKmArg
  * @param {number} [steps]
  * @returns {GeoJSON.Feature}
  */
-export function circlePolygon(center, radiusKm, steps = 64) {
+export function circlePolygon(center, radiusKmArg, steps = 64) {
   const [lon, lat] = center;
   const ring = [];
   for (let i = 0; i <= steps; i++) {
     const bearing = (i / steps) * 360;
-    ring.push(destinationPoint(lon, lat, radiusKm, bearing));
+    ring.push(destinationPoint(lon, lat, radiusKmArg, bearing));
   }
   return turfPolygon([ring]);
 }
@@ -212,7 +258,7 @@ export function boundsToPolygon(b) {
 /**
  * Resolve active AOI geometry for the current mode.
  * @param {import('maplibre-gl').Map} map
- * @returns {{ ok: true, feature: GeoJSON.Feature, label: string } | { ok: false, message: string }}
+ * @returns {{ ok: true, feature: GeoJSON.Feature, label: string } | { ok: false, message: string, needsPin?: boolean }}
  */
 export function resolveScreenAoi(map) {
   if (mode === 'view') {
@@ -232,19 +278,19 @@ export function resolveScreenAoi(map) {
     };
   }
 
-  if (mode === 'goto') {
+  if (mode === 'radius') {
     if (!focus) {
       return {
         ok: false,
         needsPin: true,
-        message: 'Click the map to drop a pin for the Go-to focus (25 km buffer).'
+        message: `Click the map to drop a pin (${radiusKm} km radius).`
       };
     }
-    const feature = circlePolygon(focus, GOTO_BUFFER_KM);
+    const feature = circlePolygon(focus, radiusKm);
     return {
       ok: true,
       feature,
-      label: `Go-to focus · ${GOTO_BUFFER_KM} km buffer`
+      label: `Radius · ${radiusKm} km around pin`
     };
   }
 
@@ -306,7 +352,7 @@ export function paintScreenAoiOutline(map, feature) {
       id: AOI_FILL,
       type: 'fill',
       source: AOI_SOURCE,
-      paint: { 'fill-color': '#2563eb', 'fill-opacity': 0.06 }
+      paint: { 'fill-color': TOOL_INK, 'fill-opacity': 0.06 }
     });
   }
   if (!map.getLayer(AOI_LINE)) {
@@ -315,7 +361,7 @@ export function paintScreenAoiOutline(map, feature) {
       type: 'line',
       source: AOI_SOURCE,
       paint: {
-        'line-color': '#2563eb',
+        'line-color': TOOL_INK,
         'line-width': 2,
         'line-dasharray': [2, 1.5]
       }
@@ -331,6 +377,7 @@ export function paintScreenAoiOutline(map, feature) {
 export function _resetScreenAoiForTests() {
   mode = 'view';
   focus = null;
+  radiusKm = DEFAULT_RADIUS_KM;
   drawnPolygon = null;
   listener = null;
   pinPickSession = null;

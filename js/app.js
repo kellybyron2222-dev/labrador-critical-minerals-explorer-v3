@@ -66,16 +66,20 @@ import { resolveBootstrapViewState, writeViewState, buildShareUrl } from './modu
 import FeedbackFab from './modules/FeedbackFab.js';
 import { track, PlausibleEvents } from './modules/analytics.js';
 import { attachMapTools, zoomToFeatures, isMapToolDrawing } from './modules/MapTools.js';
+import { mountProfessionalTools } from './modules/ProfessionalTools.js';
 import {
   aoiBbox,
   beginPinPickFocus,
   cancelPinPick,
+  circlePolygon,
   getScreenAoiState,
   onScreenAoiChange,
   paintScreenAoiOutline,
+  RADIUS_OPTIONS_KM,
   resolveScreenAoi,
   setScreenAoiMode,
-  setScreenFocus
+  setScreenFocus,
+  setScreenRadiusKm
 } from './modules/ScreenAoi.js';
 import { openScreenReport } from './modules/ScreenReport.js';
 import { setContourOverlay } from './modules/ContourOverlay.js';
@@ -274,6 +278,26 @@ class MineralsMapApp {
     });
 
     attachMapTools(map).catch((err) => console.warn('Map tools failed', err));
+    this.professionalTools = mountProfessionalTools({
+      map,
+      mapBase: this.mapBase,
+      collectViewState: () => this.collectViewState(),
+      applyViewState: (state) => this.applyViewState(state),
+      onStatus: (msg, tone) => this.setDataStatus(msg, tone),
+      getFeatures: (name) => this.layerManager.getLoadedFeatures(name) || [],
+      getLegendHtml: () => document.getElementById('legend-panel')?.innerHTML || '',
+      getAoiLabel: () => getScreenAoiState()?.mode || '',
+      queryWhatsHere: (point) => {
+        const layers = POPUP_LAYER_IDS.filter((id) => this.map.getLayer(id));
+        if (!layers.length) return [];
+        const r = 6;
+        const box = [
+          [point.x - r, point.y - r],
+          [point.x + r, point.y + r]
+        ];
+        return this.map.queryRenderedFeatures(box, { layers });
+      }
+    });
     mountPlaceSearch({
       map,
       getCommunityFeatures: () => this.layerManager.getLoadedFeatures('infraCommunities') || [],
@@ -281,7 +305,7 @@ class MineralsMapApp {
       onStatus: (msg, tone) => this.setDataStatus(msg, tone),
       onFocus: (lon, lat) => {
         setScreenFocus(lon, lat, this.map);
-        setScreenAoiMode('goto');
+        setScreenAoiMode('radius');
       }
     });
 
@@ -509,8 +533,20 @@ class MineralsMapApp {
       statuses: [...browser.statuses],
       q: browser.query || undefined,
       fatalFlaw: this.fatalFlawPresetActive,
-      basemap: this.mapBase?.currentStyle || undefined
+      basemap: this.mapBase?.currentStyle || undefined,
+      opacity: this.collectLayerOpacities()
     };
+  }
+
+  collectLayerOpacities() {
+    /** @type {Record<string, number>} */
+    const out = {};
+    document.querySelectorAll('.layer-opacity-range[data-opacity-for]').forEach((el) => {
+      const id = el.getAttribute('data-opacity-for');
+      if (!id) return;
+      out[id] = Number(el.value) / 100;
+    });
+    return out;
   }
 
   /** Context attached to feedback emails for repro. */
@@ -526,7 +562,7 @@ class MineralsMapApp {
 
   /**
    * Soft-launch guided preset: Critical Minerals + claims + hard exclusions + key infra.
-   * Uses the selected Screen AOI mode (current view / Go-to buffer / drawn polygon).
+   * Uses the selected Screen AOI mode (current view / radius around pin / drawn polygon).
    */
   async runScreenPreset() {
     track(PlausibleEvents.SCREEN_PRESET);
@@ -711,6 +747,18 @@ class MineralsMapApp {
       }
       setContourOverlay(this.map, true).then(() => this.mapBase?._syncTopoButton?.());
     }
+
+    if (state.opacity && typeof state.opacity === 'object') {
+      Object.entries(state.opacity).forEach(([checkboxId, opacity]) => {
+        const range = document.querySelector(
+          `.layer-opacity-range[data-opacity-for="${checkboxId}"]`
+        );
+        if (range) {
+          range.value = String(Math.round(Number(opacity) * 100));
+          range.dispatchEvent(new Event('input'));
+        }
+      });
+    }
   }
 
   /** Debounced URL-hash sync so the current view stays shareable/bookmarkable. */
@@ -873,6 +921,33 @@ class MineralsMapApp {
           `;
           list.appendChild(item);
 
+          const opacityWrap = document.createElement('div');
+          opacityWrap.className = 'layer-opacity-wrap';
+          opacityWrap.hidden = !config.visible;
+          const defaultOpacity =
+            type === 'wms' ? Math.round((config.opacity ?? 0.7) * 100) : 100;
+          opacityWrap.innerHTML = `
+            <label class="layer-opacity-label">
+              <span>Opacity</span>
+              <input type="range" class="layer-opacity-range" min="10" max="100" step="5"
+                value="${defaultOpacity}" data-opacity-for="${checkboxId}"
+                aria-label="Opacity for ${label}" />
+            </label>`;
+          list.appendChild(opacityWrap);
+
+          const range = opacityWrap.querySelector('input');
+          range?.addEventListener('input', () => {
+            const pct = Number(range.value);
+            this.layerManager.setLayerOpacity(name, pct / 100, {
+              kind: type === 'wms' ? 'wms' : 'vector'
+            });
+          });
+
+          const cb = item.querySelector('input');
+          cb?.addEventListener('change', () => {
+            opacityWrap.hidden = !cb.checked;
+          });
+
           if (type === 'vector' && config.commodityPicker) {
             list.appendChild(this.buildCommodityPicker(name, config.commodityPicker));
           }
@@ -998,9 +1073,9 @@ class MineralsMapApp {
     const modeDefs = [
       { id: 'view', label: 'Current view', title: 'Screen whatever is in the map viewport' },
       {
-        id: 'goto',
-        label: 'Go to + 25 km',
-        title: 'Screen a 25 km buffer around the last Go to place / coordinate'
+        id: 'radius',
+        label: 'Radius',
+        title: 'Screen a circle around a pin — pick 1 / 5 / 10 / 25 km'
       },
       {
         id: 'polygon',
@@ -1008,6 +1083,12 @@ class MineralsMapApp {
         title: 'Screen the closed polygon from the bottom-toolbar Polygon tool'
       }
     ];
+
+    const radii = document.createElement('div');
+    radii.className = 'screen-aoi-radii';
+    radii.hidden = true;
+    radii.setAttribute('role', 'group');
+    radii.setAttribute('aria-label', 'Screen radius');
 
     const syncModes = () => {
       const state = getScreenAoiState();
@@ -1023,6 +1104,13 @@ class MineralsMapApp {
           ? 'Screen the closed polygon from the Polygon tool'
           : 'Draw and close a polygon with the Polygon tool first';
       }
+      radii.hidden = state.mode !== 'radius';
+      radii.querySelectorAll('[data-radius-km]').forEach((el) => {
+        const km = Number(el.getAttribute('data-radius-km'));
+        const on = km === state.radiusKm;
+        el.classList.toggle('active', on);
+        el.setAttribute('aria-pressed', String(on));
+      });
     };
 
     modeDefs.forEach((m) => {
@@ -1038,15 +1126,20 @@ class MineralsMapApp {
           this.setDataStatus('Draw and close a polygon with the Polygon tool first.', 'error');
           return;
         }
-        if (m.id === 'goto' && !getScreenAoiState().focus) {
-          setScreenAoiMode('goto');
+        if (m.id === 'radius' && !getScreenAoiState().focus) {
+          setScreenAoiMode('radius');
           syncModes();
-          this.setDataStatus('Click the map to drop a pin (25 km buffer around that point). Esc cancels.', 'info');
+          const km = getScreenAoiState().radiusKm;
+          this.setDataStatus(
+            `Click the map to drop a pin (${km} km radius). Esc cancels.`,
+            'info'
+          );
           beginPinPickFocus(this.map, {
             onPicked: (lon, lat) => {
               syncModes();
+              const r = getScreenAoiState().radiusKm;
               this.setDataStatus(
-                `Pin set at ${lat.toFixed(4)}, ${lon.toFixed(4)} · 25 km buffer ready — hit Screen this area.`,
+                `Pin set at ${lat.toFixed(4)}, ${lon.toFixed(4)} · ${r} km ready — hit Screen this area.`,
                 'info'
               );
             },
@@ -1058,12 +1151,47 @@ class MineralsMapApp {
           });
           return;
         }
-        setScreenAoiMode(/** @type {'view'|'goto'|'polygon'} */ (m.id));
+        setScreenAoiMode(/** @type {'view'|'radius'|'polygon'} */ (m.id));
+        if (m.id === 'radius') {
+          const state = getScreenAoiState();
+          if (state.focus) {
+            paintScreenAoiOutline(
+              this.map,
+              circlePolygon(/** @type {[number, number]} */ (state.focus), state.radiusKm)
+            );
+          }
+        }
         syncModes();
       });
       modes.appendChild(b);
     });
     wrap.appendChild(modes);
+
+    RADIUS_OPTIONS_KM.forEach((km) => {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'screen-aoi-mode-btn screen-aoi-radius-chip';
+      chip.setAttribute('data-radius-km', String(km));
+      chip.textContent = `${km} km`;
+      chip.title = `${km} km radius around the pin`;
+      chip.addEventListener('click', () => {
+        setScreenRadiusKm(km);
+        setScreenAoiMode('radius');
+        const state = getScreenAoiState();
+        if (state.focus) {
+          paintScreenAoiOutline(
+            this.map,
+            circlePolygon(/** @type {[number, number]} */ (state.focus), km)
+          );
+          this.setDataStatus(`Radius ${km} km — hit Screen this area.`, 'info');
+        } else {
+          this.setDataStatus(`Radius ${km} km — click Radius mode or the map to drop a pin.`, 'info');
+        }
+        syncModes();
+      });
+      radii.appendChild(chip);
+    });
+    wrap.appendChild(radii);
 
     const btn = document.createElement('button');
     btn.type = 'button';
@@ -1632,8 +1760,8 @@ class MineralsMapApp {
 
   /** One popup for everything under the click (points + polygons), not one card per layer. */
   openCombinedPopup(e) {
-    // Don't open feature tooltips while Measure / Polygon drawing is active.
-    if (isMapToolDrawing()) return;
+    // Don't open feature tooltips while Measure / Polygon / Annotate drawing is active.
+    if (isMapToolDrawing() || this.professionalTools?.isBlocked?.()) return;
 
     const layers = POPUP_LAYER_IDS.filter((id) => this.map.getLayer(id));
     if (!layers.length) return;
@@ -1695,6 +1823,18 @@ class MineralsMapApp {
       .setLngLat(e.lngLat)
       .setHTML(`<div class="popup-content">${pendingBody}</div>`)
       .addTo(this.map);
+
+    // Sticky selection panel (professional identify)
+    try {
+      const selFeatures = [...byLayer.entries()].map(([layerId, feature]) => ({
+        type: 'Feature',
+        properties: { ...(feature.properties || {}), __layerId: layerId },
+        geometry: feature.geometry
+      }));
+      this.professionalTools?.selectionPanel?.setSelection(selFeatures);
+    } catch {
+      /* ignore */
+    }
 
     if (modsFeature) {
       this.fillModsInfraDistances(modsFeature, token, {

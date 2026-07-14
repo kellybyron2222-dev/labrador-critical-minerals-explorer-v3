@@ -136,7 +136,7 @@ export default class WelcomeModal {
       </p>
       <ol class="welcome-tips settings-about-list">
         <li><strong>Screen this area</strong> enables screening layers for the selected AOI and opens a report panel with an index of data in the area.</li>
-        <li><strong>Measure</strong> / <strong>Polygon</strong> are on the bottom toolbar (multi-draw); <strong>Topo</strong> toggles contour lines on the current basemap.</li>
+        <li><strong>Everyday tools:</strong> Bookmarks, Annotate (pins), Pin A / Compare swipe, Print, right-click, layer opacity, Back/Forward extent, and GPS locate. Use Screen → Radius for a circle AOI (1–25 km).</li>
         <li><strong>Settings → Export</strong> downloads your current view as a ZIP (WGS&nbsp;84).</li>
       </ol>
       <div class="welcome-actions settings-actions">

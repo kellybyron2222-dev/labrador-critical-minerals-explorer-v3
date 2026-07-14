@@ -16,7 +16,8 @@ import {
   resolveScreenAoi,
   setDrawnPolygon,
   setScreenAoiMode,
-  setScreenFocus
+  setScreenFocus,
+  setScreenRadiusKm
 } from './ScreenAoi.js';
 import {
   boundsFromAoiFeature,
@@ -100,22 +101,37 @@ describe('ScreenAoi', () => {
     }
   });
 
-  it('requires Go-to focus for goto mode', () => {
-    setScreenAoiMode('goto');
+  it('requires pin for radius mode', () => {
+    setScreenAoiMode('radius');
     const r = resolveScreenAoi({ getBounds: () => null });
     expect(r.ok).toBe(false);
     expect(r.needsPin).toBe(true);
   });
 
-  it('builds 25 km buffer around focus', () => {
+  it('builds radius buffer around focus (default 25 km)', () => {
     setScreenFocus(-60.5, 53.2);
-    setScreenAoiMode('goto');
+    setScreenAoiMode('radius');
     const r = resolveScreenAoi({});
     expect(r.ok).toBe(true);
     if (r.ok) {
       expect(r.label).toContain(String(GOTO_BUFFER_KM));
       expect(r.feature.geometry.coordinates[0].length).toBeGreaterThan(16);
     }
+  });
+
+  it('accepts legacy goto mode as radius', () => {
+    setScreenFocus(-60.5, 53.2);
+    setScreenAoiMode('goto');
+    expect(getScreenAoiState().mode).toBe('radius');
+  });
+
+  it('honors setScreenRadiusKm', () => {
+    setScreenFocus(-60.5, 53.2);
+    setScreenRadiusKm(5);
+    setScreenAoiMode('radius');
+    const r = resolveScreenAoi({});
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.label).toContain('5 km');
   });
 
   it('requires closed drawn polygon', () => {

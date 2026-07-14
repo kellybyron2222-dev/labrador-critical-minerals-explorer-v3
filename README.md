@@ -28,17 +28,20 @@ geophysics (aeromag / 1VD) — built on public government data.
 - **Signals (Phase 4.1)** — regional aeromag + detailed-survey 1VD, radiometrics
   (eU / eTh / K), NRCan Canada 2 km Bouguer gravity, airborne survey footprints
   (full index; filter by survey type + digital availability; popup → NL detail
-  page); raster opacity, grayscale mode, mutual exclusion.
+  page); raster opacity, grayscale mode, mutual exclusion
+- **Soft-launch tools** — Screen this area (view / radius 1–25 km / polygon),
+  Measure + Polygon, Annotate pins, Bookmarks, Pin A → Compare swipe, Print,
+  right-click menu, layer opacity, extent back/forward, GPS locate
 
-**Stage A engineering gate met.** Stage B0 soft-launch eng (welcome, capture,
-analytics, shareable views, multi-layer export) is in the app. Next: **Stage B
-outreach** (NLPA + screenshots). Long-term Leapfrog-adjacent data quality is
-documented as Stage **C′** / **G** — not current work (PRODUCT_PLAN §2.1).
+**Stage A engineering gate met.** Soft-launch eng (B0 + B-R) is shipped. **Next:
+Stage B outreach** (NLPA + screenshots) — see [`docs/soft-launch/`](./docs/soft-launch/).
+Long-term Leapfrog-adjacent data quality is Stage **C′** / **G** — not current
+work (PRODUCT_PLAN §2.1).
 
 ## Soft-launch config
 
 Copy `.env.example` → `.env` (local) and set the same values as **GitHub Actions
-repository Variables/Secrets** so Pages builds include them:
+repository Variables** so Pages builds include them:
 
 - `VITE_CONTACT_EMAIL` — FormSubmit inbox for Stay updated / Feedback (open the
   Activate email once), **or**
@@ -51,10 +54,14 @@ The Plausible tracker snippet lives in `index.html`. Privacy notice:
 Privacy-light analytics via Plausible (no fingerprinting). Export packages are
 WGS 84 / EPSG:4326 (CRS84 lon-lat); see Settings → About / Export.
 
+Ops checklist: [`docs/soft-launch/ops-checklist.md`](./docs/soft-launch/ops-checklist.md).
+
 ### Soft-launch readiness tools
 
-- **Screen this area** (Rights group) — Critical Minerals + claims + exclusions + key infra
-- **Measure** — map control (Terra Draw when installed; Turf click-measure fallback)
+- **Screen this area** (Rights group) — Critical Minerals + claims + exclusions + key infra; AOI = current view, **Radius** around a pin (1/5/10/25 km), or drawn polygon
+- **Measure / Polygon** — bottom toolbar (black solid / dashed)
+- **Annotate** — pin notes (hollow squares; not MODS circles)
+- **Pin A / Compare** — save a view, change the map, swipe compare
 - **Go to** — place / claim # / lon,lat search over the map
 - Nearest infrastructure on MODS popups includes road, transmission, port, airport, power, community
 
@@ -64,6 +71,7 @@ WGS 84 / EPSG:4326 (CRS84 lon-lat); see Settings → About / Export.
 |-----|------|
 | [`BUILD_PLAN.md`](./BUILD_PLAN.md) | Engineering checklist (layers, phases, data pipeline) |
 | [`PRODUCT_PLAN.md`](./PRODUCT_PLAN.md) | Product arc A→G incl. professional data quality (§2.1) |
+| [`docs/soft-launch/`](./docs/soft-launch/) | Ops checklist, NLPA one-pager, screenshot storyboard |
 
 ## Run
 
@@ -97,7 +105,5 @@ npm run refresh:data     # Registry-driven data refresh (respects nextDue)
 
 ## Status
 
-Phases **0–4.1** complete; **Stage B0** soft-launch UX shipped. **Next:** Stage B
-outreach (NLPA + screenshot assets). Phase **4.2** geochem and professional
-data quality (C′ / G) stay post-outreach — see PRODUCT_PLAN §2.1 and
-BUILD_PLAN §5.2.
+Phases **0–4.1** complete; soft-launch eng (B0 + B-R) shipped. **Next:** Stage B
+outreach (NLPA + screenshot capture). See PRODUCT_PLAN / BUILD_PLAN.

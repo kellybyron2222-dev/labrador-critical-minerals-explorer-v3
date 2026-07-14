@@ -2,9 +2,10 @@
 
 > **Strategic overview** (go-to-market, freemium, geography expansion).
 > Engineering checklist stays in [`BUILD_PLAN.md`](./BUILD_PLAN.md).
-> Last updated: 2026-07-14 — Soft-launch readiness (B-R) engineering: Screen
-> preset, measure/Go-to tools, privacy, Pages `VITE_*` wiring; **outreach still
-> blocked** until production capture verified
+> Last updated: 2026-07-14 — Soft-launch readiness (B-R) closed: everyday tools,
+> Screen Radius, Pin A Compare, ops vars on Pages, outreach drafts in
+> `docs/soft-launch/`. **Stage B outreach open** (capture Activate + screenshots
+> are the remaining operator steps).
 
 ---
 
@@ -188,7 +189,7 @@ outreach.
 
 ---
 
-### Stage B — Soft launch & niche marketing (free)  [~ eng done; outreach open]
+### Stage B — Soft launch & niche marketing (free)  [outreach open]
 
 Start **as soon as Stage A is usable** — do **not** wait for national or for
 premium features. Audience is small and specialized; broad ads waste money.
@@ -207,15 +208,22 @@ premium features. Audience is small and specialized; broad ads waste money.
 
 - [x] Short landing blurb on the app (what it is / isn’t; free; Labrador focus;
       data sources) — first-visit welcome + Settings → About (2026-07-13)
-- [ ] 5–10 screenshot “story” assets (claims + MODS; fatal-flaw mask; infra)
-- [ ] One-pager email for NLPA / prospectors
+- [x] 5–10 screenshot “story” assets brief — [`docs/soft-launch/screenshot-storyboard.md`](./docs/soft-launch/screenshot-storyboard.md)
+      (operator captures stills from live app)
+- [x] One-pager email for NLPA / prospectors —
+      [`docs/soft-launch/NLPA-one-pager.md`](./docs/soft-launch/NLPA-one-pager.md)
 - [x] Simple waitlist or email capture (`VITE_CONTACT_EMAIL` FormSubmit and/or
       Formspree ids) for product / changelog updates — same list feeds
       **Monthly Data Changelog** (B+) once there is something real to report
-      (2026-07-13; FormSubmit FormData + mailto fallback 2026-07-14)
+      (2026-07-13; FormSubmit FormData + mailto fallback 2026-07-14; Pages
+      Variables set 2026-07-14 — open FormSubmit Activate once on first prod submit)
 - [x] Track crude usage (Plausible privacy-light) (2026-07-13)
 - [x] Shareable view URL + multi-layer viewport export ZIP (GeoJSON / CSV / KML /
       display rasters as PNG+bounds; Shapefile via QGIS from GeoJSON) (2026-07-13)
+- [x] B-R everyday tools — Screen Radius, Measure/Polygon, Annotate pins, Bookmarks,
+      Pin A / Compare swipe, Print, context menu, opacity, extent history, GPS
+      (2026-07-14)
+- [x] Ops runbook — [`docs/soft-launch/ops-checklist.md`](./docs/soft-launch/ops-checklist.md)
 
 #### Messaging angle
 
@@ -442,6 +450,11 @@ who pays** layer above it.
 
 ## 8. Changelog
 
+- **2026-07-14** — Soft-launch **B-R closed**: Screen Radius (replaces Go-to+25 /
+  Buffer), Annotate pins, Pin A→Compare swipe, Bookmarks/Print/context menu;
+  Pages `VITE_CONTACT_EMAIL` + Plausible Variables set; outreach drafts under
+  `docs/soft-launch/`. **Next = Stage B outreach** (capture screenshots, send
+  NLPA one-pager, Activate FormSubmit on first prod submit).
 - **2026-07-14** — Added **§2.1 Professional / Leapfrog-grade data quality**
   north star: Stage **C′** cheap export hygiene vs Stage **G** full ambition;
   do **not** prioritize during Stage B outreach. Mapped into arc + BUILD_PLAN

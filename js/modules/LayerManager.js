@@ -821,6 +821,53 @@ export default class LayerManager {
   }
 
   /**
+   * Sets opacity on a vector or WMS layer (0–1).
+   * @param {string} name
+   * @param {number} opacity
+   * @param {{ kind?: 'vector'|'wms' }} [opts]
+   */
+  setLayerOpacity(name, opacity, opts = {}) {
+    const value = Math.max(0, Math.min(1, Number(opacity)));
+    if (!Number.isFinite(value)) return;
+
+    const isWms = opts.kind === 'wms' || Boolean(WMS_CONFIG[name]);
+    if (isWms) {
+      this.setWMSLayerOpacity(name, value);
+      if (WMS_CONFIG[name]) WMS_CONFIG[name].opacity = value;
+      return;
+    }
+
+    const config = LAYER_CONFIG[name];
+    if (!config) return;
+    if (!this.layers[name]) this.layers[name] = { visible: Boolean(config.visible) };
+    this.layers[name].opacity = value;
+
+    const layerId = config.layer;
+    if (!layerId || !this.map.getLayer(layerId)) {
+      if (config.outline && this.map.getLayer(config.outline)) {
+        this.map.setPaintProperty(config.outline, 'line-opacity', value);
+      }
+      return;
+    }
+
+    const type = this.map.getLayer(layerId)?.type;
+    if (type === 'circle') {
+      this.map.setPaintProperty(layerId, 'circle-opacity', value);
+      this.map.setPaintProperty(layerId, 'circle-stroke-opacity', value);
+    } else if (type === 'fill') {
+      this.map.setPaintProperty(layerId, 'fill-opacity', value);
+    } else if (type === 'line') {
+      this.map.setPaintProperty(layerId, 'line-opacity', value);
+    } else if (type === 'symbol') {
+      this.map.setPaintProperty(layerId, 'icon-opacity', value);
+      this.map.setPaintProperty(layerId, 'text-opacity', value);
+    }
+    if (config.outline && this.map.getLayer(config.outline)) {
+      this.map.setPaintProperty(config.outline, 'line-opacity', value);
+    }
+  }
+
+  /**
    * Clears runtime paint overrides and restores `config.paint.fill` (or circle)
    * on the primary MapLibre layer. Used when leaving fatal-flaw mask mode.
    */

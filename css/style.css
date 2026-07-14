@@ -885,6 +885,22 @@ html, body {
   margin: 0 0 8px;
 }
 
+.screen-aoi-radii {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0 0 8px;
+}
+
+.screen-aoi-radii[hidden] {
+  display: none !important;
+}
+
+.screen-aoi-radius-chip {
+  flex: 0 1 auto;
+  min-width: 3.25rem;
+}
+
 .screen-aoi-mode-btn {
   flex: 1;
   min-width: 0;
@@ -904,10 +920,11 @@ html, body {
 }
 
 .screen-aoi-mode-btn.active,
-.screen-aoi-mode-btn[aria-checked='true'] {
-  background: #dbeafe;
-  border-color: #2563eb;
-  color: #1e3a8a;
+.screen-aoi-mode-btn[aria-checked='true'],
+.screen-aoi-mode-btn[aria-pressed='true'] {
+  background: #111111;
+  border-color: #111111;
+  color: #fff;
 }
 
 .screen-aoi-mode-btn:disabled {
@@ -2411,6 +2428,82 @@ html, body {
   align-items: center;
   gap: 6px;
   flex-shrink: 0;
+  max-width: 100%;
+}
+
+/* Keep positioning context for bookmarks popover; flatten only chip groups */
+.buffer-tool-control,
+.annotations-control {
+  display: contents;
+}
+
+.bookmarks-control {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.tool-inline-input {
+  min-width: 10rem;
+  max-width: 14rem;
+  padding: 5px 8px;
+  border: 1px solid var(--card-light-border, #ccc);
+  border-radius: 6px;
+  background: #fff;
+  font: inherit;
+  font-size: 12px;
+  color: #111;
+}
+
+.buffer-tool-radii,
+.annotations-modes {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.layer-opacity-wrap {
+  padding: 0 8px 8px 32px;
+}
+
+.layer-opacity-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--card-light-text-muted, #666);
+}
+
+.layer-opacity-range {
+  flex: 1;
+  min-width: 0;
+  accent-color: #2563eb;
+}
+
+.control-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.selection-panel {
+  position: absolute;
+  top: 56px;
+  right: 12px;
+  bottom: 88px;
+  width: min(340px, calc(100% - 24px));
+  z-index: 7;
+  display: none;
+  flex-direction: column;
+  background: rgba(255, 255, 255, 0.98);
+  border: 1px solid var(--card-light-border, #e5e5e5);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.selection-panel.open {
+  display: flex;
 }
 
 .map-toolbar-btn {
@@ -2431,8 +2524,9 @@ html, body {
 
 .map-toolbar-btn.active,
 .map-toolbar-btn[aria-pressed='true'] {
-  background: #fde68a;
-  border-color: #d97706;
+  background: #111111;
+  border-color: #111111;
+  color: #fff;
 }
 
 .map-toolbar-btn-ghost {

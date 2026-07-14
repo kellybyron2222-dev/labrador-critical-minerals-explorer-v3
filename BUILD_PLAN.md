@@ -12,9 +12,9 @@
 > checklist for the project. Review and update it as we move along — tick boxes,
 > flip status markers, and add notes in place.
 > **Product / GTM / freemium arc:** see [`PRODUCT_PLAN.md`](./PRODUCT_PLAN.md).
-> Last updated: 2026-07-14 — Stage B0 eng done; **§5.2 Professional data
-> quality** (C′ cheap wins → Stage G Leapfrog-adjacent); **next = Stage B
-> outreach** (NLPA) — not schema overhaul
+> Last updated: 2026-07-14 — Stage B0 + **B-R** soft-launch eng closed (Screen
+> Radius, everyday tools, Pages `VITE_*`); **next = Stage B outreach** (NLPA +
+> screenshots). Ops drafts: `docs/soft-launch/`.
 
 **Status marker key:** `[x]` done · `[~]` in progress · `[ ]` not started · `[!]` blocked/needs decision
 Layer catalog status: `✅ done/in app` · `🟢 verified available` · `⬜ to confirm/wire` · `🔒 blocked`
@@ -29,8 +29,9 @@ bands + **2.4** hard exclusions) · **Pre–Phase 3 close-out** ✅ ·
 **Phase 3** ✅ (3.1–3.4 incl. nearest-infra distances) ·
 **Phase 4** ✅ (**4.1** aeromag/1VD/radiometrics/gravity/footprints; **4.2** post-MVP) ·
 **Phase 5** lite + **Stage B0** soft-launch eng ✅ (welcome, Plausible, Formspree /
-FormSubmit capture, shareable URL, multi-layer export ZIP); full provenance
-panel / measure remain.
+FormSubmit capture, shareable URL, multi-layer export ZIP) + **B-R** everyday
+tools ✅ (Screen Radius, Annotate, Pin A Compare, Bookmarks, Print, …); full
+provenance panel remains Phase 5 remainder.
 
 | Area | Status |
 |---|---|
@@ -48,6 +49,7 @@ panel / measure remain.
 | Status filters, search, list/detail, bottom KPI + Settings | ✅ |
 | Soft-launch Phase 5 lite (About data, GeoJSON export, legend collapse) | ✅ |
 | Stage B0 (welcome, Plausible, capture hooks, share URL, export ZIP) | ✅ (2026-07-13) |
+| Soft-launch B-R (Screen Radius, everyday tools, Pages Variables, outreach drafts) | ✅ (2026-07-14) |
 | Bake registry + monthly auto-refresh → PR (§6.2) | ✅ (~34 registry entries) |
 | GitHub repo + Pages hosting + CI validate/Vitest | ✅ |
 | Infrastructure (roads, power, communities, facilities + nearest distances) | ✅ Phase 3 (3.1–3.4) |
@@ -65,16 +67,18 @@ panel / measure remain.
 
 ### Recommended next steps (build sequence)
 
-> Soft-launch readiness (B-R) is in progress in app code. Do **not** start NLPA
-> outreach until production `VITE_*` vars are set on Pages and capture is tested.
+> Soft-launch readiness (B-R) eng + Pages Variables are done. Operator completes
+> FormSubmit Activate + screenshots, then NLPA outreach.
 
-1. **Operator:** set GitHub Actions Variables `VITE_CONTACT_EMAIL` (and/or
-   Formspree ids); re-run Deploy; Activate FormSubmit if used; register Plausible Goals.
-2. **Smoke:** Screen this area → measure → Go to place → export with helper → feedback.
-3. **Then** Stage B outreach (NLPA) once DoD met.
-4. Phase 5 remainder / 4.2 / C′ after first cohort feedback.
+1. **Operator:** smoke live Pages (Screen Radius → measure → export → feedback);
+   open FormSubmit **Activate** on first prod submit; confirm Plausible goals.
+2. **Outreach:** capture stills from [`docs/soft-launch/screenshot-storyboard.md`](./docs/soft-launch/screenshot-storyboard.md);
+   send [`docs/soft-launch/NLPA-one-pager.md`](./docs/soft-launch/NLPA-one-pager.md).
+3. Phase 5 remainder / 4.2 / C′ after first cohort feedback.
 
 ### Soft-launch ops runbook
+
+Full checklist: [`docs/soft-launch/ops-checklist.md`](./docs/soft-launch/ops-checklist.md).
 
 - **Inbox:** check Formspree/FormSubmit or mailto daily during cohort.
 - **Bake failures:** `refresh-data` workflow opens a GitHub Issue on failure — triage within a week.
@@ -1294,6 +1298,11 @@ branch** with Actions enabled:
 
 ## 10. Changelog
 
+- **2026-07-14** — Soft-launch **B-R closed**: Screen Radius AOI (1–25 km);
+  Annotate pins; Pin A→Compare swipe; Bookmarks / Print / context menu /
+  opacity / extent / GPS; Pages Variables `VITE_CONTACT_EMAIL` + Plausible;
+  `docs/soft-launch/` ops + NLPA one-pager + screenshot storyboard. **Next:**
+  operator smoke + FormSubmit Activate + NLPA send.
 - **2026-07-14** — Soft-launch readiness (B-R): privacy page; Pages build
   `VITE_*` env; bake-fail GitHub Issue; Screen this area preset; Critical Minerals
   default; Topo basemap; measure (Turf fallback / terradraw when available);
